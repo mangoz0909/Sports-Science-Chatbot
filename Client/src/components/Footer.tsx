@@ -2,198 +2,137 @@ import React from "react";
 import {
   Box,
   Container,
+  Divider,
   Grid,
   Link,
-  Typography,
   Stack,
-  Divider,
+  Typography,
 } from "@mui/material";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import { Link as RouterLink } from "react-router-dom";
 
 const Footer: React.FC = () => {
-  const year = new Date().getFullYear();
-
   return (
     <Box
       component="footer"
       sx={{
-        bgcolor: "#000957",
+        bgcolor: "#0f172a",
         color: "#fff",
         mt: "auto",
-        borderTop: "1px solid rgba(255,255,255,0.12)",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 5 } }}>
-        <Grid container spacing={{ xs: 4, md: 5 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 5 } }}>
+        <Grid container spacing={4}>
           <Grid item xs={12} md={5}>
-            <Stack direction="row" spacing={1.5} alignItems="center">
+            <Stack direction="row" spacing={1.25} alignItems="center">
               <Box
-                component="img"
-                src="/logo.png"
-                alt="Mernbase logo"
                 sx={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 1.5,
-                  bgcolor: "#fff",
-                  objectFit: "cover",
+                  width: 42,
+                  height: 42,
+                  borderRadius: 2.5,
+                  display: "grid",
+                  placeItems: "center",
+                  bgcolor: "#38bdf8",
+                  color: "#0f172a",
                 }}
-              />
+              >
+                <MonitorHeartIcon />
+              </Box>
 
-              <Typography variant="h6" fontWeight={900}>
-                Mernbase
-              </Typography>
+              <Box>
+                <Typography fontWeight={950} fontSize="1.15rem">
+                  SportLab AI
+                </Typography>
+                <Typography fontSize={13} color="rgba(255,255,255,0.64)">
+                  Sports science and athlete intelligence
+                </Typography>
+              </Box>
             </Stack>
 
             <Typography
-              variant="body2"
               sx={{
-                opacity: 0.82,
                 mt: 2,
                 maxWidth: 520,
+                color: "rgba(255,255,255,0.68)",
                 lineHeight: 1.8,
               }}
             >
-              A clean AI assistant platform with responsive pages for sports,
-              mental health, authentication, and dashboard workflows.
+              A clean AI-powered platform for sports Q&A, performance analytics,
+              athlete readiness, recovery tracking, and mental support.
             </Typography>
           </Grid>
 
-          <Grid item xs={6} sm={4} md={2.5}>
+          <Grid item xs={6} sm={4} md={2.3}>
             <Typography
-              variant="subtitle2"
-              sx={{
-                opacity: 0.72,
-                mb: 1.5,
-                fontWeight: 800,
-                textTransform: "uppercase",
-                letterSpacing: 0.8,
-              }}
+              fontWeight={950}
+              sx={{ mb: 1.5, color: "rgba(255,255,255,0.9)" }}
             >
-              Product
+              Platform
             </Typography>
 
             <Stack spacing={1}>
-              <Link
-                component={RouterLink}
-                to="/"
-                color="inherit"
-                underline="hover"
-                sx={{ opacity: 0.88 }}
-              >
+              <Link component={RouterLink} to="/" color="inherit" underline="hover">
                 Home
               </Link>
-
-              <Link
-                component={RouterLink}
-                to="/sports"
-                color="inherit"
-                underline="hover"
-                sx={{ opacity: 0.88 }}
-              >
-                Sports Assistant
+              <Link component={RouterLink} to="/sports" color="inherit" underline="hover">
+                Sports AI
               </Link>
-
-              <Link
-                component={RouterLink}
-                to="/mental-health"
-                color="inherit"
-                underline="hover"
-                sx={{ opacity: 0.88 }}
-              >
-                Mental Health Assistant
+              <Link component={RouterLink} to="/mental-health" color="inherit" underline="hover">
+                Mental Health
               </Link>
-
-              <Link
-                component={RouterLink}
-                to="/dashboard"
-                color="inherit"
-                underline="hover"
-                sx={{ opacity: 0.88 }}
-              >
+              <Link component={RouterLink} to="/dashboard" color="inherit" underline="hover">
                 Dashboard
               </Link>
             </Stack>
           </Grid>
 
-          <Grid item xs={6} sm={4} md={2}>
+          <Grid item xs={6} sm={4} md={2.3}>
             <Typography
-              variant="subtitle2"
-              sx={{
-                opacity: 0.72,
-                mb: 1.5,
-                fontWeight: 800,
-                textTransform: "uppercase",
-                letterSpacing: 0.8,
-              }}
+              fontWeight={950}
+              sx={{ mb: 1.5, color: "rgba(255,255,255,0.9)" }}
             >
               Account
             </Typography>
 
             <Stack spacing={1}>
-              <Link
-                component={RouterLink}
-                to="/auth?mode=login"
-                color="inherit"
-                underline="hover"
-                sx={{ opacity: 0.88 }}
-              >
-                Log in
+              <Link component={RouterLink} to="/auth?mode=login" color="inherit" underline="hover">
+                Login
               </Link>
-
-              <Link
-                component={RouterLink}
-                to="/auth?mode=signup"
-                color="inherit"
-                underline="hover"
-                sx={{ opacity: 0.88 }}
-              >
+              <Link component={RouterLink} to="/auth?mode=signup" color="inherit" underline="hover">
                 Sign up
               </Link>
             </Stack>
           </Grid>
 
-          <Grid item xs={12} sm={4} md={2.5}>
+          <Grid item xs={12} sm={4} md={2.4}>
             <Typography
-              variant="subtitle2"
-              sx={{
-                opacity: 0.72,
-                mb: 1.5,
-                fontWeight: 800,
-                textTransform: "uppercase",
-                letterSpacing: 0.8,
-              }}
+              fontWeight={950}
+              sx={{ mb: 1.5, color: "rgba(255,255,255,0.9)" }}
             >
-              Status
+              Focus
             </Typography>
 
-            <Typography
-              variant="body2"
-              sx={{
-                opacity: 0.82,
-                lineHeight: 1.8,
-              }}
-            >
-              Built with React, TypeScript, MUI, and responsive-first UI
-              structure.
+            <Typography color="rgba(255,255,255,0.68)" lineHeight={1.8}>
+              Training load, recovery, readiness, sport education, and safer AI
+              support.
             </Typography>
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: 3, borderColor: "rgba(255,255,255,0.14)" }} />
+        <Divider sx={{ my: 3, borderColor: "rgba(255,255,255,0.1)" }} />
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          spacing={1.5}
+          spacing={1}
         >
-          <Typography variant="body2" sx={{ opacity: 0.75 }}>
-            © {year} Mernbase. All rights reserved.
+          <Typography color="rgba(255,255,255,0.58)" fontSize={14}>
+            © {new Date().getFullYear()} SportLab AI. All rights reserved.
           </Typography>
 
-          <Typography variant="body2" sx={{ opacity: 0.75 }}>
-            AI assistant platform
+          <Typography color="rgba(255,255,255,0.58)" fontSize={14}>
+            Built for sports science workflows.
           </Typography>
         </Stack>
       </Container>

@@ -19,13 +19,13 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
+import PsychologyIcon from "@mui/icons-material/Psychology";
+import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
+import SpeedIcon from "@mui/icons-material/Speed";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
-import SpeedIcon from "@mui/icons-material/Speed";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import PsychologyIcon from "@mui/icons-material/Psychology";
-import ShieldIcon from "@mui/icons-material/Shield";
 
 type Mode = "login" | "signup";
 
@@ -60,12 +60,12 @@ const AuthPage: React.FC = () => {
     window.history.replaceState({}, "", url);
   }, [mode]);
 
-  const title = mode === "login" ? "Welcome back, athlete" : "Create your performance account";
+  const title = mode === "login" ? "Welcome back" : "Create your account";
 
   const subtitle =
     mode === "login"
-      ? "Log in to continue tracking training, recovery, and AI assistant insights."
-      : "Start your AI-powered sports science workspace in minutes.";
+      ? "Log in to access your sports science workspace."
+      : "Create an account to start using SportLab AI.";
 
   const validate = () => {
     if (!email || !email.includes("@")) return "Please enter a valid email.";
@@ -123,11 +123,8 @@ const AuthPage: React.FC = () => {
       const data = await response.json();
 
       if (data?.token) {
-        if (remember) {
-          localStorage.setItem("token", data.token);
-        } else {
-          sessionStorage.setItem("token", data.token);
-        }
+        if (remember) localStorage.setItem("token", data.token);
+        else sessionStorage.setItem("token", data.token);
       }
 
       if (data?.user) {
@@ -152,169 +149,116 @@ const AuthPage: React.FC = () => {
     <Box
       sx={{
         minHeight: "100vh",
+        bgcolor: "#f8fafc",
+        py: { xs: 4, md: 7 },
         display: "grid",
         alignItems: "center",
-        py: { xs: 4, md: 7 },
-        bgcolor: "#06111f",
-        background:
-          "radial-gradient(circle at 10% 10%, rgba(56,189,248,0.22), transparent 28%), radial-gradient(circle at 90% 20%, rgba(34,197,94,0.14), transparent 26%), linear-gradient(135deg, #06111f 0%, #0f172a 60%, #020617 100%)",
       }}
     >
       <Container maxWidth="lg">
         <Grid container spacing={3} alignItems="stretch">
-          {/* Left Visual Panel */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={5}>
             <Paper
               elevation={0}
               sx={{
                 height: "100%",
-                minHeight: { xs: 420, md: 650 },
+                minHeight: { xs: "auto", md: 640 },
                 borderRadius: 5,
                 p: { xs: 3, md: 4 },
+                bgcolor: "#0f172a",
                 color: "#fff",
-                bgcolor: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.14)",
-                backdropFilter: "blur(18px)",
-                position: "relative",
-                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <Box
-                sx={{
-                  position: "absolute",
-                  width: 340,
-                  height: 340,
-                  borderRadius: "50%",
-                  right: -120,
-                  top: -100,
-                  background: "rgba(56,189,248,0.18)",
-                  filter: "blur(2px)",
-                }}
-              />
-
-              <Box
-                sx={{
-                  position: "absolute",
-                  width: 280,
-                  height: 280,
-                  borderRadius: "50%",
-                  left: -100,
-                  bottom: -90,
-                  background: "rgba(34,197,94,0.16)",
-                }}
-              />
-
-              <Stack sx={{ position: "relative", height: "100%" }}>
-                <Stack direction="row" spacing={1.2} alignItems="center">
-                  <Box
-                    sx={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 2,
-                      display: "grid",
-                      placeItems: "center",
-                      bgcolor: "#38bdf8",
-                      color: "#06111f",
-                    }}
-                  >
-                    <MonitorHeartIcon />
-                  </Box>
-
-                  <Box>
-                    <Typography variant="h5" fontWeight={950}>
-                      SportLab AI
-                    </Typography>
-                    <Typography variant="body2" color="rgba(255,255,255,0.65)">
-                      Sports science assistant platform
-                    </Typography>
-                  </Box>
-                </Stack>
-
-                <Box sx={{ flex: 1, display: "grid", alignContent: "center", py: 5 }}>
-                  <Chip
-                    label="Secure athlete workspace"
-                    sx={{
-                      width: "fit-content",
-                      mb: 2,
-                      bgcolor: "rgba(34,197,94,0.14)",
-                      color: "#86efac",
-                      border: "1px solid rgba(134,239,172,0.24)",
-                      fontWeight: 900,
-                    }}
-                  />
-
-                  <Typography
-                    variant="h2"
-                    sx={{
-                      fontWeight: 950,
-                      lineHeight: 1,
-                      letterSpacing: -1,
-                      fontSize: { xs: "2.4rem", md: "3.7rem" },
-                      mb: 2,
-                    }}
-                  >
-                    Your AI coach, analyst, and recovery companion.
-                  </Typography>
-
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      color: "rgba(255,255,255,0.72)",
-                      lineHeight: 1.7,
-                      maxWidth: 560,
-                    }}
-                  >
-                    Access sports Q&A, athlete dashboards, training analytics,
-                    and mental readiness support from one clean system.
-                  </Typography>
-
-                  <Grid container spacing={2} sx={{ mt: 3 }}>
-                    {[
-                      {
-                        icon: <SpeedIcon />,
-                        label: "Sprint analytics",
-                      },
-                      {
-                        icon: <FitnessCenterIcon />,
-                        label: "Load monitoring",
-                      },
-                      {
-                        icon: <PsychologyIcon />,
-                        label: "Mental readiness",
-                      },
-                      {
-                        icon: <ShieldIcon />,
-                        label: "Secure access",
-                      },
-                    ].map((item) => (
-                      <Grid item xs={12} sm={6} key={item.label}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            borderRadius: 3,
-                            bgcolor: "rgba(255,255,255,0.08)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                          }}
-                        >
-                          <Stack direction="row" spacing={1.2} alignItems="center">
-                            <Box sx={{ color: "#7dd3fc" }}>{item.icon}</Box>
-                            <Typography fontWeight={800}>{item.label}</Typography>
-                          </Stack>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
+              <Stack direction="row" spacing={1.2} alignItems="center">
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2.5,
+                    display: "grid",
+                    placeItems: "center",
+                    bgcolor: "#38bdf8",
+                    color: "#0f172a",
+                  }}
+                >
+                  <MonitorHeartIcon />
                 </Box>
 
-                <Typography variant="body2" color="rgba(255,255,255,0.55)">
-                  Built for modern sports teams, student projects, and AI-powered coaching tools.
-                </Typography>
+                <Box>
+                  <Typography variant="h5" fontWeight={950}>
+                    SportLab AI
+                  </Typography>
+                  <Typography color="#94a3b8" fontSize={14}>
+                    Athlete intelligence platform
+                  </Typography>
+                </Box>
               </Stack>
+
+              <Box sx={{ flex: 1, display: "grid", alignContent: "center", py: 5 }}>
+                <Chip
+                  label="Clean access for performance teams"
+                  sx={{
+                    width: "fit-content",
+                    bgcolor: "rgba(56,189,248,0.12)",
+                    color: "#7dd3fc",
+                    fontWeight: 900,
+                    mb: 2,
+                  }}
+                />
+
+                <Typography
+                  variant="h2"
+                  sx={{
+                    fontWeight: 950,
+                    lineHeight: 1.02,
+                    letterSpacing: -1,
+                    fontSize: { xs: "2.3rem", md: "3.3rem" },
+                    mb: 2,
+                  }}
+                >
+                  One login for sports AI, recovery insights, and dashboards.
+                </Typography>
+
+                <Typography sx={{ color: "#cbd5e1", lineHeight: 1.8 }}>
+                  Keep the product focused: easy onboarding, clean forms, readable
+                  visuals, and clear access to the athlete workspace.
+                </Typography>
+
+                <Grid container spacing={1.5} sx={{ mt: 3 }}>
+                  {[
+                    { icon: <SpeedIcon />, label: "Performance" },
+                    { icon: <FitnessCenterIcon />, label: "Load" },
+                    { icon: <PsychologyIcon />, label: "Mindset" },
+                    { icon: <ShieldOutlinedIcon />, label: "Secure" },
+                  ].map((item) => (
+                    <Grid item xs={6} key={item.label}>
+                      <Box
+                        sx={{
+                          p: 1.6,
+                          borderRadius: 3,
+                          bgcolor: "rgba(255,255,255,0.06)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                        }}
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Box sx={{ color: "#38bdf8", display: "flex" }}>{item.icon}</Box>
+                          <Typography fontWeight={850}>{item.label}</Typography>
+                        </Stack>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+
+              <Typography color="#64748b" fontSize={14}>
+                Sports science tools for athletes, coaches, and student projects.
+              </Typography>
             </Paper>
           </Grid>
 
-          {/* Auth Form */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={7}>
             <Paper
               elevation={0}
               component="form"
@@ -322,17 +266,17 @@ const AuthPage: React.FC = () => {
               noValidate
               sx={{
                 height: "100%",
-                minHeight: { xs: "auto", md: 650 },
+                minHeight: { xs: "auto", md: 640 },
                 borderRadius: 5,
                 p: { xs: 3, sm: 4, md: 5 },
-                bgcolor: "#fff",
+                bgcolor: "#ffffff",
+                border: "1px solid #e2e8f0",
                 display: "grid",
                 alignContent: "center",
-                boxShadow: "0 28px 80px rgba(0,0,0,0.25)",
               }}
             >
-              <Stack spacing={2.5}>
-                <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack spacing={2.4} sx={{ maxWidth: 520, mx: "auto", width: "100%" }}>
+                <Stack direction="row" spacing={1} alignItems="center">
                   <IconButton
                     onClick={() => navigate("/")}
                     size="small"
@@ -342,7 +286,12 @@ const AuthPage: React.FC = () => {
                     <ArrowBackIosNewIcon fontSize="small" />
                   </IconButton>
 
-                  <Typography variant="overline" color="text.secondary" fontWeight={900}>
+                  <Typography
+                    variant="overline"
+                    color="#64748b"
+                    fontWeight={900}
+                    letterSpacing={1}
+                  >
                     Back to home
                   </Typography>
                 </Stack>
@@ -353,14 +302,14 @@ const AuthPage: React.FC = () => {
                     sx={{
                       fontWeight: 950,
                       letterSpacing: -0.8,
-                      fontSize: { xs: "2rem", md: "2.6rem" },
                       color: "#0f172a",
+                      fontSize: { xs: "2rem", md: "2.7rem" },
                     }}
                   >
                     {title}
                   </Typography>
 
-                  <Typography color="text.secondary" sx={{ mt: 1, lineHeight: 1.7 }}>
+                  <Typography color="#64748b" lineHeight={1.8} sx={{ mt: 1 }}>
                     {subtitle}
                   </Typography>
                 </Box>
@@ -374,8 +323,11 @@ const AuthPage: React.FC = () => {
                       borderRadius: 3,
                       fontWeight: 900,
                       bgcolor: mode === "login" ? "#0f172a" : "transparent",
+                      color: mode === "login" ? "#fff" : "#0f172a",
+                      boxShadow: "none",
                       "&:hover": {
                         bgcolor: mode === "login" ? "#1e293b" : "#f8fafc",
+                        boxShadow: "none",
                       },
                     }}
                   >
@@ -390,8 +342,11 @@ const AuthPage: React.FC = () => {
                       borderRadius: 3,
                       fontWeight: 900,
                       bgcolor: mode === "signup" ? "#0f172a" : "transparent",
+                      color: mode === "signup" ? "#fff" : "#0f172a",
+                      boxShadow: "none",
                       "&:hover": {
                         bgcolor: mode === "signup" ? "#1e293b" : "#f8fafc",
+                        boxShadow: "none",
                       },
                     }}
                   >
@@ -449,8 +404,8 @@ const AuthPage: React.FC = () => {
                 {mode === "login" && (
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
-                    alignItems={{ xs: "flex-start", sm: "center" }}
                     justifyContent="space-between"
+                    alignItems={{ xs: "flex-start", sm: "center" }}
                     spacing={1}
                   >
                     <FormControlLabel
@@ -468,7 +423,7 @@ const AuthPage: React.FC = () => {
                       type="button"
                       underline="hover"
                       onClick={() => alert("Connect this to your reset password flow.")}
-                      sx={{ fontWeight: 800 }}
+                      sx={{ fontWeight: 850 }}
                     >
                       Forgot password?
                     </Link>
@@ -481,14 +436,14 @@ const AuthPage: React.FC = () => {
                   size="large"
                   disabled={submitting}
                   sx={{
-                    py: 1.4,
+                    py: 1.35,
                     borderRadius: 3,
+                    bgcolor: "#0f172a",
                     fontWeight: 950,
-                    bgcolor: "#22c55e",
-                    color: "#052e16",
-                    boxShadow: "0 12px 30px rgba(34,197,94,0.25)",
+                    boxShadow: "none",
                     "&:hover": {
-                      bgcolor: "#86efac",
+                      bgcolor: "#1e293b",
+                      boxShadow: "none",
                     },
                   }}
                 >
@@ -497,11 +452,11 @@ const AuthPage: React.FC = () => {
                       ? "Logging in..."
                       : "Creating account..."
                     : mode === "login"
-                    ? "Log in"
+                    ? "Login"
                     : "Create account"}
                 </Button>
 
-                <Typography textAlign="center" color="text.secondary">
+                <Typography textAlign="center" color="#64748b">
                   {mode === "login" ? (
                     <>
                       Don&apos;t have an account?{" "}
@@ -523,7 +478,7 @@ const AuthPage: React.FC = () => {
                         onClick={() => setMode("login")}
                         sx={{ fontWeight: 900 }}
                       >
-                        Log in
+                        Login
                       </Link>
                     </>
                   )}

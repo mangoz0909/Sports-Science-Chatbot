@@ -1,14 +1,15 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { CssBaseline, GlobalStyles, Box } from "@mui/material";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Box, CssBaseline, GlobalStyles } from "@mui/material";
 
-import Home from "./pages/Home";
-import SportsHome from "./pages/SportsHome";
-import MentalHealthHome from "./pages/MentalHealthHome";
-import AuthPage from "./pages/AuthPage";
-import Dashboard from "./pages/Dashboard";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+
+import Home from "./pages/Home";
+import AuthPage from "./pages/AuthPage";
+import Dashboard from "./pages/Dashboard";
+import SportsHome from "./pages/SportsHome";
+import MentalHealthHome from "./pages/MentalHealthHome";
 
 const App: React.FC = () => {
   return (
@@ -24,10 +25,11 @@ const App: React.FC = () => {
           },
           body: {
             minHeight: "100%",
-            overflowX: "hidden",
             margin: 0,
             padding: 0,
-            backgroundColor: "#f6f8fc",
+            overflowX: "hidden",
+            backgroundColor: "#f8fafc",
+            color: "#0f172a",
           },
           "#root": {
             minHeight: "100vh",
@@ -37,7 +39,7 @@ const App: React.FC = () => {
           "*": {
             boxSizing: "border-box",
           },
-          "img, video, canvas, svg": {
+          "img, svg, video, canvas": {
             maxWidth: "100%",
           },
         }}
@@ -46,20 +48,14 @@ const App: React.FC = () => {
       <BrowserRouter>
         <Header />
 
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            width: "100%",
-            minHeight: "calc(100vh - 64px)",
-          }}
-        >
+        <Box component="main" sx={{ flex: 1, width: "100%" }}>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/sports" element={<SportsHome />} />
-            <Route path="/mental-health" element={<MentalHealthHome />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/sports" element={<SportsHome />} />
+            <Route path="/mental-health" element={<MentalHealthHome />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Box>
 

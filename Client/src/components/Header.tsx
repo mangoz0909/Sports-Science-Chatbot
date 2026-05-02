@@ -1,93 +1,66 @@
 import React from "react";
 import {
   AppBar,
-  Toolbar,
-  Typography,
-  Button,
   Box,
-  IconButton,
-  useScrollTrigger,
-  Slide,
+  Button,
+  Container,
+  Divider,
   Drawer,
+  IconButton,
   List,
   ListItemButton,
   ListItemText,
-  Divider,
+  Stack,
+  Toolbar,
+  Typography,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
-function HideOnScroll({ children }: { children: React.ReactElement }) {
-  const trigger = useScrollTrigger();
-
-  return (
-    <Slide appear={false} direction="down" in={!trigger}>
-      {children}
-    </Slide>
-  );
-}
-
-type NavButtonProps = {
-  to: string;
+type NavItem = {
   label: string;
-  active?: boolean;
+  to: string;
 };
 
-const NavButton: React.FC<NavButtonProps> = ({ to, label, active }) => {
-  return (
-    <Button
-      component={RouterLink}
-      to={to}
-      sx={{
-        color: "inherit",
-        opacity: active ? 1 : 0.82,
-        fontWeight: active ? 800 : 600,
-        borderRadius: 999,
-        px: 1.75,
-        "&:hover": {
-          opacity: 1,
-          bgcolor: "rgba(255,255,255,0.1)",
-        },
-      }}
-    >
-      {label}
-    </Button>
-  );
-};
+const navItems: NavItem[] = [
+  { label: "Home", to: "/" },
+  { label: "Sports AI", to: "/sports" },
+  { label: "Mental Health", to: "/mental-health" },
+  { label: "Dashboard", to: "/dashboard" },
+];
 
 const Header: React.FC = () => {
-  const [open, setOpen] = React.useState(false);
-  const { pathname, hash } = useLocation();
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const { pathname } = useLocation();
 
-  const currentPath = `${pathname}${hash}`;
-
-  const isActive = (target: string) => {
-    if (target.includes("#")) return currentPath === target;
-    return pathname === target;
+  const isActive = (to: string) => {
+    if (to === "/") return pathname === "/";
+    return pathname.startsWith(to);
   };
 
-  const closeDrawer = () => setOpen(false);
+  const closeDrawer = () => setDrawerOpen(false);
 
   return (
     <>
-      <HideOnScroll>
-        <AppBar
-          position="sticky"
-          elevation={0}
-          sx={{
-            bgcolor: "rgba(0, 9, 87, 0.92)",
-            color: "#fff",
-            backdropFilter: "blur(10px)",
-            borderBottom: "1px solid rgba(255,255,255,0.12)",
-          }}
-        >
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: "rgba(255,255,255,0.94)",
+          color: "#0f172a",
+          borderBottom: "1px solid #e2e8f0",
+          backdropFilter: "blur(14px)",
+        }}
+      >
+        <Container maxWidth="xl">
           <Toolbar
+            disableGutters
             sx={{
               minHeight: { xs: 64, md: 72 },
               display: "flex",
               justifyContent: "space-between",
               gap: 2,
-              px: { xs: 2, md: 4 },
             }}
           >
             <Box
@@ -99,191 +72,205 @@ const Header: React.FC = () => {
                 gap: 1.25,
                 textDecoration: "none",
                 color: "inherit",
-                minWidth: 0,
               }}
             >
               <Box
-                component="img"
-                src="/logo.png"
-                alt="Mernbase logo"
                 sx={{
-                  width: { xs: 32, md: 36 },
-                  height: { xs: 32, md: 36 },
-                  borderRadius: 1.25,
-                  boxShadow: 1,
-                  bgcolor: "common.white",
-                  objectFit: "cover",
-                  flexShrink: 0,
-                }}
-              />
-
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 900,
-                  letterSpacing: 0.3,
-                  fontSize: { xs: "1.05rem", md: "1.25rem" },
-                  whiteSpace: "nowrap",
+                  width: 42,
+                  height: 42,
+                  borderRadius: 2.5,
+                  display: "grid",
+                  placeItems: "center",
+                  bgcolor: "#0f172a",
+                  color: "#38bdf8",
                 }}
               >
-                Mernbase
-              </Typography>
+                <MonitorHeartIcon />
+              </Box>
+
+              <Box>
+                <Typography
+                  sx={{
+                    fontWeight: 950,
+                    lineHeight: 1,
+                    letterSpacing: -0.3,
+                    fontSize: { xs: "1.05rem", md: "1.2rem" },
+                  }}
+                >
+                  SportLab AI
+                </Typography>
+                <Typography
+                  sx={{
+                    display: { xs: "none", sm: "block" },
+                    fontSize: 12,
+                    color: "#64748b",
+                    fontWeight: 700,
+                  }}
+                >
+                  Sports Science Platform
+                </Typography>
+              </Box>
             </Box>
 
-            <Box
-              sx={{
-                display: { xs: "none", md: "flex" },
-                alignItems: "center",
-                gap: 0.5,
-              }}
+            <Stack
+              direction="row"
+              spacing={0.5}
+              alignItems="center"
+              sx={{ display: { xs: "none", md: "flex" } }}
             >
-              <NavButton to="/" label="Home" active={isActive("/")} />
-              <NavButton
-                to="/sports"
-                label="Sports"
-                active={isActive("/sports")}
-              />
-              <NavButton
-                to="/mental-health"
-                label="Mental Health"
-                active={isActive("/mental-health")}
-              />
-              <NavButton
-                to="/dashboard"
-                label="Dashboard"
-                active={isActive("/dashboard")}
-              />
+              {navItems.map((item) => (
+                <Button
+                  key={item.to}
+                  component={RouterLink}
+                  to={item.to}
+                  sx={{
+                    color: isActive(item.to) ? "#0284c7" : "#334155",
+                    fontWeight: isActive(item.to) ? 900 : 750,
+                    borderRadius: 999,
+                    px: 2,
+                    bgcolor: isActive(item.to) ? "#e0f2fe" : "transparent",
+                    "&:hover": {
+                      bgcolor: "#f1f5f9",
+                    },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
 
-              <Divider
-                orientation="vertical"
-                flexItem
-                sx={{
-                  mx: 1.5,
-                  borderColor: "rgba(255,255,255,0.22)",
-                }}
-              />
+              <Divider orientation="vertical" flexItem sx={{ mx: 1.25 }} />
 
               <Button
-                variant="contained"
                 component={RouterLink}
-                to="/auth?mode=signup"
+                to="/auth?mode=login"
+                variant="outlined"
                 sx={{
-                  fontWeight: 800,
                   borderRadius: 999,
-                  bgcolor: "#fff",
-                  color: "#000957",
+                  fontWeight: 900,
+                  borderColor: "#cbd5e1",
+                  color: "#0f172a",
                   px: 2.25,
                   "&:hover": {
-                    bgcolor: "#eef2ff",
+                    borderColor: "#94a3b8",
+                    bgcolor: "#f8fafc",
+                  },
+                }}
+              >
+                Login
+              </Button>
+
+              <Button
+                component={RouterLink}
+                to="/auth?mode=signup"
+                variant="contained"
+                sx={{
+                  borderRadius: 999,
+                  fontWeight: 900,
+                  bgcolor: "#0f172a",
+                  color: "#fff",
+                  px: 2.5,
+                  boxShadow: "none",
+                  "&:hover": {
+                    bgcolor: "#1e293b",
+                    boxShadow: "none",
                   },
                 }}
               >
                 Get Started
               </Button>
-            </Box>
+            </Stack>
 
             <IconButton
-              onClick={() => setOpen(true)}
-              color="inherit"
+              onClick={() => setDrawerOpen(true)}
               sx={{ display: { xs: "inline-flex", md: "none" } }}
-              aria-label="Open menu"
+              aria-label="Open navigation menu"
             >
               <MenuIcon />
             </IconButton>
           </Toolbar>
-        </AppBar>
-      </HideOnScroll>
+        </Container>
+      </AppBar>
 
-      <Drawer anchor="right" open={open} onClose={closeDrawer}>
-        <Box
-          sx={{
-            width: 300,
-            maxWidth: "85vw",
-            p: 2,
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.25,
-              mb: 1.5,
-            }}
-          >
+      <Drawer anchor="right" open={drawerOpen} onClose={closeDrawer}>
+        <Box sx={{ width: 300, maxWidth: "86vw", p: 2.5 }}>
+          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
             <Box
-              component="img"
-              src="/logo.png"
-              alt="Mernbase logo"
               sx={{
-                width: 32,
-                height: 32,
-                borderRadius: 1,
-                bgcolor: "common.white",
-                boxShadow: 1,
-                objectFit: "cover",
+                width: 40,
+                height: 40,
+                borderRadius: 2.2,
+                display: "grid",
+                placeItems: "center",
+                bgcolor: "#0f172a",
+                color: "#38bdf8",
               }}
-            />
+            >
+              <MonitorHeartIcon />
+            </Box>
 
-            <Typography variant="h6" sx={{ fontWeight: 900 }}>
-              Mernbase
-            </Typography>
-          </Box>
+            <Box>
+              <Typography fontWeight={950}>SportLab AI</Typography>
+              <Typography fontSize={12} color="text.secondary" fontWeight={700}>
+                Sports Science Platform
+              </Typography>
+            </Box>
+          </Stack>
 
           <Divider sx={{ mb: 1 }} />
 
           <List>
-            <ListItemButton component={RouterLink} to="/" onClick={closeDrawer}>
-              <ListItemText primary="Home" />
-            </ListItemButton>
-
-            <ListItemButton
-              component={RouterLink}
-              to="/sports"
-              onClick={closeDrawer}
-            >
-              <ListItemText primary="Sports Assistant" />
-            </ListItemButton>
-
-            <ListItemButton
-              component={RouterLink}
-              to="/mental-health"
-              onClick={closeDrawer}
-            >
-              <ListItemText primary="Mental Health Assistant" />
-            </ListItemButton>
-
-            <ListItemButton
-              component={RouterLink}
-              to="/dashboard"
-              onClick={closeDrawer}
-            >
-              <ListItemText primary="Dashboard" />
-            </ListItemButton>
+            {navItems.map((item) => (
+              <ListItemButton
+                key={item.to}
+                component={RouterLink}
+                to={item.to}
+                onClick={closeDrawer}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.5,
+                  bgcolor: isActive(item.to) ? "#e0f2fe" : "transparent",
+                  color: isActive(item.to) ? "#0284c7" : "#0f172a",
+                }}
+              >
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{ fontWeight: 850 }}
+                />
+              </ListItemButton>
+            ))}
           </List>
 
-          <Divider sx={{ my: 1 }} />
+          <Divider sx={{ my: 1.5 }} />
 
-          <Box display="flex" flexDirection="column" gap={1}>
+          <Stack spacing={1}>
             <Button
-              variant="outlined"
               fullWidth
               component={RouterLink}
               to="/auth?mode=login"
+              variant="outlined"
               onClick={closeDrawer}
+              sx={{ borderRadius: 2.5, fontWeight: 900 }}
             >
-              Log in
+              Login
             </Button>
 
             <Button
-              variant="contained"
               fullWidth
               component={RouterLink}
               to="/auth?mode=signup"
+              variant="contained"
               onClick={closeDrawer}
+              sx={{
+                borderRadius: 2.5,
+                fontWeight: 900,
+                bgcolor: "#0f172a",
+                boxShadow: "none",
+                "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
+              }}
             >
               Get Started
             </Button>
-          </Box>
+          </Stack>
         </Box>
       </Drawer>
     </>

@@ -16,11 +16,11 @@ import {
   Typography,
 } from "@mui/material";
 
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import DirectionsRunIcon from "@mui/icons-material/DirectionsRun";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import SpeedIcon from "@mui/icons-material/Speed";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import PsychologyIcon from "@mui/icons-material/Psychology";
+import SpeedIcon from "@mui/icons-material/Speed";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import {
@@ -47,179 +47,142 @@ import {
 } from "recharts";
 
 type RangeKey = "7d" | "30d" | "90d";
-type AthleteKey = "Squad" | "Forwards" | "Midfielders" | "Defenders";
+type GroupKey = "Full Squad" | "Attackers" | "Midfielders" | "Defenders";
 
-const COLORS = {
+const groups: GroupKey[] = ["Full Squad", "Attackers", "Midfielders", "Defenders"];
+
+const colors = {
+  slate: "#0f172a",
+  blue: "#0284c7",
   cyan: "#06b6d4",
-  blue: "#2563eb",
   green: "#22c55e",
   amber: "#f59e0b",
   red: "#ef4444",
   purple: "#8b5cf6",
 };
 
-const athleteGroups: AthleteKey[] = ["Squad", "Forwards", "Midfielders", "Defenders"];
-
-const buildPerformanceData = (days: number) =>
+const makeSeries = (days: number) =>
   Array.from({ length: days }, (_, index) => {
-    const day = index + 1;
+    const load = Math.round(64 + Math.sin(index / 2.7) * 10 + (index % 4));
+    const recovery = Math.round(73 + Math.cos(index / 3.4) * 8 - (index % 3));
+    const readiness = Math.round((recovery * 0.58 + (100 - Math.abs(load - 72)) * 0.42));
+    const sprint = Number((29.5 + Math.sin(index / 3) * 1.7 + (index % 5) * 0.12).toFixed(1));
+
     return {
-      day: `D${day}`,
-      load: Math.round(62 + Math.sin(index / 2) * 12 + Math.random() * 12),
-      readiness: Math.round(72 + Math.cos(index / 3) * 9 + Math.random() * 9),
-      recovery: Math.round(68 + Math.sin(index / 4) * 10 + Math.random() * 10),
-      sprint: Math.round(28 + Math.sin(index / 3) * 4 + Math.random() * 4),
+      day: `D${index + 1}`,
+      load,
+      recovery,
+      readiness,
+      sprint,
     };
   });
 
-const dataMap: Record<RangeKey, ReturnType<typeof buildPerformanceData>> = {
-  "7d": buildPerformanceData(7),
-  "30d": buildPerformanceData(30),
-  "90d": buildPerformanceData(90),
+const seriesMap: Record<RangeKey, ReturnType<typeof makeSeries>> = {
+  "7d": makeSeries(7),
+  "30d": makeSeries(30),
+  "90d": makeSeries(90),
 };
 
 const injuryRisk = [
-  { name: "Low Risk", value: 62 },
-  { name: "Moderate", value: 27 },
-  { name: "High Risk", value: 11 },
+  { name: "Low", value: 64 },
+  { name: "Moderate", value: 25 },
+  { name: "High", value: 11 },
 ];
 
 const trainingZones = [
-  { zone: "Zone 1", minutes: 42 },
-  { zone: "Zone 2", minutes: 64 },
-  { zone: "Zone 3", minutes: 52 },
-  { zone: "Zone 4", minutes: 35 },
-  { zone: "Zone 5", minutes: 18 },
+  { zone: "Z1", minutes: 44 },
+  { zone: "Z2", minutes: 62 },
+  { zone: "Z3", minutes: 49 },
+  { zone: "Z4", minutes: 31 },
+  { zone: "Z5", minutes: 15 },
 ];
 
-const radarData = [
-  { metric: "Speed", value: 86 },
-  { metric: "Power", value: 78 },
-  { metric: "Endurance", value: 82 },
-  { metric: "Agility", value: 74 },
-  { metric: "Recovery", value: 71 },
-  { metric: "Focus", value: 88 },
+const athleticProfile = [
+  { metric: "Speed", score: 86 },
+  { metric: "Power", score: 79 },
+  { metric: "Endurance", score: 82 },
+  { metric: "Agility", score: 76 },
+  { metric: "Recovery", score: 73 },
+  { metric: "Focus", score: 88 },
 ];
 
-const teamTable = [
-  {
-    name: "Arjun",
-    role: "Batter",
-    readiness: 91,
-    load: "Optimal",
-    risk: "Low",
-  },
-  {
-    name: "Ravi",
-    role: "Bowler",
-    readiness: 74,
-    load: "High",
-    risk: "Moderate",
-  },
-  {
-    name: "Karan",
-    role: "Winger",
-    readiness: 82,
-    load: "Optimal",
-    risk: "Low",
-  },
-  {
-    name: "Dev",
-    role: "Defender",
-    readiness: 65,
-    load: "Heavy",
-    risk: "High",
-  },
+const watchlist = [
+  { name: "Arjun", role: "Batter", readiness: 91, risk: "Low" },
+  { name: "Ravi", role: "Bowler", readiness: 74, risk: "Moderate" },
+  { name: "Karan", role: "Winger", readiness: 83, risk: "Low" },
+  { name: "Dev", role: "Defender", readiness: 66, risk: "High" },
 ];
 
 const Dashboard: React.FC = () => {
   const [range, setRange] = React.useState<RangeKey>("30d");
-  const [group, setGroup] = React.useState<AthleteKey>("Squad");
+  const [group, setGroup] = React.useState<GroupKey>("Full Squad");
 
-  const data = React.useMemo(() => dataMap[range], [range]);
+  const data = React.useMemo(() => seriesMap[range], [range]);
 
   const latest = data[data.length - 1];
-  const previous = data[0];
 
-  const avgReadiness = Math.round(
-    data.reduce((sum, item) => sum + item.readiness, 0) / data.length
-  );
-
-  const avgLoad = Math.round(
-    data.reduce((sum, item) => sum + item.load, 0) / data.length
-  );
-
-  const avgRecovery = Math.round(
-    data.reduce((sum, item) => sum + item.recovery, 0) / data.length
-  );
-
-  const sprintChange = latest.sprint - previous.sprint;
-
-  const handleRange = (event: SelectChangeEvent) => {
-    setRange(event.target.value as RangeKey);
-  };
+  const avg = (key: "load" | "recovery" | "readiness") =>
+    Math.round(data.reduce((sum, item) => sum + item[key], 0) / data.length);
 
   const kpis = [
     {
-      label: "Readiness Score",
-      value: `${avgReadiness}%`,
-      helper: "Team match-day readiness",
+      label: "Readiness",
+      value: `${avg("readiness")}%`,
+      helper: "Composite team readiness",
       icon: <MonitorHeartIcon />,
-      progress: avgReadiness,
-      color: COLORS.green,
+      progress: avg("readiness"),
+      color: colors.green,
     },
     {
       label: "Training Load",
-      value: `${avgLoad}`,
+      value: `${avg("load")}`,
       helper: "Average workload index",
       icon: <FitnessCenterIcon />,
-      progress: avgLoad,
-      color: COLORS.cyan,
+      progress: avg("load"),
+      color: colors.blue,
     },
     {
-      label: "Recovery Index",
-      value: `${avgRecovery}%`,
-      helper: "Sleep, soreness, fatigue",
+      label: "Recovery",
+      value: `${avg("recovery")}%`,
+      helper: "Fatigue and recovery score",
       icon: <DirectionsRunIcon />,
-      progress: avgRecovery,
-      color: COLORS.amber,
+      progress: avg("recovery"),
+      color: colors.amber,
     },
     {
-      label: "Sprint Speed",
+      label: "Top Speed",
       value: `${latest.sprint} km/h`,
-      helper: `${sprintChange >= 0 ? "+" : ""}${sprintChange} km/h vs start`,
+      helper: "Latest sprint output",
       icon: <SpeedIcon />,
       progress: Math.min(100, latest.sprint * 3),
-      color: COLORS.purple,
+      color: colors.purple,
     },
   ];
 
+  const riskColor = (risk: string) => {
+    if (risk === "Low") return { bg: "#dcfce7", color: "#166534" };
+    if (risk === "Moderate") return { bg: "#fef3c7", color: "#92400e" };
+    return { bg: "#fee2e2", color: "#991b1b" };
+  };
+
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "#f5f8fc",
-        background:
-          "radial-gradient(circle at 0% 0%, rgba(56,189,248,0.15), transparent 28%), radial-gradient(circle at 100% 0%, rgba(34,197,94,0.12), transparent 28%)",
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
-        {/* Header */}
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={2}
-          alignItems={{ xs: "flex-start", md: "center" }}
           justifyContent="space-between"
+          alignItems={{ xs: "flex-start", md: "center" }}
           sx={{ mb: 3 }}
         >
           <Box>
             <Chip
-              label="Sports Science Command Center"
+              label="Performance Dashboard"
               sx={{
-                mb: 1.5,
                 bgcolor: "#e0f2fe",
                 color: "#0369a1",
                 fontWeight: 900,
+                mb: 1.3,
               }}
             />
 
@@ -227,23 +190,29 @@ const Dashboard: React.FC = () => {
               variant="h3"
               sx={{
                 fontWeight: 950,
-                letterSpacing: -1,
+                letterSpacing: -0.9,
                 color: "#0f172a",
                 fontSize: { xs: "2rem", md: "3rem" },
               }}
             >
-              Athlete Performance Dashboard
+              Athlete Monitoring
             </Typography>
 
-            <Typography color="text.secondary" sx={{ mt: 0.8 }}>
-              Monitor training load, recovery, readiness, sprint output, and injury risk.
+            <Typography color="#64748b" sx={{ mt: 0.75 }}>
+              Readable sports science metrics for load, recovery, readiness, and risk.
             </Typography>
           </Box>
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
             <FormControl size="small" sx={{ minWidth: 150, bgcolor: "#fff" }}>
               <InputLabel>Date Range</InputLabel>
-              <Select value={range} label="Date Range" onChange={handleRange}>
+              <Select
+                value={range}
+                label="Date Range"
+                onChange={(event: SelectChangeEvent) =>
+                  setRange(event.target.value as RangeKey)
+                }
+              >
                 <MenuItem value="7d">Last 7 days</MenuItem>
                 <MenuItem value="30d">Last 30 days</MenuItem>
                 <MenuItem value="90d">Last 90 days</MenuItem>
@@ -251,16 +220,16 @@ const Dashboard: React.FC = () => {
             </FormControl>
 
             <Stack direction="row" spacing={1} flexWrap="wrap">
-              {athleteGroups.map((item) => (
+              {groups.map((item) => (
                 <Chip
                   key={item}
                   label={item}
                   onClick={() => setGroup(item)}
                   sx={{
-                    fontWeight: 800,
-                    bgcolor: group === item ? "#0f172a" : "#fff",
-                    color: group === item ? "#fff" : "#0f172a",
-                    border: "1px solid #e5e7eb",
+                    bgcolor: group === item ? "#0f172a" : "#ffffff",
+                    color: group === item ? "#ffffff" : "#0f172a",
+                    border: "1px solid #e2e8f0",
+                    fontWeight: 850,
                   }}
                 />
               ))}
@@ -268,7 +237,6 @@ const Dashboard: React.FC = () => {
           </Stack>
         </Stack>
 
-        {/* KPI Cards */}
         <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
           {kpis.map((item) => (
             <Grid item xs={12} sm={6} lg={3} key={item.label}>
@@ -277,18 +245,17 @@ const Dashboard: React.FC = () => {
                 sx={{
                   height: "100%",
                   borderRadius: 4,
-                  border: "1px solid #e5e7eb",
-                  boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
+                  bgcolor: "#fff",
+                  border: "1px solid #e2e8f0",
                 }}
               >
                 <CardContent sx={{ p: 3 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Box>
-                      <Typography variant="body2" color="text.secondary" fontWeight={800}>
+                      <Typography color="#64748b" fontWeight={850}>
                         {item.label}
                       </Typography>
-
-                      <Typography variant="h4" fontWeight={950} sx={{ mt: 0.7 }}>
+                      <Typography variant="h4" fontWeight={950} sx={{ mt: 0.5 }}>
                         {item.value}
                       </Typography>
                     </Box>
@@ -302,14 +269,13 @@ const Dashboard: React.FC = () => {
                         placeItems: "center",
                         bgcolor: `${item.color}18`,
                         color: item.color,
-                        "& svg": { fontSize: 30 },
                       }}
                     >
                       {item.icon}
                     </Box>
                   </Stack>
 
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
+                  <Typography color="#64748b" fontSize={14} sx={{ mt: 2, mb: 1 }}>
                     {item.helper}
                   </Typography>
 
@@ -319,7 +285,7 @@ const Dashboard: React.FC = () => {
                     sx={{
                       height: 9,
                       borderRadius: 999,
-                      bgcolor: "#eef2f7",
+                      bgcolor: "#e2e8f0",
                       "& .MuiLinearProgress-bar": {
                         bgcolor: item.color,
                         borderRadius: 999,
@@ -332,7 +298,6 @@ const Dashboard: React.FC = () => {
           ))}
         </Grid>
 
-        {/* Main Charts */}
         <Grid container spacing={2.5}>
           <Grid item xs={12} lg={8}>
             <Card
@@ -340,49 +305,52 @@ const Dashboard: React.FC = () => {
               sx={{
                 height: 420,
                 borderRadius: 4,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
+                bgcolor: "#fff",
+                border: "1px solid #e2e8f0",
               }}
             >
               <CardContent sx={{ height: "100%", p: 3 }}>
                 <Stack direction="row" justifyContent="space-between" sx={{ mb: 2 }}>
                   <Box>
                     <Typography variant="h6" fontWeight={950}>
-                      Performance Trend
+                      Readiness Trend
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Load, readiness, and recovery over selected range
+                    <Typography color="#64748b" fontSize={14}>
+                      Training load, recovery, and readiness over time
                     </Typography>
                   </Box>
 
-                  <Chip label={group} sx={{ bgcolor: "#ecfeff", color: "#0369a1", fontWeight: 900 }} />
+                  <Chip
+                    label={group}
+                    sx={{ bgcolor: "#f1f5f9", color: "#0f172a", fontWeight: 900 }}
+                  />
                 </Stack>
 
                 <ResponsiveContainer width="100%" height="82%">
                   <LineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="day" />
-                    <YAxis domain={[0, 110]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="day" stroke="#64748b" />
+                    <YAxis stroke="#64748b" domain={[0, 110]} />
                     <Tooltip />
                     <Legend />
                     <Line
                       type="monotone"
                       dataKey="readiness"
-                      stroke={COLORS.green}
+                      stroke={colors.green}
                       strokeWidth={3}
                       dot={false}
                     />
                     <Line
                       type="monotone"
                       dataKey="recovery"
-                      stroke={COLORS.amber}
+                      stroke={colors.amber}
                       strokeWidth={3}
                       dot={false}
                     />
                     <Line
                       type="monotone"
                       dataKey="load"
-                      stroke={COLORS.cyan}
+                      stroke={colors.blue}
                       strokeWidth={3}
                       dot={false}
                     />
@@ -398,19 +366,19 @@ const Dashboard: React.FC = () => {
               sx={{
                 height: 420,
                 borderRadius: 4,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
+                bgcolor: "#fff",
+                border: "1px solid #e2e8f0",
               }}
             >
               <CardContent sx={{ height: "100%", p: 3 }}>
                 <Typography variant="h6" fontWeight={950}>
-                  Injury Risk Distribution
+                  Injury Risk
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Based on load spikes and recovery signals
+                <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
+                  Distribution based on recovery and workload
                 </Typography>
 
-                <ResponsiveContainer width="100%" height="78%">
+                <ResponsiveContainer width="100%" height="80%">
                   <PieChart>
                     <Tooltip />
                     <Pie
@@ -421,10 +389,10 @@ const Dashboard: React.FC = () => {
                       outerRadius="82%"
                       paddingAngle={4}
                     >
-                      {injuryRisk.map((entry, index) => (
+                      {injuryRisk.map((item, index) => (
                         <Cell
-                          key={entry.name}
-                          fill={[COLORS.green, COLORS.amber, COLORS.red][index]}
+                          key={item.name}
+                          fill={[colors.green, colors.amber, colors.red][index]}
                         />
                       ))}
                     </Pie>
@@ -439,27 +407,27 @@ const Dashboard: React.FC = () => {
             <Card
               elevation={0}
               sx={{
-                height: 360,
+                height: 350,
                 borderRadius: 4,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
+                bgcolor: "#fff",
+                border: "1px solid #e2e8f0",
               }}
             >
               <CardContent sx={{ height: "100%", p: 3 }}>
                 <Typography variant="h6" fontWeight={950}>
-                  Training Zone Minutes
+                  Training Zones
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Intensity distribution across sessions
+                <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
+                  Minutes spent across intensity zones
                 </Typography>
 
                 <ResponsiveContainer width="100%" height="78%">
                   <BarChart data={trainingZones}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="zone" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="zone" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
                     <Tooltip />
-                    <Bar dataKey="minutes" fill={COLORS.blue} radius={[10, 10, 0, 0]} />
+                    <Bar dataKey="minutes" fill={colors.blue} radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -470,31 +438,31 @@ const Dashboard: React.FC = () => {
             <Card
               elevation={0}
               sx={{
-                height: 360,
+                height: 350,
                 borderRadius: 4,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
+                bgcolor: "#fff",
+                border: "1px solid #e2e8f0",
               }}
             >
               <CardContent sx={{ height: "100%", p: 3 }}>
                 <Typography variant="h6" fontWeight={950}>
                   Athletic Profile
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Composite score across key performance pillars
+                <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
+                  Composite view across performance pillars
                 </Typography>
 
                 <ResponsiveContainer width="100%" height="78%">
-                  <RadarChart data={radarData}>
+                  <RadarChart data={athleticProfile}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="metric" />
                     <PolarRadiusAxis domain={[0, 100]} />
                     <Radar
                       name="Score"
-                      dataKey="value"
-                      stroke={COLORS.purple}
-                      fill={COLORS.purple}
-                      fillOpacity={0.35}
+                      dataKey="score"
+                      stroke={colors.purple}
+                      fill={colors.purple}
+                      fillOpacity={0.28}
                     />
                     <Tooltip />
                   </RadarChart>
@@ -507,36 +475,36 @@ const Dashboard: React.FC = () => {
             <Card
               elevation={0}
               sx={{
-                height: 360,
+                height: 350,
                 borderRadius: 4,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
+                bgcolor: "#fff",
+                border: "1px solid #e2e8f0",
               }}
             >
               <CardContent sx={{ height: "100%", p: 3 }}>
                 <Typography variant="h6" fontWeight={950}>
                   Sprint Output
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Top speed trend across recent sessions
+                <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
+                  Latest top-speed development
                 </Typography>
 
                 <ResponsiveContainer width="100%" height="78%">
                   <AreaChart data={data}>
                     <defs>
                       <linearGradient id="sprintFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.cyan} stopOpacity={0.4} />
-                        <stop offset="95%" stopColor={COLORS.cyan} stopOpacity={0.02} />
+                        <stop offset="5%" stopColor={colors.cyan} stopOpacity={0.35} />
+                        <stop offset="95%" stopColor={colors.cyan} stopOpacity={0.03} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="day" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
                     <Tooltip />
                     <Area
                       type="monotone"
                       dataKey="sprint"
-                      stroke={COLORS.cyan}
+                      stroke={colors.cyan}
                       strokeWidth={3}
                       fill="url(#sprintFill)"
                     />
@@ -550,89 +518,64 @@ const Dashboard: React.FC = () => {
             <Card
               elevation={0}
               sx={{
+                minHeight: 350,
                 height: "100%",
-                minHeight: 360,
                 borderRadius: 4,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
+                bgcolor: "#fff",
+                border: "1px solid #e2e8f0",
               }}
             >
               <CardContent sx={{ p: 3 }}>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                  <WarningAmberIcon sx={{ color: COLORS.amber }} />
+                  <WarningAmberIcon sx={{ color: colors.amber }} />
                   <Typography variant="h6" fontWeight={950}>
                     Athlete Watchlist
                   </Typography>
                 </Stack>
 
                 <Stack spacing={1.5}>
-                  {teamTable.map((athlete) => (
-                    <Box
-                      key={athlete.name}
-                      sx={{
-                        p: 2,
-                        borderRadius: 3,
-                        bgcolor: "#f8fafc",
-                        border: "1px solid #e5e7eb",
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        spacing={2}
+                  {watchlist.map((athlete) => {
+                    const risk = riskColor(athlete.risk);
+
+                    return (
+                      <Box
+                        key={athlete.name}
+                        sx={{
+                          p: 2,
+                          borderRadius: 3,
+                          bgcolor: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                        }}
                       >
-                        <Box>
-                          <Typography fontWeight={950}>{athlete.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {athlete.role}
-                          </Typography>
-                        </Box>
+                        <Stack direction="row" justifyContent="space-between" spacing={1.5}>
+                          <Box>
+                            <Typography fontWeight={950}>{athlete.name}</Typography>
+                            <Typography color="#64748b" fontSize={14}>
+                              {athlete.role}
+                            </Typography>
+                          </Box>
 
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Chip
-                            label={`${athlete.readiness}%`}
-                            size="small"
-                            sx={{
-                              bgcolor:
-                                athlete.readiness >= 80
-                                  ? "#dcfce7"
-                                  : athlete.readiness >= 70
-                                  ? "#fef3c7"
-                                  : "#fee2e2",
-                              color:
-                                athlete.readiness >= 80
-                                  ? "#166534"
-                                  : athlete.readiness >= 70
-                                  ? "#92400e"
-                                  : "#991b1b",
-                              fontWeight: 900,
-                            }}
-                          />
+                          <Stack direction="row" spacing={1}>
+                            <Chip
+                              label={`${athlete.readiness}%`}
+                              size="small"
+                              sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 900 }}
+                            />
 
-                          <Chip
-                            label={athlete.risk}
-                            size="small"
-                            sx={{
-                              fontWeight: 900,
-                              bgcolor:
-                                athlete.risk === "Low"
-                                  ? "#ecfdf5"
-                                  : athlete.risk === "Moderate"
-                                  ? "#fffbeb"
-                                  : "#fef2f2",
-                              color:
-                                athlete.risk === "Low"
-                                  ? "#047857"
-                                  : athlete.risk === "Moderate"
-                                  ? "#b45309"
-                                  : "#b91c1c",
-                            }}
-                          />
+                            <Chip
+                              label={athlete.risk}
+                              size="small"
+                              sx={{
+                                bgcolor: risk.bg,
+                                color: risk.color,
+                                fontWeight: 900,
+                              }}
+                            />
+                          </Stack>
                         </Stack>
-                      </Stack>
-                    </Box>
-                  ))}
+                      </Box>
+                    );
+                  })}
                 </Stack>
 
                 <Box
@@ -646,14 +589,14 @@ const Dashboard: React.FC = () => {
                 >
                   <Stack direction="row" spacing={1} alignItems="center">
                     <PsychologyIcon sx={{ color: "#2563eb" }} />
-                    <Typography fontWeight={950} color="#1d4ed8">
-                      AI Coach Note
+                    <Typography color="#1d4ed8" fontWeight={950}>
+                      AI Recommendation
                     </Typography>
                   </Stack>
 
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.7 }}>
-                    Reduce heavy sprint volume for high-risk athletes and move
-                    them into recovery-focused technical drills.
+                  <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
+                    Keep high-risk athletes below peak sprint load today. Prioritize
+                    mobility, low-intensity skill work, and recovery monitoring.
                   </Typography>
                 </Box>
               </CardContent>
