@@ -1,0 +1,27 @@
+Technical future enhancements
+
+1. Conversation memory 
+    Currently the chatbot memory is not persistent, whenever the app is refreshed or reloaded memory is wiped. 
+    ##To avoid this - connect checkpointer memory to persistent databases such as postgres, mysql.
+
+2. Access to conversation history - Both UI and API implementation
+    Add conversation panel on the left side of chatbot UI. 
+    Implementat API and connect conversation panel.
+
+3. Prompt tuning
+    Fine tune the prompts for better LLM understanding.
+
+
+4. Code refactoring
+    Create a modularized code.
+
+App future enhancements
+
+1. Broader user age group
+    Improve the chatbot prompts to be unique based on the user's age group. 
+
+2. Mobile App
+    iOS & Android versions for easier access.
+
+3. School Integration
+    Connect with school counseling resources to better support students.
