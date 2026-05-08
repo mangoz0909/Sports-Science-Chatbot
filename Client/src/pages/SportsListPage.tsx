@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SportsTennisIcon from "@mui/icons-material/SportsTennis";
-import { Sport, sports } from "./sportsData";
+import { Sport, sports } from "../data/sportsData";
 
 type SportsFinderProps = {
   compact?: boolean;
