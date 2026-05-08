@@ -74,6 +74,14 @@ const workspaceCards = [
     color: "#8b5cf6",
   },
   {
+    title: "Sports Matching Engine",
+    desc: "Search one sport and discover similar sports based on movement, equipment, intensity, and sport science profile.",
+    icon: <SportsSoccerIcon />,
+    to: "/sports-list",
+    cta: "Find Sports",
+    color: "#f59e0b",
+  },
+  {
     title: "Athlete Dashboard",
     desc: "Explore performance, recovery, workload, injury risk, and team readiness visuals.",
     icon: <AnalyticsIcon />,
@@ -218,8 +226,8 @@ const Home: React.FC = () => {
                       }}
                     >
                       SportLab AI helps athletes, coaches, and students explore
-                      training load, recovery, readiness, sports rules, and mental
-                      performance through a clean AI-powered interface.
+                      training load, recovery, readiness, sport matching, sports rules,
+                      and mental performance through a clean AI-powered interface.
                     </Typography>
                   </MotionBox>
 

@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./AiChatHome.css";
 
 type QuickAction = {
@@ -17,8 +18,10 @@ type AiChatHomeProps = {
   quickActions: QuickAction[];
   examplesTitle: string;
   examples: string[];
-  footerNote?: React.ReactNode;
-  apiEndpoint?: string;
+  footerNote?: ReactNode;
+  model?: string;
+  systemPrompt?: string;
+  sideContent?: ReactNode;
 };
 
 type ChatMessage = {
@@ -52,61 +55,115 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionConstructorLike = new () => SpeechRecognitionLike;
 
+type PuterChatResponse =
+  | string
+  | {
+      text?: string;
+      message?: {
+        content?: Array<{ text?: string }> | string;
+      };
+    };
+
 declare global {
   interface Window {
     SpeechRecognition?: SpeechRecognitionConstructorLike;
     webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
+    puter?: {
+      ai?: {
+        chat?: (prompt: string, options?: { model?: string }) => Promise<PuterChatResponse>;
+      };
+    };
   }
 }
 
+const PUTER_SCRIPT_ID = "puter-js-v2";
+const DEFAULT_MODEL = "claude-sonnet-4-6";
+
+function loadPuterScript() {
+  return new Promise<void>((resolve, reject) => {
+    if (window.puter?.ai?.chat) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.getElementById(PUTER_SCRIPT_ID) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Failed to load Puter.js.")), {
+        once: true,
+      });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = PUTER_SCRIPT_ID;
+    script.src = "https://js.puter.com/v2/";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Puter.js."));
+    document.body.appendChild(script);
+  });
+}
+
+function extractPuterText(response: PuterChatResponse) {
+  if (typeof response === "string") return response;
+  if (response?.text) return response.text;
+
+  const content = response?.message?.content;
+
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map((item) => item.text).filter(Boolean).join("\n");
+  }
+
+  return "No response received.";
+}
+
 function formatBotMessage(content: string) {
-  return content
-    .split("\n")
-    .map((line, index) => {
-      const trimmed = line.trim();
+  return content.split("\n").map((line, index) => {
+    const trimmed = line.trim();
 
-      if (!trimmed) {
-        return <br key={index} />;
-      }
+    if (!trimmed) return <br key={index} />;
 
-      if (trimmed.startsWith("### ")) {
-        return (
-          <h3 key={index} className="markdown-heading">
-            {trimmed.replace("### ", "")}
-          </h3>
-        );
-      }
-
-      if (trimmed.startsWith("## ")) {
-        return (
-          <h2 key={index} className="markdown-heading">
-            {trimmed.replace("## ", "")}
-          </h2>
-        );
-      }
-
-      if (trimmed.startsWith("# ")) {
-        return (
-          <h1 key={index} className="markdown-heading">
-            {trimmed.replace("# ", "")}
-          </h1>
-        );
-      }
-
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        return (
-          <div key={index} className="markdown-list-item">
-            • {trimmed.slice(2)}
-          </div>
-        );
-      }
-
+    if (trimmed.startsWith("### ")) {
       return (
-        <p key={index} className="markdown-paragraph">
-          {trimmed}
-        </p>
+        <h3 key={index} className="markdown-heading">
+          {trimmed.replace("### ", "")}
+        </h3>
       );
-    });
+    }
+
+    if (trimmed.startsWith("## ")) {
+      return (
+        <h2 key={index} className="markdown-heading">
+          {trimmed.replace("## ", "")}
+        </h2>
+      );
+    }
+
+    if (trimmed.startsWith("# ")) {
+      return (
+        <h1 key={index} className="markdown-heading">
+          {trimmed.replace("# ", "")}
+        </h1>
+      );
+    }
+
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      return (
+        <div key={index} className="markdown-list-item">
+          • {trimmed.slice(2)}
+        </div>
+      );
+    }
+
+    return (
+      <p key={index} className="markdown-paragraph">
+        {trimmed}
+      </p>
+    );
+  });
 }
 
 export default function AiChatHome({
@@ -121,18 +178,43 @@ export default function AiChatHome({
   examplesTitle,
   examples,
   footerNote,
-  apiEndpoint = "/ask",
+  model = DEFAULT_MODEL,
+  systemPrompt,
+  sideContent,
 }: AiChatHomeProps) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState("");
+  const [puterReady, setPuterReady] = useState(false);
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const canSend = message.trim().length > 0 && !isLoading;
+
+  const defaultSystemPrompt = useMemo(
+    () =>
+      "You are SportLab AI, a concise sports science assistant. Explain sports rules, training, recovery, injury-risk concepts, athlete readiness, tactics, nutrition basics, and mental performance clearly. Avoid medical diagnosis. Tell users to seek qualified professional help for injuries, emergencies, or severe mental health concerns.",
+    []
+  );
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadPuterScript()
+      .then(() => {
+        if (mounted) setPuterReady(true);
+      })
+      .catch(() => {
+        if (mounted) setError("Puter.js failed to load. Check your connection and script permissions.");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     chatBoxRef.current?.scrollTo({
@@ -148,7 +230,6 @@ export default function AiChatHome({
     if (!SpeechRecognitionConstructor) return;
 
     const recognition = new SpeechRecognitionConstructor();
-
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -168,15 +249,10 @@ export default function AiChatHome({
       setError("Voice input failed. Please type your message instead.");
     };
 
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
+    recognition.onend = () => setIsRecording(false);
     recognitionRef.current = recognition;
 
-    return () => {
-      recognition.stop();
-    };
+    return () => recognition.stop();
   }, []);
 
   const handleMicClick = () => {
@@ -190,9 +266,24 @@ export default function AiChatHome({
     recognitionRef.current.start();
   };
 
+  const buildPrompt = (userMessage: string) => {
+    const recentHistory = messages
+      .slice(-8)
+      .map((item) => `${item.role === "user" ? "User" : "Assistant"}: ${item.content}`)
+      .join("\n");
+
+    return [
+      `System: ${systemPrompt || defaultSystemPrompt}`,
+      recentHistory ? `Recent conversation:\n${recentHistory}` : "",
+      `User: ${userMessage}`,
+      "Assistant:",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  };
+
   const submitMessage = async (text: string) => {
     const userMessage = text.trim();
-
     if (!userMessage || isLoading) return;
 
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
@@ -201,35 +292,25 @@ export default function AiChatHome({
     setError("");
 
     try {
-      const response = await fetch(apiEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `message=${encodeURIComponent(userMessage)}`,
-      });
+      await loadPuterScript();
 
-      if (!response.ok) {
-        throw new Error("Request failed");
+      if (!window.puter?.ai?.chat) {
+        throw new Error("Puter AI is unavailable.");
       }
 
-      const data: { reply?: string } = await response.json();
+      const response = await window.puter.ai.chat(buildPrompt(userMessage), { model });
+      const reply = extractPuterText(response);
 
+      setPuterReady(true);
+      setMessages((prev) => [...prev, { role: "bot", content: reply }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI request failed. Try again.");
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          content: data.reply || "No response received.",
-        },
-      ]);
-    } catch {
-      setError("Could not connect to the assistant. Please check your server.");
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "bot",
-          content: "Sorry, I could not process that request right now.",
+          content:
+            "I could not connect to Puter.js right now. Check that https://js.puter.com/v2/ is allowed and retry.",
         },
       ]);
     } finally {
@@ -242,10 +323,6 @@ export default function AiChatHome({
     submitMessage(message);
   };
 
-  const handleQuickAsk = (prompt: string) => {
-    submitMessage(prompt);
-  };
-
   return (
     <main className="ai-page">
       <section className="ai-shell">
@@ -253,9 +330,8 @@ export default function AiChatHome({
           <header className="chat-header">
             <div className="brand-block">
               <img src={logoSrc} alt={`${title} logo`} className="brand-logo" />
-
               <div>
-                <p className="eyebrow">AI Assistant</p>
+                <p className="eyebrow">AI Assistant • {puterReady ? "Puter Ready" : "Loading Puter"}</p>
                 <h1>{title}</h1>
               </div>
             </div>
@@ -273,9 +349,7 @@ export default function AiChatHome({
             {messages.map((item, index) => (
               <div
                 key={`${item.role}-${index}`}
-                className={`message ${
-                  item.role === "user" ? "user-message" : "bot-message"
-                }`}
+                className={`message ${item.role === "user" ? "user-message" : "bot-message"}`}
               >
                 {item.role === "bot" ? formatBotMessage(item.content) : item.content}
               </div>
@@ -311,12 +385,7 @@ export default function AiChatHome({
                 🎤
               </button>
 
-              <button
-                type="submit"
-                className="send-btn"
-                disabled={!canSend}
-                aria-label="Send message"
-              >
+              <button type="submit" className="send-btn" disabled={!canSend} aria-label="Send message">
                 ↑
               </button>
             </div>
@@ -324,16 +393,13 @@ export default function AiChatHome({
         </section>
 
         <aside className="side-panel">
+          {sideContent && <section className="panel-section side-custom">{sideContent}</section>}
+
           <section className="panel-section">
             <h3>{toolsTitle}</h3>
-
             <div className="quick-grid">
               {quickActions.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  onClick={() => handleQuickAsk(action.prompt)}
-                >
+                <button key={action.label} type="button" onClick={() => submitMessage(action.prompt)}>
                   {action.label}
                 </button>
               ))}
@@ -342,13 +408,11 @@ export default function AiChatHome({
 
           <section className="panel-section">
             <h3>{examplesTitle}</h3>
-
             <ul>
               {examples.map((example) => (
                 <li key={example}>{example}</li>
               ))}
             </ul>
-
             {footerNote && <div className="chat-footer-note">{footerNote}</div>}
           </section>
         </aside>

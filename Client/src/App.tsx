@@ -9,7 +9,9 @@ import Home from "./pages/Home";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import SportsHome from "./pages/SportsHome";
+import SportsListPage from "./pages/SportsListPage";
 import MentalHealthHome from "./pages/MentalHealthHome";
+import ProfilePage from "./pages/ProfilePage";
 
 const App: React.FC = () => {
   return (
@@ -42,6 +44,9 @@ const App: React.FC = () => {
           "img, svg, video, canvas": {
             maxWidth: "100%",
           },
+          a: {
+            textDecoration: "none",
+          },
         }}
       />
 
@@ -54,7 +59,9 @@ const App: React.FC = () => {
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/sports" element={<SportsHome />} />
+            <Route path="/sports-list" element={<SportsListPage />} />
             <Route path="/mental-health" element={<MentalHealthHome />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Box>

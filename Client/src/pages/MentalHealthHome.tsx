@@ -3,43 +3,33 @@ import AiChatHome from "../components/AiChatHome";
 export default function MentalHealthHome() {
   return (
     <AiChatHome
-      title="MangoMind🥭 AI — Mental Health Chatbot"
+      title="MangoMind AI — Mental Health Support"
       logoSrc="/static/mental_logo.png"
       emptyIcon="🧠"
-      emptyTitle="Ask anything about mental health"
-      emptySubtitle="General Health QA • Mental Health Suggestions • Emotional Support • Emergency Support"
+      emptyTitle="Ask for general mental wellbeing support"
+      emptySubtitle="Stress • Confidence • Focus • Emotional Support • Emergency Direction"
       inputPlaceholder="Message Mental Health Assistant"
       toolsTitle="Quick Mental Health Tools"
+      model="claude-haiku-4-5"
+      systemPrompt="You are MangoMind, a supportive wellbeing assistant. Give general mental health information, stress-management strategies, emotional support, and practical coping steps. Do not diagnose. For emergencies, self-harm risk, or immediate danger, tell the user to call local emergency services or a trusted person now."
       quickActions={[
-        {
-          label: "Calming Strategy",
-          prompt: "How to calm myself down?",
-        },
-        {
-          label: "Anxiety Solutions",
-          prompt: "Teach me how to manage my anxiety",
-        },
-        {
-          label: "Mental Health Tips",
-          prompt: "How to improve my mental health",
-        },
-        {
-          label: "Lifestyle Suggestions",
-          prompt: "Give me some lifestyle suggestions that will improve my mental health",
-        },
+        { label: "Calming Strategy", prompt: "How can I calm myself down right now?" },
+        { label: "Anxiety Support", prompt: "Teach me how to manage anxiety before a match." },
+        { label: "Confidence Routine", prompt: "Give me a pre-game confidence routine." },
+        { label: "Lifestyle Suggestions", prompt: "Give me lifestyle suggestions to support mental wellbeing." },
       ]}
       examplesTitle="Example Questions"
       examples={[
-        "What are some common mental disorders?",
-        "How do I know if I need mental support?",
-        "What should I do if I have no one to talk to?",
-        "How can I help others with mental health issues?",
+        "How do I handle performance anxiety?",
+        "What should I do if I feel overwhelmed?",
+        "How can an athlete improve focus?",
+        "How can I support a teammate who is stressed?",
       ]}
       footerNote={
         <>
-          🔒 Your conversations are private
+          🔒 Your conversations run client-side through Puter.js.
           <br />
-          🚨 In case of emergency, call your local emergency hotline.
+          🚨 In an emergency, call your local emergency hotline immediately.
         </>
       }
     />
