@@ -4,7 +4,7 @@ import { Box, CssBaseline, GlobalStyles } from "@mui/material";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-
+import DailyCheckIn from "./pages/DailyCheckIn";
 import Home from "./pages/Home";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
@@ -63,6 +63,7 @@ const App: React.FC = () => {
             <Route path="/mental-health" element={<MentalHealthHome />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/daily-check-in" element={<DailyCheckIn />} />
           </Routes>
         </Box>
 

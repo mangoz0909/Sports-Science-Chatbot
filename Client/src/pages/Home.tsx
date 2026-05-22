@@ -58,6 +58,14 @@ const capabilities = [
 
 const workspaceCards = [
   {
+    title: "Daily Athlete Check-In",
+    desc: "Log your daily sleep, fatigue, soreness, hydration, recovery, training intensity, and wellness data.",
+    icon: <MonitorHeartIcon />,
+    to: "/daily-check-in",
+    cta: "Open Check-In",
+    color: "#ec4899",
+  },
+  {
     title: "Sports AI Assistant",
     desc: "Ask about rules, tactics, drills, coaching cues, match strategy, and sports science.",
     icon: <SportsCricketIcon />,

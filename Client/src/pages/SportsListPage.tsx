@@ -6,14 +6,10 @@ import {
   Chip,
   Container,
   Grid,
-  InputAdornment,
-  LinearProgress,
-  MenuItem,
+  Slider,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
 import SportsTennisIcon from "@mui/icons-material/SportsTennis";
 import { Sport, sports } from "../data/sportsData";
 
@@ -21,148 +17,188 @@ type SportsFinderProps = {
   compact?: boolean;
 };
 
-const categories = ["All", ...Array.from(new Set(sports.map((sport) => sport.category)))];
+const questions = [
+  { key: "teamwork", label: "Teamwork", description: "Do you enjoy team-based sports?" },
+  { key: "intensity", label: "Intensity", description: "How physically intense do you want the sport to be?" },
+  { key: "contact", label: "Contact", description: "Are you comfortable with contact or collision?" },
+  { key: "strategy", label: "Strategy", description: "Do you enjoy tactics and decision-making?" },
+  { key: "endurance", label: "Endurance", description: "Do you like long-lasting physical effort?" },
+  { key: "speed", label: "Speed", description: "Do you like fast reactions and quick movement?" },
+  { key: "coordination", label: "Coordination", description: "Do you like hand-eye coordination skills?" },
+  { key: "equipment", label: "Equipment", description: "Are you okay using gear or equipment?" },
+] as const;
 
-function normalize(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+type SurveyKey = (typeof questions)[number]["key"];
+type SurveyAnswers = Record<SurveyKey, number>;
+
+const defaultAnswers: SurveyAnswers = {
+  teamwork: 5,
+  intensity: 5,
+  contact: 5,
+  strategy: 5,
+  endurance: 5,
+  speed: 5,
+  coordination: 5,
+  equipment: 5,
+};
+
+function getSportProfile(sport: Sport): SurveyAnswers {
+  const name = sport.name.toLowerCase();
+  const category = sport.category.toLowerCase();
+  const tags = sport.similarityTags.join(" ").toLowerCase();
+  const text = `${name} ${category} ${tags}`;
+
+  return {
+    teamwork:
+      text.includes("team") || text.includes("football") || text.includes("basketball") || text.includes("soccer")
+        ? 9
+        : 3,
+
+    intensity:
+      text.includes("running") || text.includes("football") || text.includes("basketball") || text.includes("soccer")
+        ? 9
+        : 6,
+
+    contact:
+      text.includes("football") || text.includes("rugby") || text.includes("wrestling")
+        ? 9
+        : text.includes("basketball") || text.includes("soccer")
+        ? 5
+        : 2,
+
+    strategy:
+      text.includes("tennis") || text.includes("baseball") || text.includes("basketball") || text.includes("soccer")
+        ? 8
+        : 6,
+
+    endurance:
+      text.includes("running") || text.includes("soccer") || text.includes("swimming") || text.includes("cycling")
+        ? 9
+        : 5,
+
+    speed:
+      text.includes("tennis") || text.includes("basketball") || text.includes("soccer") || text.includes("badminton")
+        ? 9
+        : 6,
+
+    coordination:
+      text.includes("tennis") || text.includes("baseball") || text.includes("golf") || text.includes("badminton")
+        ? 9
+        : 6,
+
+    equipment:
+      text.includes("tennis") || text.includes("baseball") || text.includes("golf") || text.includes("hockey")
+        ? 8
+        : 3,
+  };
 }
 
-function levenshtein(a: string, b: string) {
-  const matrix = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+function surveyMatchScore(answers: SurveyAnswers, profile: SurveyAnswers) {
+  const keys = Object.keys(answers) as SurveyKey[];
 
-  for (let j = 1; j <= b.length; j += 1) matrix[0][j] = j;
+  const totalDifference = keys.reduce((sum, key) => {
+    return sum + Math.abs(answers[key] - profile[key]);
+  }, 0);
 
-  for (let i = 1; i <= a.length; i += 1) {
-    for (let j = 1; j <= b.length; j += 1) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
-    }
-  }
+  const maxDifference = keys.length * 9;
 
-  return matrix[a.length][b.length];
-}
-
-function textSimilarity(query: string, sport: Sport) {
-  const q = normalize(query);
-  if (!q) return 0.72;
-
-  const name = normalize(sport.name);
-  const haystack = normalize([sport.name, sport.category, sport.description, ...sport.similarityTags].join(" "));
-
-  let score = 0;
-
-  if (name === q) score += 1.2;
-  if (name.includes(q)) score += 0.75;
-  if (haystack.includes(q)) score += 0.5;
-
-  const words = q.split(" ").filter(Boolean);
-  const matchedWords = words.filter((word) => haystack.includes(word)).length;
-  score += matchedWords * 0.22;
-
-  const minDistance = Math.min(
-    ...[name, ...sport.similarityTags.map(normalize)].map((candidate) =>
-      levenshtein(q, candidate.slice(0, Math.max(q.length, 1)))
-    )
-  );
-
-  score += Math.max(0, 0.36 - minDistance * 0.06);
-
-  return Math.min(1, score);
-}
-
-function getRelatedBoost(query: string, sport: Sport) {
-  const q = normalize(query);
-  const exactSport = sports.find((item) => normalize(item.name).includes(q) || item.id === q);
-
-  if (!q || !exactSport || exactSport.id === sport.id) return 0;
-
-  const sharedTags = sport.similarityTags.filter((tag) => exactSport.similarityTags.includes(tag)).length;
-  const sameCategory = sport.category === exactSport.category ? 0.24 : 0;
-
-  return Math.min(0.55, sharedTags * 0.075 + sameCategory);
+  return Math.round((1 - totalDifference / maxDifference) * 100);
 }
 
 export function SportsFinder({ compact = false }: SportsFinderProps) {
-  const [query, setQuery] = React.useState("tennis");
-  const [category, setCategory] = React.useState("All");
+  const [answers, setAnswers] = React.useState<SurveyAnswers>(defaultAnswers);
 
   const rankedSports = React.useMemo(() => {
     return sports
-      .filter((sport) => category === "All" || sport.category === category)
       .map((sport) => {
-        const score = Math.round((textSimilarity(query, sport) + getRelatedBoost(query, sport)) * 100);
-        return { ...sport, matchScore: Math.min(100, score) };
+        const profile = getSportProfile(sport);
+        const matchScore = surveyMatchScore(answers, profile);
+        return { ...sport, matchScore };
       })
-      .filter((sport) => !query.trim() || sport.matchScore >= 18)
       .sort((a, b) => b.matchScore - a.matchScore || a.name.localeCompare(b.name));
-  }, [category, query]);
+  }, [answers]);
 
-  const maxItems = compact ? 5 : rankedSports.length;
-  const visibleSports = rankedSports.slice(0, maxItems);
+  const visibleSports = rankedSports.slice(0, compact ? 5 : 9);
 
   return (
     <Box className={compact ? "sports-finder-compact" : undefined}>
-      <Stack spacing={compact ? 1.5 : 2.5}>
-        <Box>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2.5,
-                display: "grid",
-                placeItems: "center",
-                bgcolor: "#e0f2fe",
-                color: "#0284c7",
-              }}
-            >
-              <SportsTennisIcon />
-            </Box>
-            <Box>
-              <Typography variant={compact ? "h6" : "h4"} fontWeight={950}>
-                Sports Finder
-              </Typography>
-              <Typography color="#64748b" fontSize={compact ? 13 : 15}>
-                Search one sport and get close alternatives.
-              </Typography>
-            </Box>
-          </Stack>
-        </Box>
-
-        <Stack direction={compact ? "column" : { xs: "column", md: "row" }} spacing={1.2}>
-          <TextField
-            fullWidth
-            size="small"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search tennis, football, cricket..."
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
+      <Stack spacing={compact ? 2 : 3}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              borderRadius: 2.5,
+              display: "grid",
+              placeItems: "center",
+              bgcolor: "#e0f2fe",
+              color: "#0284c7",
             }}
-          />
-
-          <TextField
-            select
-            size="small"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            sx={{ minWidth: compact ? "100%" : 190 }}
           >
-            {categories.map((item) => (
-              <MenuItem key={item} value={item}>
-                {item}
-              </MenuItem>
-            ))}
-          </TextField>
+            <SportsTennisIcon />
+          </Box>
+
+          <Box>
+            <Typography variant={compact ? "h6" : "h4"} fontWeight={950}>
+              Sports Match Survey
+            </Typography>
+            <Typography color="#64748b" fontSize={compact ? 13 : 15}>
+              Rate yourself from 1–10 and get matched sports.
+            </Typography>
+          </Box>
         </Stack>
+
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 4,
+            border: "1px solid #e2e8f0",
+            bgcolor: "#ffffff",
+          }}
+        >
+          <CardContent sx={{ p: compact ? 2 : 3 }}>
+            <Grid container spacing={compact ? 1.5 : 2.5}>
+              {questions.map((question) => (
+                <Grid item xs={12} md={compact ? 12 : 6} key={question.key}>
+                  <Stack spacing={0.7}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography fontWeight={900}>{question.label}</Typography>
+                        <Typography color="#64748b" fontSize={13}>
+                          {question.description}
+                        </Typography>
+                      </Box>
+
+                      <Chip
+                        label={answers[question.key]}
+                        size="small"
+                        sx={{
+                          bgcolor: "#eff6ff",
+                          color: "#1d4ed8",
+                          fontWeight: 950,
+                        }}
+                      />
+                    </Stack>
+
+                    <Slider
+                      value={answers[question.key]}
+                      min={1}
+                      max={10}
+                      step={1}
+                      marks
+                      onChange={(_, value) =>
+                        setAnswers((prev) => ({
+                          ...prev,
+                          [question.key]: value as number,
+                        }))
+                      }
+                    />
+                  </Stack>
+                </Grid>
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
 
         <Grid container spacing={compact ? 1.2 : 2}>
           {visibleSports.map((sport) => (
@@ -187,6 +223,7 @@ export function SportsFinder({ compact = false }: SportsFinderProps) {
                         </Typography>
                       </Box>
                     </Stack>
+
                     <Chip
                       size="small"
                       label={`${sport.matchScore}%`}
@@ -194,19 +231,7 @@ export function SportsFinder({ compact = false }: SportsFinderProps) {
                     />
                   </Stack>
 
-                  <LinearProgress
-                    variant="determinate"
-                    value={sport.matchScore}
-                    sx={{
-                      my: 1.5,
-                      height: 8,
-                      borderRadius: 999,
-                      bgcolor: "#e2e8f0",
-                      "& .MuiLinearProgress-bar": { borderRadius: 999, bgcolor: "#22c55e" },
-                    }}
-                  />
-
-                  <Typography color="#475569" fontSize={compact ? 13 : 14} lineHeight={1.65}>
+                  <Typography sx={{ mt: 1.5 }} color="#475569" fontSize={compact ? 13 : 14} lineHeight={1.65}>
                     {sport.description}
                   </Typography>
 
@@ -217,6 +242,7 @@ export function SportsFinder({ compact = false }: SportsFinderProps) {
                           <Chip key={item} size="small" label={item} sx={{ bgcolor: "#f1f5f9", fontWeight: 800 }} />
                         ))}
                       </Stack>
+
                       <Typography sx={{ mt: 1.5 }} color="#0f172a" fontSize={14} fontWeight={850}>
                         Starter drill: {sport.beginnerDrill}
                       </Typography>
@@ -241,12 +267,14 @@ export default function SportsListPage() {
             label="Sport Matching Engine"
             sx={{ width: "fit-content", bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 950 }}
           />
+
           <Typography variant="h3" sx={{ fontWeight: 950, letterSpacing: -0.9 }}>
-            Find the closest sports to your search.
+            Find your best-fit sport.
           </Typography>
+
           <Typography color="#64748b" maxWidth={760} lineHeight={1.8}>
-            The search ranks direct matches first, then related sports using category overlap, movement pattern,
-            equipment, training demand, and sport-science similarity tags.
+            Answer a short preference and sport-science survey. The system compares your answers to each sport’s
+            profile and ranks the closest matches.
           </Typography>
         </Stack>
 
