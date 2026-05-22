@@ -22,6 +22,8 @@ import RestaurantIcon from "@mui/icons-material/Restaurant";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 
+import { createDailyCheckIn } from "../services/checkinService";
+
 type CheckInData = {
   sleepHours: number;
   sleepQuality: number;
@@ -144,7 +146,7 @@ function getAIAdvice(data: CheckInData) {
   const injuryRisk = calculateInjuryRisk(data);
 
   if (data.painLevel >= 7) {
-    return "High pain reported. Avoid intense training today and focus on recovery or consult a trainer.";
+    return "High pain reported. Avoid intense training today and consider speaking with a qualified professional.";
   }
 
   if (injuryRisk >= 65) {
@@ -152,7 +154,7 @@ function getAIAdvice(data: CheckInData) {
   }
 
   if (data.sleepHours < 7 || data.sleepQuality <= 5) {
-    return "Sleep is limiting your recovery. Keep training light and aim for 8+ hours tonight.";
+    return "Sleep is limiting your recovery. Keep training light and aim for better sleep tonight.";
   }
 
   if (data.fatigue >= 7 || data.soreness >= 7) {
@@ -169,6 +171,8 @@ function getAIAdvice(data: CheckInData) {
 export default function DailyCheckIn() {
   const [data, setData] = React.useState<CheckInData>(defaultData);
   const [submitted, setSubmitted] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const readiness = calculateReadiness(data);
   const injuryRisk = calculateInjuryRisk(data);
@@ -180,6 +184,38 @@ export default function DailyCheckIn() {
       [key]: value,
     }));
     setSubmitted(false);
+    setError(null);
+  };
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await createDailyCheckIn({
+        sleep_hours: data.sleepHours,
+        sleep_quality: data.sleepQuality,
+        energy: data.energy,
+        soreness: data.soreness,
+        fatigue: data.fatigue,
+        stress: data.stress,
+        mood: data.mood,
+        hydration: data.hydration,
+        nutrition: data.nutrition,
+        training_intensity: data.trainingIntensity,
+        pain_level: data.painLevel,
+        notes: data.notes,
+        readiness_score: readiness,
+        recovery_score: recovery,
+        injury_risk: injuryRisk,
+      });
+
+      setSubmitted(true);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save daily check-in.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const summaryCards = [
@@ -236,10 +272,22 @@ export default function DailyCheckIn() {
           </Typography>
 
           <Typography color="#64748b" maxWidth={760} lineHeight={1.8}>
-            Enter your daily sleep, recovery, training, nutrition, and injury data. Your AI coach will estimate readiness,
-            recovery, and injury risk.
+            Enter your daily sleep, recovery, training, nutrition, and injury data.
+            Your AI coach will estimate readiness, recovery, and injury risk.
           </Typography>
         </Stack>
+
+        {submitted && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Daily check-in saved successfully.
+          </Alert>
+        )}
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
           {summaryCards.map((card) => (
@@ -295,7 +343,11 @@ export default function DailyCheckIn() {
           <Grid item xs={12} lg={8}>
             <Stack spacing={2.5}>
               {sections.map((section) => (
-                <Card key={section.title} elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+                <Card
+                  key={section.title}
+                  elevation={0}
+                  sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}
+                >
                   <CardContent sx={{ p: 3 }}>
                     <Stack direction="row" spacing={1.2} alignItems="center" sx={{ mb: 2 }}>
                       <Box
@@ -325,7 +377,11 @@ export default function DailyCheckIn() {
                         return (
                           <Grid item xs={12} md={6} key={field.key}>
                             <Stack spacing={0.8}>
-                              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                alignItems="center"
+                              >
                                 <Typography fontWeight={900}>{field.label}</Typography>
                                 <Chip
                                   label={value}
@@ -342,9 +398,11 @@ export default function DailyCheckIn() {
                                 value={value}
                                 min={field.min}
                                 max={field.max}
-                                step={field.key === "sleepHours" ? 0.5 : 1}
+                                step={1}
                                 marks
-                                onChange={(_, newValue) => updateValue(key, newValue as number)}
+                                onChange={(_, newValue) =>
+                                  updateValue(key, newValue as number)
+                                }
                               />
                             </Stack>
                           </Grid>
@@ -365,7 +423,7 @@ export default function DailyCheckIn() {
                     fullWidth
                     multiline
                     minRows={4}
-                    placeholder="Add anything important: soreness location, practice details, meals, stress, injuries..."
+                    placeholder="Add anything important: pain, match schedule, training notes, or recovery concerns."
                     value={data.notes}
                     onChange={(event) => updateValue("notes", event.target.value)}
                   />
@@ -375,79 +433,68 @@ export default function DailyCheckIn() {
           </Grid>
 
           <Grid item xs={12} lg={4}>
-            <Card
-              elevation={0}
-              sx={{
-                borderRadius: 4,
-                border: "1px solid #e2e8f0",
-                position: { lg: "sticky" },
-                top: 24,
-              }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Stack direction="row" spacing={1.2} alignItems="center">
-                  <PsychologyIcon sx={{ color: "#2563eb" }} />
-                  <Typography variant="h6" fontWeight={950}>
-                    AI Coach Feedback
-                  </Typography>
-                </Stack>
+            <Stack spacing={2.5}>
+              <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Stack direction="row" spacing={1.2} alignItems="center">
+                    <PsychologyIcon sx={{ color: "#0284c7" }} />
+                    <Typography variant="h6" fontWeight={950}>
+                      AI Coach Summary
+                    </Typography>
+                  </Stack>
 
-                <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#eff6ff", border: "1px solid #bfdbfe" }}>
-                  <Typography fontWeight={950} color="#1d4ed8">
-                    Recommendation
-                  </Typography>
-                  <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                    {getAIAdvice(data)}
-                  </Typography>
-                </Box>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 2,
+                      borderRadius: 3,
+                      bgcolor: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                    }}
+                  >
+                    <Typography color="#1d4ed8" fontWeight={950}>
+                      Recommendation
+                    </Typography>
+                    <Typography color="#475569" lineHeight={1.75} sx={{ mt: 1 }}>
+                      {getAIAdvice(data)}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
 
-                <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                  <Typography fontWeight={950}>Training Suggestion</Typography>
-                  <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                    {readiness >= 80 && injuryRisk < 35
-                      ? "High readiness day: full practice or higher intensity training is okay."
-                      : readiness >= 55
-                      ? "Moderate readiness day: skill practice with controlled intensity is best."
-                      : "Low readiness day: recovery, mobility, and light movement are recommended."}
+              <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h6" fontWeight={950} sx={{ mb: 2 }}>
+                    Save Today’s Check-In
                   </Typography>
-                </Box>
 
-                <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#ecfdf5", border: "1px solid #bbf7d0" }}>
-                  <Typography fontWeight={950} color="#047857">
-                    Diet & Hydration
+                  <Typography color="#64748b" lineHeight={1.8} sx={{ mb: 2 }}>
+                    This will save your readiness, recovery, injury risk, and input data
+                    to your Supabase database.
                   </Typography>
-                  <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                    {data.hydration <= 5
-                      ? "Hydration is low. Drink more water before and after training."
-                      : data.nutrition <= 5
-                      ? "Nutrition quality is low. Add protein and healthy carbs after practice."
-                      : "Nutrition and hydration are solid today. Keep meals balanced around training."}
-                  </Typography>
-                </Box>
 
-                {submitted && (
-                  <Alert severity="success" sx={{ mt: 2, borderRadius: 3 }}>
-                    Daily check-in saved for today.
-                  </Alert>
-                )}
-
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  sx={{
-                    mt: 2,
-                    borderRadius: 3,
-                    py: 1.3,
-                    fontWeight: 950,
-                    bgcolor: "#0f172a",
-                  }}
-                  onClick={() => setSubmitted(true)}
-                >
-                  Submit Daily Check-In
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={saving}
+                    sx={{
+                      borderRadius: 3,
+                      bgcolor: "#0f172a",
+                      fontWeight: 950,
+                      py: 1.3,
+                      boxShadow: "none",
+                      "&:hover": {
+                        bgcolor: "#1e293b",
+                        boxShadow: "none",
+                      },
+                    }}
+                  >
+                    {saving ? "Saving..." : "Save Daily Check-In"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </Stack>
           </Grid>
         </Grid>
       </Container>

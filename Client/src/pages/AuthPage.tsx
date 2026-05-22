@@ -27,9 +27,9 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
-type Mode = "login" | "signup";
+import { loginUser, signUpUser } from "../services/authService";
 
-const API_BASE = process.env.REACT_APP_API_URL?.trim() || "http://localhost:5000";
+type Mode = "login" | "signup";
 
 function useQuery() {
   const { search } = useLocation();
@@ -69,7 +69,9 @@ const AuthPage: React.FC = () => {
 
   const validate = () => {
     if (!email || !email.includes("@")) return "Please enter a valid email.";
-    if (mode === "signup" && name.trim().length < 2) return "Please enter your full name.";
+    if (mode === "signup" && name.trim().length < 2) {
+      return "Please enter your full name.";
+    }
     if (password.length < 6) return "Password must be at least 6 characters.";
     return null;
   };
@@ -90,56 +92,17 @@ const AuthPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const url =
-        mode === "login"
-          ? `${API_BASE}/api/auth/login`
-          : `${API_BASE}/api/auth/signup`;
-
-      const payload =
-        mode === "login"
-          ? { email, password, remember }
-          : { name, email, password };
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        let message = "Request failed.";
-
-        try {
-          const data = await response.json();
-          message = data?.message || data?.error || message;
-        } catch {
-          // keep default message
-        }
-
-        throw new Error(message);
+      if (mode === "login") {
+        await loginUser(email, password);
+        setSuccessMsg("Logged in successfully.");
+      } else {
+        await signUpUser(name, email, password);
+        setSuccessMsg("Account created successfully.");
       }
-
-      const data = await response.json();
-
-      if (data?.token) {
-        if (remember) localStorage.setItem("token", data.token);
-        else sessionStorage.setItem("token", data.token);
-      }
-
-      if (data?.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-
-      setSuccessMsg(
-        mode === "login"
-          ? "Logged in successfully."
-          : "Account created successfully."
-      );
 
       setTimeout(() => navigate("/dashboard"), 600);
     } catch (err: any) {
-      setError(err?.message ?? "Something went wrong. Try again.");
+      setError(err?.message || "Something went wrong. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -243,7 +206,9 @@ const AuthPage: React.FC = () => {
                         }}
                       >
                         <Stack direction="row" spacing={1} alignItems="center">
-                          <Box sx={{ color: "#38bdf8", display: "flex" }}>{item.icon}</Box>
+                          <Box sx={{ color: "#38bdf8", display: "flex" }}>
+                            {item.icon}
+                          </Box>
                           <Typography fontWeight={850}>{item.label}</Typography>
                         </Stack>
                       </Box>
@@ -350,7 +315,7 @@ const AuthPage: React.FC = () => {
                       },
                     }}
                   >
-                    Sign up
+                    Sign Up
                   </Button>
                 </Stack>
 
@@ -359,41 +324,31 @@ const AuthPage: React.FC = () => {
 
                 {mode === "signup" && (
                   <TextField
-                    label="Full name"
+                    fullWidth
+                    label="Full Name"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    autoComplete="name"
-                    required
-                    fullWidth
                   />
                 )}
 
                 <TextField
+                  fullWidth
                   label="Email"
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  required
-                  fullWidth
                 />
 
                 <TextField
+                  fullWidth
                   label="Password"
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  required
-                  fullWidth
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton
-                          aria-label={showPw ? "Hide password" : "Show password"}
-                          onClick={() => setShowPw((value) => !value)}
-                          edge="end"
-                        >
+                        <IconButton onClick={() => setShowPw((prev) => !prev)}>
                           {showPw ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
@@ -402,44 +357,26 @@ const AuthPage: React.FC = () => {
                 />
 
                 {mode === "login" && (
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    justifyContent="space-between"
-                    alignItems={{ xs: "flex-start", sm: "center" }}
-                    spacing={1}
-                  >
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={remember}
-                          onChange={(event) => setRemember(event.target.checked)}
-                        />
-                      }
-                      label="Remember me"
-                    />
-
-                    <Link
-                      component="button"
-                      type="button"
-                      underline="hover"
-                      onClick={() => alert("Connect this to your reset password flow.")}
-                      sx={{ fontWeight: 850 }}
-                    >
-                      Forgot password?
-                    </Link>
-                  </Stack>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={remember}
+                        onChange={(event) => setRemember(event.target.checked)}
+                      />
+                    }
+                    label="Remember me"
+                  />
                 )}
 
                 <Button
                   type="submit"
                   variant="contained"
-                  size="large"
                   disabled={submitting}
                   sx={{
-                    py: 1.35,
                     borderRadius: 3,
                     bgcolor: "#0f172a",
                     fontWeight: 950,
+                    py: 1.4,
                     boxShadow: "none",
                     "&:hover": {
                       bgcolor: "#1e293b",
@@ -448,40 +385,22 @@ const AuthPage: React.FC = () => {
                   }}
                 >
                   {submitting
-                    ? mode === "login"
-                      ? "Logging in..."
-                      : "Creating account..."
+                    ? "Please wait..."
                     : mode === "login"
                     ? "Login"
-                    : "Create account"}
+                    : "Create Account"}
                 </Button>
 
-                <Typography textAlign="center" color="#64748b">
-                  {mode === "login" ? (
-                    <>
-                      Don&apos;t have an account?{" "}
-                      <Link
-                        component="button"
-                        type="button"
-                        onClick={() => setMode("signup")}
-                        sx={{ fontWeight: 900 }}
-                      >
-                        Sign up
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      Already have an account?{" "}
-                      <Link
-                        component="button"
-                        type="button"
-                        onClick={() => setMode("login")}
-                        sx={{ fontWeight: 900 }}
-                      >
-                        Login
-                      </Link>
-                    </>
-                  )}
+                <Typography color="#64748b" textAlign="center">
+                  {mode === "login" ? "No account yet?" : "Already have an account?"}{" "}
+                  <Link
+                    component="button"
+                    type="button"
+                    onClick={() => setMode(mode === "login" ? "signup" : "login")}
+                    sx={{ fontWeight: 900 }}
+                  >
+                    {mode === "login" ? "Create one" : "Login instead"}
+                  </Link>
                 </Typography>
               </Stack>
             </Paper>
