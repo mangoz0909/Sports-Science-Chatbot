@@ -4,9 +4,12 @@ import { Box, CssBaseline, GlobalStyles } from "@mui/material";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 import DailyCheckIn from "./pages/DailyCheckIn";
 import Home from "./pages/Home";
 import AuthPage from "./pages/AuthPage";
+import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import SportsHome from "./pages/SportsHome";
 import SportsListPage from "./pages/SportsListPage";
@@ -55,15 +58,44 @@ const App: React.FC = () => {
 
         <Box component="main" sx={{ flex: 1, width: "100%" }}>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/sports" element={<SportsHome />} />
             <Route path="/sports-list" element={<SportsListPage />} />
             <Route path="/mental-health" element={<MentalHealthHome />} />
-            <Route path="/profile" element={<ProfilePage />} />
+
+            {/* Protected routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/daily-check-in"
+              element={
+                <ProtectedRoute>
+                  <DailyCheckIn />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
-            <Route path="/daily-check-in" element={<DailyCheckIn />} />
           </Routes>
         </Box>
 

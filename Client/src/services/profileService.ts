@@ -1,4 +1,4 @@
-import { supabase } from "../../lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 
 export type Profile = {
   id: string;
@@ -7,6 +7,36 @@ export type Profile = {
   primary_sport: string | null;
   goal: string | null;
 };
+
+export async function syncGoogleProfile() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) throw error;
+  if (!user) return null;
+
+  const name =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split("@")[0] ||
+    "SportLab Athlete";
+
+  const { data, error: upsertError } = await supabase
+    .from("profiles")
+    .upsert({
+      id: user.id,
+      name,
+      email: user.email,
+    })
+    .select()
+    .single();
+
+  if (upsertError) throw upsertError;
+
+  return data as Profile;
+}
 
 export async function getMyProfile() {
   const {
@@ -21,11 +51,11 @@ export async function getMyProfile() {
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
 
-  return data as Profile;
+  return data as Profile | null;
 }
 
 export async function updateMyProfile(profile: {

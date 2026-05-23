@@ -20,6 +20,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import GoogleIcon from "@mui/icons-material/Google";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -27,7 +28,7 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
-import { loginUser, signUpUser } from "../services/authService";
+import { loginUser, loginWithGoogle, signUpUser } from "../services/authService";
 
 type Mode = "login" | "signup";
 
@@ -50,6 +51,7 @@ const AuthPage: React.FC = () => {
   const [remember, setRemember] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -69,11 +71,27 @@ const AuthPage: React.FC = () => {
 
   const validate = () => {
     if (!email || !email.includes("@")) return "Please enter a valid email.";
+
     if (mode === "signup" && name.trim().length < 2) {
       return "Please enter your full name.";
     }
+
     if (password.length < 6) return "Password must be at least 6 characters.";
+
     return null;
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setSuccessMsg(null);
+    setGoogleSubmitting(true);
+
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      setError(err?.message || "Google login failed.");
+      setGoogleSubmitting(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -322,6 +340,36 @@ const AuthPage: React.FC = () => {
                 {error && <Alert severity="error">{error}</Alert>}
                 {successMsg && <Alert severity="success">{successMsg}</Alert>}
 
+                <Button
+                  type="button"
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<GoogleIcon />}
+                  onClick={handleGoogleLogin}
+                  disabled={googleSubmitting || submitting}
+                  sx={{
+                    borderRadius: 3,
+                    fontWeight: 950,
+                    py: 1.35,
+                    borderColor: "#cbd5e1",
+                    color: "#0f172a",
+                    "&:hover": {
+                      borderColor: "#94a3b8",
+                      bgcolor: "#f8fafc",
+                    },
+                  }}
+                >
+                  {googleSubmitting ? "Redirecting..." : "Continue with Google"}
+                </Button>
+
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ flex: 1, height: 1, bgcolor: "#e2e8f0" }} />
+                  <Typography color="#94a3b8" fontSize={13} fontWeight={800}>
+                    OR
+                  </Typography>
+                  <Box sx={{ flex: 1, height: 1, bgcolor: "#e2e8f0" }} />
+                </Stack>
+
                 {mode === "signup" && (
                   <TextField
                     fullWidth
@@ -348,7 +396,10 @@ const AuthPage: React.FC = () => {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPw((prev) => !prev)}>
+                        <IconButton
+                          type="button"
+                          onClick={() => setShowPw((prev) => !prev)}
+                        >
                           {showPw ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
@@ -371,7 +422,7 @@ const AuthPage: React.FC = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={submitting}
+                  disabled={submitting || googleSubmitting}
                   sx={{
                     borderRadius: 3,
                     bgcolor: "#0f172a",
