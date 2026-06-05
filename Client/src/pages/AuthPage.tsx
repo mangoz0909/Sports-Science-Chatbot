@@ -28,7 +28,11 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
-import { loginUser, loginWithGoogle, signUpUser } from "../services/authService";
+import {
+  loginUser,
+  signUpUser,
+  signInWithGoogle,
+} from "../services/authService";
 
 type Mode = "login" | "signup";
 
@@ -51,6 +55,7 @@ const AuthPage: React.FC = () => {
   const [remember, setRemember] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -81,15 +86,15 @@ const AuthPage: React.FC = () => {
     return null;
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignIn = async () => {
     setError(null);
     setSuccessMsg(null);
     setGoogleSubmitting(true);
 
     try {
-      await loginWithGoogle();
+      await signInWithGoogle();
     } catch (err: any) {
-      setError(err?.message || "Google login failed.");
+      setError(err?.message || "Google sign-in failed. Try again.");
       setGoogleSubmitting(false);
     }
   };
@@ -344,31 +349,27 @@ const AuthPage: React.FC = () => {
                   type="button"
                   variant="outlined"
                   fullWidth
-                  startIcon={<GoogleIcon />}
-                  onClick={handleGoogleLogin}
-                  disabled={googleSubmitting || submitting}
+                  disabled={googleSubmitting}
+                  onClick={handleGoogleSignIn}
                   sx={{
                     borderRadius: 3,
-                    fontWeight: 950,
-                    py: 1.35,
-                    borderColor: "#cbd5e1",
+                    py: 1.4,
+                    fontWeight: 900,
+                    textTransform: "none",
                     color: "#0f172a",
+                    borderColor: "#cbd5e1",
                     "&:hover": {
                       borderColor: "#94a3b8",
                       bgcolor: "#f8fafc",
                     },
                   }}
                 >
-                  {googleSubmitting ? "Redirecting..." : "Continue with Google"}
+                  {googleSubmitting ? "Opening Google..." : "Continue with Google"}
                 </Button>
 
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Box sx={{ flex: 1, height: 1, bgcolor: "#e2e8f0" }} />
-                  <Typography color="#94a3b8" fontSize={13} fontWeight={800}>
-                    OR
-                  </Typography>
-                  <Box sx={{ flex: 1, height: 1, bgcolor: "#e2e8f0" }} />
-                </Stack>
+                <Typography textAlign="center" color="#64748b" fontWeight={800}>
+                  OR
+                </Typography>
 
                 {mode === "signup" && (
                   <TextField
