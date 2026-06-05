@@ -19,6 +19,8 @@ import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import PersonIcon from "@mui/icons-material/Person";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
+import { supabase } from "../lib/supabaseClient";
+
 type NavItem = {
   label: string;
   to: string;
@@ -36,7 +38,25 @@ const navItems: NavItem[] = [
 
 const Header: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+
   const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setIsLoggedIn(!!data.session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const isActive = (to: string) => {
     if (to === "/") return pathname === "/";
@@ -44,6 +64,11 @@ const Header: React.FC = () => {
   };
 
   const closeDrawer = () => setDrawerOpen(false);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsLoggedIn(false);
+  };
 
   return (
     <>
@@ -153,44 +178,67 @@ const Header: React.FC = () => {
                 <PersonIcon />
               </IconButton>
 
-              <Button
-                component={RouterLink}
-                to="/auth?mode=login"
-                variant="outlined"
-                sx={{
-                  borderRadius: 999,
-                  fontWeight: 900,
-                  borderColor: "#cbd5e1",
-                  color: "#0f172a",
-                  px: 2,
-                  "&:hover": {
-                    borderColor: "#94a3b8",
-                    bgcolor: "#f8fafc",
-                  },
-                }}
-              >
-                Login
-              </Button>
+              {isLoggedIn ? (
+                <Button
+                  type="button"
+                  onClick={handleLogout}
+                  variant="outlined"
+                  sx={{
+                    borderRadius: 999,
+                    fontWeight: 900,
+                    borderColor: "#cbd5e1",
+                    color: "#0f172a",
+                    px: 2,
+                    "&:hover": {
+                      borderColor: "#94a3b8",
+                      bgcolor: "#f8fafc",
+                    },
+                  }}
+                >
+                  Logout
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    component={RouterLink}
+                    to="/auth?mode=login"
+                    variant="outlined"
+                    sx={{
+                      borderRadius: 999,
+                      fontWeight: 900,
+                      borderColor: "#cbd5e1",
+                      color: "#0f172a",
+                      px: 2,
+                      "&:hover": {
+                        borderColor: "#94a3b8",
+                        bgcolor: "#f8fafc",
+                      },
+                    }}
+                  >
+                    Login
+                  </Button>
 
-              <Button
-                component={RouterLink}
-                to="/auth?mode=signup"
-                variant="contained"
-                sx={{
-                  borderRadius: 999,
-                  fontWeight: 900,
-                  bgcolor: "#0f172a",
-                  color: "#fff",
-                  px: 2.25,
-                  boxShadow: "none",
-                  "&:hover": {
-                    bgcolor: "#1e293b",
-                    boxShadow: "none",
-                  },
-                }}
-              >
-                Get Started
-              </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/auth?mode=signup"
+                    variant="contained"
+                    sx={{
+                      borderRadius: 999,
+                      fontWeight: 900,
+                      bgcolor: "#0f172a",
+                      color: "#fff",
+                      px: 2.25,
+                      boxShadow: "none",
+                      "&:hover": {
+                        bgcolor: "#1e293b",
+                        boxShadow: "none",
+                      },
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </>
+              )}
             </Stack>
 
             <IconButton
@@ -245,7 +293,10 @@ const Header: React.FC = () => {
                   color: isActive(item.to) ? "#0284c7" : "#0f172a",
                 }}
               >
-                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 850 }} />
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{ fontWeight: 850 }}
+                />
               </ListItemButton>
             ))}
           </List>
@@ -253,36 +304,52 @@ const Header: React.FC = () => {
           <Divider sx={{ my: 1.5 }} />
 
           <Stack spacing={1}>
-            <Button
-              fullWidth
-              component={RouterLink}
-              to="/auth?mode=login"
-              variant="outlined"
-              onClick={closeDrawer}
-              sx={{ borderRadius: 2.5, fontWeight: 900 }}
-            >
-              Login
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={async () => {
+                  await handleLogout();
+                  closeDrawer();
+                }}
+                sx={{ borderRadius: 2.5, fontWeight: 900 }}
+              >
+                Logout
+              </Button>
+            ) : (
+              <>
+                <Button
+                  fullWidth
+                  component={RouterLink}
+                  to="/auth?mode=login"
+                  variant="outlined"
+                  onClick={closeDrawer}
+                  sx={{ borderRadius: 2.5, fontWeight: 900 }}
+                >
+                  Login
+                </Button>
 
-            <Button
-              fullWidth
-              component={RouterLink}
-              to="/auth?mode=signup"
-              variant="contained"
-              onClick={closeDrawer}
-              sx={{
-                borderRadius: 2.5,
-                fontWeight: 900,
-                bgcolor: "#0f172a",
-                boxShadow: "none",
-                "&:hover": {
-                  bgcolor: "#1e293b",
-                  boxShadow: "none",
-                },
-              }}
-            >
-              Get Started
-            </Button>
+                <Button
+                  fullWidth
+                  component={RouterLink}
+                  to="/auth?mode=signup"
+                  variant="contained"
+                  onClick={closeDrawer}
+                  sx={{
+                    borderRadius: 2.5,
+                    fontWeight: 900,
+                    bgcolor: "#0f172a",
+                    boxShadow: "none",
+                    "&:hover": {
+                      bgcolor: "#1e293b",
+                      boxShadow: "none",
+                    },
+                  }}
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
           </Stack>
         </Box>
       </Drawer>

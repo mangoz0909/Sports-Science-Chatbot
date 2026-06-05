@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Alert,
   Avatar,
   Box,
   Button,
@@ -18,18 +19,11 @@ import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import SpeedIcon from "@mui/icons-material/Speed";
 
-type StoredUser = {
-  name?: string;
-  email?: string;
-};
-
-function getStoredUser(): StoredUser {
-  try {
-    return JSON.parse(localStorage.getItem("user") || "{}");
-  } catch {
-    return {};
-  }
-}
+import {
+  getMyProfile,
+  syncGoogleProfile,
+  updateMyProfile,
+} from "../services/profileService";
 
 const profileMetrics = [
   { label: "Readiness", value: 84, icon: <MonitorHeartIcon />, helper: "Training availability" },
@@ -46,12 +40,40 @@ const recentActivity = [
 ];
 
 const ProfilePage: React.FC = () => {
-  const storedUser = getStoredUser();
-  const [name, setName] = React.useState(storedUser.name || "SportLab Athlete");
-  const [email, setEmail] = React.useState(storedUser.email || "athlete@sportlab.ai");
+  const [name, setName] = React.useState("SportLab Athlete");
+  const [email, setEmail] = React.useState("");
   const [sport, setSport] = React.useState("Tennis");
   const [goal, setGoal] = React.useState("Improve speed, recovery, and match readiness");
+
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    async function loadProfile() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        await syncGoogleProfile();
+        const profile = await getMyProfile();
+
+        if (profile) {
+          setName(profile.name || "SportLab Athlete");
+          setEmail(profile.email || "");
+          setSport(profile.primary_sport || "Tennis");
+          setGoal(profile.goal || "Improve speed, recovery, and match readiness");
+        }
+      } catch (err: any) {
+        setError(err?.message || "Failed to load profile.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProfile();
+  }, []);
 
   const initials = name
     .split(" ")
@@ -60,10 +82,25 @@ const ProfilePage: React.FC = () => {
     .slice(0, 2)
     .toUpperCase();
 
-  const saveProfile = () => {
-    localStorage.setItem("user", JSON.stringify({ name, email, sport, goal }));
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 1600);
+  const saveProfile = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+
+      await updateMyProfile({
+        name,
+        email,
+        primary_sport: sport,
+        goal,
+      });
+
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 1600);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save profile.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -72,16 +109,23 @@ const ProfilePage: React.FC = () => {
         <Stack spacing={1.2} sx={{ mb: 3 }}>
           <Chip
             label="Athlete Profile"
-            sx={{ width: "fit-content", bgcolor: "#ecfdf5", color: "#047857", fontWeight: 950 }}
+            sx={{
+              width: "fit-content",
+              bgcolor: "#ecfdf5",
+              color: "#047857",
+              fontWeight: 950,
+            }}
           />
           <Typography variant="h3" sx={{ fontWeight: 950, letterSpacing: -0.9 }}>
             Your sports science workspace.
           </Typography>
           <Typography color="#64748b" maxWidth={780} lineHeight={1.8}>
-            Store athlete context locally, track key profile metrics, and keep the app personalized for sports AI,
-            recovery, readiness, and dashboard workflows.
+            Store athlete context, track profile metrics, and personalize SportLab AI.
           </Typography>
         </Stack>
+
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {loading && <Alert severity="info" sx={{ mb: 2 }}>Loading profile...</Alert>}
 
         <Grid container spacing={2.5}>
           <Grid item xs={12} md={4}>
@@ -91,12 +135,12 @@ const ProfilePage: React.FC = () => {
                   <Avatar sx={{ width: 96, height: 96, bgcolor: "#0f172a", color: "#38bdf8", fontWeight: 950, fontSize: 32 }}>
                     {initials}
                   </Avatar>
+
                   <Box>
-                    <Typography variant="h5" fontWeight={950}>
-                      {name}
-                    </Typography>
+                    <Typography variant="h5" fontWeight={950}>{name}</Typography>
                     <Typography color="#64748b">{email}</Typography>
                   </Box>
+
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="center">
                     <Chip label={sport} sx={{ fontWeight: 900 }} />
                     <Chip label="Active" sx={{ bgcolor: "#dcfce7", color: "#166534", fontWeight: 900 }} />
@@ -116,10 +160,19 @@ const ProfilePage: React.FC = () => {
                         </Stack>
                         <Typography fontWeight={950}>{metric.value}%</Typography>
                       </Stack>
+
                       <LinearProgress
                         variant="determinate"
                         value={metric.value}
-                        sx={{ height: 9, borderRadius: 999, bgcolor: "#e2e8f0", "& .MuiLinearProgress-bar": { bgcolor: "#0284c7", borderRadius: 999 } }}
+                        sx={{
+                          height: 9,
+                          borderRadius: 999,
+                          bgcolor: "#e2e8f0",
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor: "#0284c7",
+                            borderRadius: 999,
+                          },
+                        }}
                       />
                     </Box>
                   ))}
@@ -136,26 +189,36 @@ const ProfilePage: React.FC = () => {
                     <Typography variant="h5" fontWeight={950} sx={{ mb: 2 }}>
                       Profile Details
                     </Typography>
+
                     <Grid container spacing={2}>
                       <Grid item xs={12} sm={6}>
-                        <TextField fullWidth label="Name" value={name} onChange={(event) => setName(event.target.value)} />
+                        <TextField fullWidth label="Name" value={name} onChange={(e) => setName(e.target.value)} />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <TextField fullWidth label="Email" value={email} onChange={(event) => setEmail(event.target.value)} />
+                        <TextField fullWidth label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <TextField fullWidth label="Primary Sport" value={sport} onChange={(event) => setSport(event.target.value)} />
+                        <TextField fullWidth label="Primary Sport" value={sport} onChange={(e) => setSport(e.target.value)} />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <TextField fullWidth label="Main Goal" value={goal} onChange={(event) => setGoal(event.target.value)} />
+                        <TextField fullWidth label="Main Goal" value={goal} onChange={(e) => setGoal(e.target.value)} />
                       </Grid>
                     </Grid>
+
                     <Button
                       variant="contained"
                       onClick={saveProfile}
-                      sx={{ mt: 2.5, borderRadius: 3, bgcolor: "#0f172a", fontWeight: 950, px: 3, "&:hover": { bgcolor: "#1e293b" } }}
+                      disabled={saving || loading}
+                      sx={{
+                        mt: 2.5,
+                        borderRadius: 3,
+                        bgcolor: "#0f172a",
+                        fontWeight: 950,
+                        px: 3,
+                        "&:hover": { bgcolor: "#1e293b" },
+                      }}
                     >
-                      {saved ? "Saved" : "Save Profile"}
+                      {saving ? "Saving..." : saved ? "Saved" : "Save Profile"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -167,6 +230,7 @@ const ProfilePage: React.FC = () => {
                     <Typography variant="h5" fontWeight={950} sx={{ mb: 2 }}>
                       Recent Activity
                     </Typography>
+
                     <Stack spacing={1.2}>
                       {recentActivity.map((item, index) => (
                         <Box
