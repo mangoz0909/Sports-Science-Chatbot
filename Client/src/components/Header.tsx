@@ -31,7 +31,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: "Home", to: "/" },
   { label: "Sports Health AI", to: "/sports" },
-  { label: "Sports List", to: "/sports-list" },
+  { label: "Sports Match", to: "/sports-list" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Check-In", to: "/daily-check-in" },
 ];
