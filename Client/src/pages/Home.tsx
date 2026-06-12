@@ -421,14 +421,19 @@ const Home: React.FC = () => {
                         sx={{
                           width: 56,
                           height: 56,
-                          borderRadius: 3,
+                          borderRadius: "14px",
                           display: "grid",
                           placeItems: "center",
                           bgcolor: "#e0f2fe",
-                          color: "#0284c7",
+                          overflow: "hidden",
                         }}
                       >
-                        <MonitorHeartIcon />
+                        <Box
+                          component="img"
+                          src="/sportslab_logo.png"
+                          alt="SportLab AI"
+                          sx={{ width: 44, height: 44, objectFit: "contain" }}
+                        />
                       </MotionBox>
                     </Stack>
 
@@ -772,7 +777,7 @@ const Home: React.FC = () => {
           >
             <Grid container spacing={2.5}>
               {workspaceCards.map((item) => (
-                <Grid item xs={12} md={4} key={item.title}>
+                <Grid item xs={12} sm={6} md={4} key={item.title}>
                   <MotionCard
                     variants={fadeUp}
                     transition={transition}

@@ -4,7 +4,7 @@ export default function UnifiedAIHome() {
   return (
     <AiChatHome
       title="Sports Health AI"
-      logoSrc="/static/mental_logo.png"
+      logoSrc="/sportslab_logo.png"
       emptyIcon="🏆"
       emptyTitle="Ask about sports performance or mental wellbeing"
       emptySubtitle="Training · Recovery · Nutrition · Stress · Confidence · Focus"
@@ -45,26 +45,10 @@ Tell them to contact emergency services, a trusted adult, parent, coach, counsel
 Always be supportive, practical, and student-friendly.
 `}
       quickActions={[
-        {
-          icon: "📅",
-          label: "Training Plan",
-          prompt: "Create a weekly training plan for tennis.",
-        },
-        {
-          icon: "💪",
-          label: "Recovery",
-          prompt: "How can I recover faster after a hard workout?",
-        },
-        {
-          icon: "🧠",
-          label: "Confidence",
-          prompt: "Give me a pre-match confidence routine.",
-        },
-        {
-          icon: "🌿",
-          label: "Stress Support",
-          prompt: "How can I manage stress during exams and sports?",
-        },
+        { icon: "📅", label: "Training Plan", prompt: "Create a weekly training plan for tennis." },
+        { icon: "💪", label: "Recovery", prompt: "How can I recover faster after a hard workout?" },
+        { icon: "🧠", label: "Confidence", prompt: "Give me a pre-match confidence routine." },
+        { icon: "🌿", label: "Stress Support", prompt: "How can I manage stress during exams and sports?" },
       ]}
       examplesTitle="Example Questions"
       examples={[

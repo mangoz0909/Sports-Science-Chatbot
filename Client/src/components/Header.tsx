@@ -17,62 +17,50 @@ import {
   Typography,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import PersonIcon from "@mui/icons-material/Person";
+import CloseIcon from "@mui/icons-material/Close";
 import { Link as RouterLink, useLocation } from "react-router-dom";
-
 import { supabase } from "../lib/supabaseClient";
 
-type NavItem = {
-  label: string;
-  to: string;
-};
+type NavItem = { label: string; to: string };
 
 const navItems: NavItem[] = [
   { label: "Home", to: "/" },
-  { label: "Sports Health AI", to: "/sports" },
+  { label: "Sports AI", to: "/sports" },
   { label: "Sports Match", to: "/sports-list" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Check-In", to: "/daily-check-in" },
 ];
 
+const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (
+  <Box
+    component="img"
+    src="/sportslab_logo.png"
+    alt="SportLab AI"
+    sx={{
+      width: size,
+      height: size,
+      objectFit: "contain",
+      borderRadius: "10px",
+      flexShrink: 0,
+    }}
+  />
+);
+
 const Header: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-  const [profileAnchor, setProfileAnchor] =
-    React.useState<null | HTMLElement>(null);
-
+  const [profileAnchor, setProfileAnchor] = React.useState<null | HTMLElement>(null);
   const { pathname } = useLocation();
 
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setIsLoggedIn(!!data.session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    supabase.auth.getSession().then(({ data }) => setIsLoggedIn(!!data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setIsLoggedIn(!!s));
+    return () => subscription.unsubscribe();
   }, []);
 
-  const isActive = (to: string) => {
-    return pathname === to;
-  };
-
+  const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
   const closeDrawer = () => setDrawerOpen(false);
-
-  const openProfileMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setProfileAnchor(event.currentTarget);
-  };
-
-  const closeProfileMenu = () => {
-    setProfileAnchor(null);
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -85,22 +73,24 @@ const Header: React.FC = () => {
         position="sticky"
         elevation={0}
         sx={{
-          bgcolor: "rgba(255,255,255,0.94)",
+          bgcolor: "rgba(255,255,255,0.96)",
           color: "#0f172a",
           borderBottom: "1px solid #e2e8f0",
-          backdropFilter: "blur(14px)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
         }}
       >
         <Container maxWidth="xl">
           <Toolbar
             disableGutters
             sx={{
-              minHeight: { xs: 64, md: 72 },
+              minHeight: { xs: 60, md: 68 },
               display: "flex",
               justifyContent: "space-between",
               gap: 2,
             }}
           >
+            {/* ── Brand ── */}
             <Box
               component={RouterLink}
               to="/"
@@ -110,26 +100,18 @@ const Header: React.FC = () => {
                 gap: 1.25,
                 textDecoration: "none",
                 color: "inherit",
+                flexShrink: 0,
               }}
             >
-              <Box
-                component="img"
-                src="/static/sportlab_logo.png"
-                alt="SportLab AI"
-                sx={{
-                  width: 48,
-                  height: 48,
-                  objectFit: "contain",
-                }}
-              />
-
+              <Logo size={40} />
               <Box>
                 <Typography
                   sx={{
-                    fontWeight: 950,
-                    lineHeight: 1,
-                    letterSpacing: -0.3,
-                    fontSize: { xs: "1.05rem", md: "1.2rem" },
+                    fontWeight: 900,
+                    lineHeight: 1.1,
+                    letterSpacing: "-0.02em",
+                    fontSize: { xs: "1rem", md: "1.1rem" },
+                    color: "#0f172a",
                   }}
                 >
                   SportLab AI
@@ -137,21 +119,24 @@ const Header: React.FC = () => {
                 <Typography
                   sx={{
                     display: { xs: "none", sm: "block" },
-                    fontSize: 12,
-                    color: "#64748b",
-                    fontWeight: 700,
+                    fontSize: 11,
+                    color: "#94a3b8",
+                    fontWeight: 600,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
                   }}
                 >
-                  Sports Science Platform
+                  Sports Science
                 </Typography>
               </Box>
             </Box>
 
+            {/* ── Desktop Nav ── */}
             <Stack
               direction="row"
-              spacing={0.35}
+              spacing={0.5}
               alignItems="center"
-              sx={{ display: { xs: "none", lg: "flex" } }}
+              sx={{ display: { xs: "none", lg: "flex" }, flex: 1, justifyContent: "center" }}
             >
               {navItems.map((item) => (
                 <Button
@@ -159,62 +144,56 @@ const Header: React.FC = () => {
                   component={RouterLink}
                   to={item.to}
                   sx={{
-                    color: isActive(item.to) ? "#0284c7" : "#334155",
-                    fontWeight: isActive(item.to) ? 900 : 750,
-                    borderRadius: 999,
-                    px: 1.25,
+                    color: isActive(item.to) ? "#0284c7" : "#475569",
+                    fontWeight: isActive(item.to) ? 800 : 600,
+                    fontSize: "0.875rem",
+                    borderRadius: "10px",
+                    px: 1.5,
+                    py: 0.75,
+                    minWidth: 0,
                     bgcolor: isActive(item.to) ? "#e0f2fe" : "transparent",
-                    "&:hover": { bgcolor: "#f1f5f9" },
+                    textTransform: "none",
+                    "&:hover": { bgcolor: "#f1f5f9", color: "#0f172a" },
+                    transition: "all 0.15s ease",
                   }}
                 >
                   {item.label}
                 </Button>
               ))}
+            </Stack>
 
-              <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-
+            {/* ── Desktop Auth ── */}
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ display: { xs: "none", lg: "flex" }, flexShrink: 0 }}
+            >
               {isLoggedIn ? (
                 <>
                   <IconButton
-                    onClick={openProfileMenu}
+                    onClick={(e) => setProfileAnchor(e.currentTarget)}
                     aria-label="Profile menu"
                     sx={{
-                      bgcolor: isActive("/profile") ? "#e0f2fe" : "#f8fafc",
+                      width: 36,
+                      height: 36,
+                      bgcolor: isActive("/profile") ? "#e0f2fe" : "#f1f5f9",
+                      borderRadius: "10px",
                       "&:hover": { bgcolor: "#e0f2fe" },
                     }}
                   >
-                    <PersonIcon />
+                    <PersonIcon sx={{ fontSize: 20 }} />
                   </IconButton>
-
                   <Menu
                     anchorEl={profileAnchor}
                     open={Boolean(profileAnchor)}
-                    onClose={closeProfileMenu}
-                    anchorOrigin={{
-                      vertical: "bottom",
-                      horizontal: "right",
-                    }}
-                    transformOrigin={{
-                      vertical: "top",
-                      horizontal: "right",
-                    }}
+                    onClose={() => setProfileAnchor(null)}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    transformOrigin={{ vertical: "top", horizontal: "right" }}
+                    PaperProps={{ sx: { borderRadius: 2, border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", mt: 0.5 } }}
                   >
-                    <MenuItem
-                      component={RouterLink}
-                      to="/profile"
-                      onClick={closeProfileMenu}
-                    >
-                      Profile
-                    </MenuItem>
-
-                    <MenuItem
-                      onClick={async () => {
-                        closeProfileMenu();
-                        await handleLogout();
-                      }}
-                    >
-                      Logout
-                    </MenuItem>
+                    <MenuItem component={RouterLink} to="/profile" onClick={() => setProfileAnchor(null)} sx={{ fontSize: 14, fontWeight: 600 }}>Profile</MenuItem>
+                    <MenuItem onClick={async () => { setProfileAnchor(null); await handleLogout(); }} sx={{ fontSize: 14, fontWeight: 600, color: "#ef4444" }}>Logout</MenuItem>
                   </Menu>
                 </>
               ) : (
@@ -222,81 +201,98 @@ const Header: React.FC = () => {
                   <Button
                     component={RouterLink}
                     to="/auth?mode=login"
-                    variant="outlined"
                     sx={{
-                      borderRadius: 999,
-                      fontWeight: 900,
-                      borderColor: "#cbd5e1",
-                      color: "#0f172a",
+                      borderRadius: "10px",
+                      fontWeight: 700,
+                      fontSize: "0.875rem",
+                      color: "#475569",
+                      textTransform: "none",
                       px: 2,
-                      "&:hover": {
-                        borderColor: "#94a3b8",
-                        bgcolor: "#f8fafc",
-                      },
+                      "&:hover": { bgcolor: "#f1f5f9", color: "#0f172a" },
                     }}
                   >
-                    Login
+                    Log in
                   </Button>
-
                   <Button
                     component={RouterLink}
                     to="/auth?mode=signup"
                     variant="contained"
                     sx={{
-                      borderRadius: 999,
-                      fontWeight: 900,
+                      borderRadius: "10px",
+                      fontWeight: 700,
+                      fontSize: "0.875rem",
+                      textTransform: "none",
                       bgcolor: "#0f172a",
                       color: "#fff",
                       px: 2.25,
+                      py: 0.875,
                       boxShadow: "none",
-                      "&:hover": {
-                        bgcolor: "#1e293b",
-                        boxShadow: "none",
-                      },
+                      "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
                     }}
                   >
-                    Get Started
+                    Get started
                   </Button>
                 </>
               )}
             </Stack>
 
+            {/* ── Mobile Hamburger ── */}
             <IconButton
               onClick={() => setDrawerOpen(true)}
-              sx={{ display: { xs: "inline-flex", lg: "none" } }}
+              sx={{
+                display: { xs: "inline-flex", lg: "none" },
+                width: 40,
+                height: 40,
+                borderRadius: "10px",
+                bgcolor: "#f1f5f9",
+                "&:hover": { bgcolor: "#e2e8f0" },
+              }}
               aria-label="Open navigation menu"
             >
-              <MenuIcon />
+              <MenuIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Toolbar>
         </Container>
       </AppBar>
 
-      <Drawer anchor="right" open={drawerOpen} onClose={closeDrawer}>
-        <Box sx={{ width: 320, maxWidth: "86vw", p: 2.5 }}>
-          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
-                      <Box
-              component="img"
-              src="/static/sportlab_logo.png"
-              alt="SportLab AI"
-              sx={{
-                width: 48,
-                height: 48,
-                objectFit: "contain",
-              }}
-            />
-
-            <Box>
-              <Typography fontWeight={950}>SportLab AI</Typography>
-              <Typography fontSize={12} color="text.secondary" fontWeight={700}>
-                Sports Science Platform
-              </Typography>
-            </Box>
+      {/* ── Mobile Drawer ── */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={closeDrawer}
+        PaperProps={{
+          sx: {
+            width: 300,
+            maxWidth: "90vw",
+            borderRadius: "20px 0 0 20px",
+            border: "none",
+          },
+        }}
+      >
+        <Box sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column" }}>
+          {/* Drawer header */}
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Logo size={36} />
+              <Box>
+                <Typography fontWeight={800} fontSize="0.95rem" lineHeight={1.2}>SportLab AI</Typography>
+                <Typography fontSize={11} color="text.secondary" fontWeight={600} sx={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  Sports Science
+                </Typography>
+              </Box>
+            </Stack>
+            <IconButton
+              onClick={closeDrawer}
+              sx={{ width: 32, height: 32, bgcolor: "#f1f5f9", borderRadius: "8px" }}
+            >
+              <CloseIcon sx={{ fontSize: 16 }} />
+            </IconButton>
           </Stack>
 
-          <Divider sx={{ mb: 1 }} />
+          <Divider sx={{ mb: 1.5 }} />
 
-          <List>
+          {/* Nav links */}
+          <List sx={{ flex: 1, p: 0 }}>
             {navItems.map((item) => (
               <ListItemButton
                 key={item.to}
@@ -304,51 +300,49 @@ const Header: React.FC = () => {
                 to={item.to}
                 onClick={closeDrawer}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: "10px",
                   mb: 0.5,
+                  py: 1,
                   bgcolor: isActive(item.to) ? "#e0f2fe" : "transparent",
-                  color: isActive(item.to) ? "#0284c7" : "#0f172a",
+                  color: isActive(item.to) ? "#0284c7" : "#334155",
+                  "&:hover": { bgcolor: "#f8fafc" },
                 }}
               >
                 <ListItemText
                   primary={item.label}
-                  primaryTypographyProps={{ fontWeight: 850 }}
+                  primaryTypographyProps={{ fontWeight: isActive(item.to) ? 800 : 600, fontSize: 15 }}
                 />
               </ListItemButton>
             ))}
-
             {isLoggedIn && (
               <ListItemButton
                 component={RouterLink}
                 to="/profile"
                 onClick={closeDrawer}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: "10px",
                   mb: 0.5,
+                  py: 1,
                   bgcolor: isActive("/profile") ? "#e0f2fe" : "transparent",
-                  color: isActive("/profile") ? "#0284c7" : "#0f172a",
+                  color: isActive("/profile") ? "#0284c7" : "#334155",
+                  "&:hover": { bgcolor: "#f8fafc" },
                 }}
               >
-                <ListItemText
-                  primary="Profile"
-                  primaryTypographyProps={{ fontWeight: 850 }}
-                />
+                <ListItemText primary="Profile" primaryTypographyProps={{ fontWeight: 600, fontSize: 15 }} />
               </ListItemButton>
             )}
           </List>
 
-          <Divider sx={{ my: 1.5 }} />
+          <Divider sx={{ mb: 2 }} />
 
+          {/* Auth buttons */}
           <Stack spacing={1}>
             {isLoggedIn ? (
               <Button
                 fullWidth
                 variant="outlined"
-                onClick={async () => {
-                  await handleLogout();
-                  closeDrawer();
-                }}
-                sx={{ borderRadius: 2.5, fontWeight: 900 }}
+                onClick={async () => { await handleLogout(); closeDrawer(); }}
+                sx={{ borderRadius: "10px", fontWeight: 700, textTransform: "none", color: "#ef4444", borderColor: "#fecaca" }}
               >
                 Logout
               </Button>
@@ -360,11 +354,10 @@ const Header: React.FC = () => {
                   to="/auth?mode=login"
                   variant="outlined"
                   onClick={closeDrawer}
-                  sx={{ borderRadius: 2.5, fontWeight: 900 }}
+                  sx={{ borderRadius: "10px", fontWeight: 700, textTransform: "none", borderColor: "#e2e8f0", color: "#334155" }}
                 >
-                  Login
+                  Log in
                 </Button>
-
                 <Button
                   fullWidth
                   component={RouterLink}
@@ -372,17 +365,15 @@ const Header: React.FC = () => {
                   variant="contained"
                   onClick={closeDrawer}
                   sx={{
-                    borderRadius: 2.5,
-                    fontWeight: 900,
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    textTransform: "none",
                     bgcolor: "#0f172a",
                     boxShadow: "none",
-                    "&:hover": {
-                      bgcolor: "#1e293b",
-                      boxShadow: "none",
-                    },
+                    "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
                   }}
                 >
-                  Get Started
+                  Get started
                 </Button>
               </>
             )}

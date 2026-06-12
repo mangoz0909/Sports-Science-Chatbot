@@ -21,7 +21,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import GoogleIcon from "@mui/icons-material/Google";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import SpeedIcon from "@mui/icons-material/Speed";
@@ -156,26 +155,26 @@ const AuthPage: React.FC = () => {
                 flexDirection: "column",
               }}
             >
-              <Stack direction="row" spacing={1.2} alignItems="center">
+              <Stack direction="row" spacing={1.5} alignItems="center">
                 <Box
+                  component="img"
+                  src="/sportslab_logo.png"
+                  alt="SportLab AI"
                   sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 2.5,
-                    display: "grid",
-                    placeItems: "center",
-                    bgcolor: "#38bdf8",
-                    color: "#0f172a",
+                    width: 48,
+                    height: 48,
+                    objectFit: "contain",
+                    borderRadius: "12px",
+                    bgcolor: "rgba(255,255,255,0.08)",
+                    p: 0.5,
+                    flexShrink: 0,
                   }}
-                >
-                  <MonitorHeartIcon />
-                </Box>
-
+                />
                 <Box>
-                  <Typography variant="h5" fontWeight={950}>
+                  <Typography variant="h5" fontWeight={900} lineHeight={1.15}>
                     SportLab AI
                   </Typography>
-                  <Typography color="#94a3b8" fontSize={14}>
+                  <Typography color="#94a3b8" fontSize={13} fontWeight={500}>
                     Athlete intelligence platform
                   </Typography>
                 </Box>

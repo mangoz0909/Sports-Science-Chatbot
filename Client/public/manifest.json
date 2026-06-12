@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "SportLab AI",
+  "name": "SportLab AI — Sports Science Platform",
+  "description": "AI-powered sports science platform for athlete readiness, recovery, and performance.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,18 +9,19 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
+      "src": "sportslab_logo.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo512.png",
+      "src": "sportslab_logo.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#0f172a",
+  "background_color": "#f8fafc",
+  "categories": ["health", "fitness", "sports"]
 }
