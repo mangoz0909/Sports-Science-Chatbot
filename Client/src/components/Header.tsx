@@ -113,18 +113,15 @@ const Header: React.FC = () => {
               }}
             >
               <Box
+                component="img"
+                src="/static/sportlab_logo.png"
+                alt="SportLab AI"
                 sx={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 2.5,
-                  display: "grid",
-                  placeItems: "center",
-                  bgcolor: "#0f172a",
-                  color: "#38bdf8",
+                  width: 48,
+                  height: 48,
+                  objectFit: "contain",
                 }}
-              >
-                <MonitorHeartIcon />
-              </Box>
+              />
 
               <Box>
                 <Typography
@@ -278,19 +275,16 @@ const Header: React.FC = () => {
       <Drawer anchor="right" open={drawerOpen} onClose={closeDrawer}>
         <Box sx={{ width: 320, maxWidth: "86vw", p: 2.5 }}>
           <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
-            <Box
+                      <Box
+              component="img"
+              src="/static/sportlab_logo.png"
+              alt="SportLab AI"
               sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2.2,
-                display: "grid",
-                placeItems: "center",
-                bgcolor: "#0f172a",
-                color: "#38bdf8",
+                width: 48,
+                height: 48,
+                objectFit: "contain",
               }}
-            >
-              <MonitorHeartIcon />
-            </Box>
+            />
 
             <Box>
               <Typography fontWeight={950}>SportLab AI</Typography>
