@@ -19,7 +19,7 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
-
+import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import {
   Area,
   AreaChart,
@@ -43,31 +43,66 @@ const colors = {
   cyan: "#06b6d4",
 };
 
+export default function Dashboard() {
+  const [latestCheckIn, setLatestCheckIn] = React.useState<any>(null);
+const [weeklyCheckIns, setWeeklyCheckIns] = React.useState<any[]>([]);
+const [loading, setLoading] = React.useState(true);
+
+React.useEffect(() => {
+  async function loadCheckIns() {
+    try {
+      const latest = await getLatestCheckIn();
+      const last7 = await getLast7CheckIns();
+
+      setLatestCheckIn(latest);
+      setWeeklyCheckIns(last7);
+    } catch (error) {
+      console.error("Failed to load check-ins:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  loadCheckIns();
+}, []);
+
 const userProfile = {
   name: "Mango",
   sport: "Tennis",
-  readiness: 82,
-  recovery: 76,
-  load: 68,
-  sleep: 7.2,
-  sleepQuality: 81,
-  fatigue: 36,
-  injuryRisk: 24,
+  readiness: latestCheckIn?.readiness_score ?? 0,
+  recovery: latestCheckIn?.recovery_score ?? 0,
+  load: latestCheckIn?.training_intensity ? latestCheckIn.training_intensity * 10 : 0,
+  sleep: latestCheckIn?.sleep_hours ?? 0,
+  sleepQuality: latestCheckIn?.sleep_quality ? latestCheckIn.sleep_quality * 10 : 0,
+  fatigue: latestCheckIn?.fatigue ? latestCheckIn.fatigue * 10 : 0,
+  injuryRisk: latestCheckIn?.injury_risk ?? 0,
   calories: 2900,
   protein: 145,
-  hydration: 3.4,
-  hydrationGoal: 4.0,
+  hydration: latestCheckIn?.hydration ?? 0,
+  hydrationGoal: 10,
+  nutrition: latestCheckIn?.nutrition ? latestCheckIn.nutrition * 10 : 0,
 };
 
-const weeklyData = [
-  { day: "Mon", readiness: 78, recovery: 72, load: 64, sleep: 7.1, fatigue: 42 },
-  { day: "Tue", readiness: 81, recovery: 75, load: 68, sleep: 7.3, fatigue: 38 },
-  { day: "Wed", readiness: 74, recovery: 67, load: 82, sleep: 6.5, fatigue: 55 },
-  { day: "Thu", readiness: 84, recovery: 79, load: 70, sleep: 7.6, fatigue: 34 },
-  { day: "Fri", readiness: 88, recovery: 82, load: 74, sleep: 8.0, fatigue: 29 },
-  { day: "Sat", readiness: 80, recovery: 76, load: 77, sleep: 7.4, fatigue: 41 },
-  { day: "Sun", readiness: 86, recovery: 84, load: 52, sleep: 8.2, fatigue: 25 },
-];
+const weeklyData = weeklyCheckIns.map((item) => ({
+  day: new Date(item.created_at).toLocaleDateString("en-US", {
+    weekday: "short",
+  }),
+  readiness: item.readiness_score ?? 0,
+  recovery: item.recovery_score ?? 0,
+  load: item.training_intensity ? item.training_intensity * 10 : 0,
+  sleep: item.sleep_hours ?? 0,
+  fatigue: item.fatigue ? item.fatigue * 10 : 0,
+}));
+
+if (loading) {
+  return (
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+      <Typography fontWeight={950}>Loading dashboard...</Typography>
+    </Box>
+  );
+}
+
+
 
 const trainingPlan = [
   { day: "Monday", plan: "Tennis footwork + light strength", intensity: "Medium" },
@@ -93,7 +128,7 @@ function riskColor(value: number) {
   return colors.red;
 }
 
-function getAIRecommendation() {
+function getAIRecommendation(userProfile: any) {
   if (userProfile.injuryRisk >= 60) {
     return "Your injury risk is high. Reduce high-intensity training and focus on mobility, hydration, and sleep.";
   }
@@ -112,8 +147,6 @@ function getAIRecommendation() {
 
   return "You are in a stable training zone. Continue normal practice, but keep monitoring sleep and hydration.";
 }
-
-export default function Dashboard() {
   const kpis = [
     {
       label: "My Readiness",
@@ -288,8 +321,7 @@ export default function Dashboard() {
                     Recommendation
                   </Typography>
                   <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                    {getAIRecommendation()}
-                  </Typography>
+                  {getAIRecommendation(userProfile)}                  </Typography>
                 </Box>
 
                 <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>

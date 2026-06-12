@@ -367,6 +367,19 @@ export default function AiChatHome({
           {error && <div className="chat-error">{error}</div>}
 
           <form className="chat-input" onSubmit={handleSubmit}>
+            <div className="mobile-quick-actions">
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => submitMessage(action.prompt)}
+                  disabled={isLoading}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+
             <div className="input-container">
               <input
                 type="text"

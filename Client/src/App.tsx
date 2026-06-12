@@ -13,7 +13,7 @@ import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import SportsHome from "./pages/SportsHome";
 import SportsListPage from "./pages/SportsListPage";
-import MentalHealthHome from "./pages/MentalHealthHome";
+
 import ProfilePage from "./pages/ProfilePage";
 
 const App: React.FC = () => {
@@ -64,7 +64,6 @@ const App: React.FC = () => {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/sports" element={<SportsHome />} />
             <Route path="/sports-list" element={<SportsListPage />} />
-            <Route path="/mental-health" element={<MentalHealthHome />} />
 
             {/* Protected routes */}
             <Route

@@ -1,32 +1,83 @@
 import AiChatHome from "../components/AiChatHome";
-import { SportsFinder } from "./SportsListPage";
 
-export default function SportsHome() {
+export default function UnifiedAIHome() {
   return (
     <AiChatHome
-      title="Sports Science AI Assistant"
-      logoSrc="/static/sport_log_2.png"
+      title="Sports Health AI"
+      logoSrc="/static/mental_logo.png"
       emptyIcon="🏆"
-      emptyTitle="Ask anything about sports science"
-      emptySubtitle="Rules • Coaching • Training Load • Recovery • Sport Matching"
-      inputPlaceholder="Ask about training, recovery, sport rules, or tactics..."
-      toolsTitle="Quick Sports Tools"
-      model="claude-sonnet-4-6"
-      systemPrompt="You are a sports science assistant for SportLab AI. Give practical, concise help about sport rules, athlete performance, training load, recovery, tactics, mental performance, and beginner drills. For injuries or medical concerns, do not diagnose; recommend a qualified clinician."
-      sideContent={<SportsFinder compact />}
+      emptyTitle="Ask about sports performance or mental wellbeing"
+      emptySubtitle="Training • Recovery • Nutrition • Stress • Confidence • Focus"
+      inputPlaceholder="Ask SportLab AI anything..."
+      toolsTitle="Quick Actions"
+      model="claude-haiku-4-5"
+      systemPrompt={`
+You are SportLab AI and MangoMind AI combined.
+
+You help with:
+- Sports performance
+- Training plans
+- Recovery
+- Nutrition
+- Injury prevention
+- Mental wellbeing
+- Stress management
+- Confidence building
+- Focus and performance psychology
+
+If a question is sports-related:
+Provide evidence-based sports science advice.
+
+If a question is mental-health related:
+Provide supportive emotional guidance and practical coping strategies.
+
+Do NOT diagnose medical or mental health conditions.
+
+If the user mentions:
+- self-harm
+- suicide
+- immediate danger
+- abuse
+- emergency situations
+
+Tell them to contact emergency services, a trusted adult, parent, coach, counselor, or crisis hotline immediately.
+
+Always be supportive, practical, and student-friendly.
+`}
       quickActions={[
-        { label: "Find sports like tennis", prompt: "What sports are most similar to tennis and why?" },
-        { label: "Build a beginner plan", prompt: "Create a beginner sports training plan for 4 weeks." },
-        { label: "Recovery checklist", prompt: "Give me a recovery checklist after a high intensity session." },
-        { label: "Analyze readiness", prompt: "Explain how to evaluate athlete readiness before training." },
+        {
+          label: "Training Plan",
+          prompt: "Create a weekly training plan for tennis."
+        },
+        {
+          label: "Recovery",
+          prompt: "How can I recover faster after a hard workout?"
+        },
+        {
+          label: "Confidence",
+          prompt: "Give me a pre-match confidence routine."
+        },
+        {
+          label: "Stress Support",
+          prompt: "How can I manage stress during exams and sports?"
+        },
       ]}
       examplesTitle="Example Questions"
       examples={[
-        "What sport is closest to tennis?",
-        "How do I improve acceleration for football?",
-        "How should training load be managed for young athletes?",
-        "What are the key performance metrics in cricket?",
+        "How can I improve my tennis footwork?",
+        "What should I eat before competition?",
+        "How do I deal with performance anxiety?",
+        "How can I stay motivated during training?",
+        "What are signs of overtraining?",
+        "How can I support a stressed teammate?",
       ]}
+      footerNote={
+        <>
+          🔒 Conversations run client-side through Puter.js.
+          <br />
+          🚨 For emergencies or self-harm concerns, contact local emergency services or a trusted adult immediately.
+        </>
+      }
     />
   );
 }

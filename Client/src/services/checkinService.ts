@@ -1,62 +1,54 @@
 import { supabase } from "../lib/supabaseClient";
 
-export type DailyCheckInPayload = {
-  sleep_hours: number;
-  sleep_quality: number;
-  energy: number;
-  soreness: number;
-  fatigue: number;
-  stress: number;
-  mood: number;
-  hydration: number;
-  nutrition: number;
-  training_intensity: number;
-  pain_level: number;
-  notes: string;
-  readiness_score: number;
-  recovery_score: number;
-  injury_risk: number;
-};
-
-export async function createDailyCheckIn(payload: DailyCheckInPayload) {
+export async function createDailyCheckIn(checkInData: any) {
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
   if (userError) throw userError;
-  if (!user) throw new Error("User not logged in.");
+  if (!user) throw new Error("You must be logged in to save a check-in.");
+
+  const today = new Date().toISOString().slice(0, 10);
 
   const { data, error } = await supabase
     .from("daily_checkins")
-    .insert({
-      user_id: user.id,
-      ...payload,
-    })
+    .upsert(
+      {
+        ...checkInData,
+        user_id: user.id,
+        checkin_date: today,
+      },
+      {
+        onConflict: "user_id,checkin_date",
+      }
+    )
     .select()
     .single();
 
   if (error) throw error;
-
   return data;
 }
 
-export async function getMyDailyCheckIns() {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) throw new Error("User not logged in.");
-
+export async function getLatestCheckIn() {
   const { data, error } = await supabase
     .from("daily_checkins")
     .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("checkin_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (error) throw error;
-
   return data;
+}
+
+export async function getLast7CheckIns() {
+  const { data, error } = await supabase
+    .from("daily_checkins")
+    .select("*")
+    .order("checkin_date", { ascending: false })
+    .limit(7);
+
+  if (error) throw error;
+  return [...(data || [])].reverse();
 }

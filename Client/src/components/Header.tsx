@@ -10,6 +10,8 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Toolbar,
   Typography,
@@ -28,17 +30,17 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Home", to: "/" },
-  { label: "Sports AI", to: "/sports" },
+  { label: "Sports Health AI", to: "/sports" },
   { label: "Sports List", to: "/sports-list" },
-  { label: "Mental Health", to: "/mental-health" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Check-In", to: "/daily-check-in" },
-  { label: "Profile", to: "/profile" },
 ];
 
 const Header: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [profileAnchor, setProfileAnchor] =
+    React.useState<null | HTMLElement>(null);
 
   const { pathname } = useLocation();
 
@@ -64,6 +66,14 @@ const Header: React.FC = () => {
   };
 
   const closeDrawer = () => setDrawerOpen(false);
+
+  const openProfileMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setProfileAnchor(event.currentTarget);
+  };
+
+  const closeProfileMenu = () => {
+    setProfileAnchor(null);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -167,36 +177,50 @@ const Header: React.FC = () => {
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
-              <IconButton
-                component={RouterLink}
-                to="/profile"
-                aria-label="Open profile"
-                sx={{
-                  bgcolor: isActive("/profile") ? "#e0f2fe" : "#f8fafc",
-                }}
-              >
-                <PersonIcon />
-              </IconButton>
-
               {isLoggedIn ? (
-                <Button
-                  type="button"
-                  onClick={handleLogout}
-                  variant="outlined"
-                  sx={{
-                    borderRadius: 999,
-                    fontWeight: 900,
-                    borderColor: "#cbd5e1",
-                    color: "#0f172a",
-                    px: 2,
-                    "&:hover": {
-                      borderColor: "#94a3b8",
-                      bgcolor: "#f8fafc",
-                    },
-                  }}
-                >
-                  Logout
-                </Button>
+                <>
+                  <IconButton
+                    onClick={openProfileMenu}
+                    aria-label="Profile menu"
+                    sx={{
+                      bgcolor: isActive("/profile") ? "#e0f2fe" : "#f8fafc",
+                      "&:hover": { bgcolor: "#e0f2fe" },
+                    }}
+                  >
+                    <PersonIcon />
+                  </IconButton>
+
+                  <Menu
+                    anchorEl={profileAnchor}
+                    open={Boolean(profileAnchor)}
+                    onClose={closeProfileMenu}
+                    anchorOrigin={{
+                      vertical: "bottom",
+                      horizontal: "right",
+                    }}
+                    transformOrigin={{
+                      vertical: "top",
+                      horizontal: "right",
+                    }}
+                  >
+                    <MenuItem
+                      component={RouterLink}
+                      to="/profile"
+                      onClick={closeProfileMenu}
+                    >
+                      Profile
+                    </MenuItem>
+
+                    <MenuItem
+                      onClick={async () => {
+                        closeProfileMenu();
+                        await handleLogout();
+                      }}
+                    >
+                      Logout
+                    </MenuItem>
+                  </Menu>
+                </>
               ) : (
                 <>
                   <Button
@@ -299,6 +323,25 @@ const Header: React.FC = () => {
                 />
               </ListItemButton>
             ))}
+
+            {isLoggedIn && (
+              <ListItemButton
+                component={RouterLink}
+                to="/profile"
+                onClick={closeDrawer}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.5,
+                  bgcolor: isActive("/profile") ? "#e0f2fe" : "transparent",
+                  color: isActive("/profile") ? "#0284c7" : "#0f172a",
+                }}
+              >
+                <ListItemText
+                  primary="Profile"
+                  primaryTypographyProps={{ fontWeight: 850 }}
+                />
+              </ListItemButton>
+            )}
           </List>
 
           <Divider sx={{ my: 1.5 }} />

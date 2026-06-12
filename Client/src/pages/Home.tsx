@@ -345,75 +345,7 @@ const Home: React.FC = () => {
                 transition={transition}
                 sx={{ position: "relative" }}
               >
-                {!isMobile && (
-                  <>
-                    <MotionBox
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              y: [0, -12, 0],
-                            }
-                      }
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                      sx={{
-                        position: "absolute",
-                        display: "grid",
-                        placeItems: "center",
-                        top: 24,
-                        left: -18,
-                        width: 72,
-                        height: 72,
-                        borderRadius: 4,
-                        bgcolor: "#ffffff",
-                        border: "1px solid #e2e8f0",
-                        boxShadow: "0 18px 50px rgba(15,23,42,0.12)",
-                        color: "#0284c7",
-                        zIndex: 2,
-                      }}
-                    >
-                      <SpeedIcon sx={{ fontSize: 34 }} />
-                    </MotionBox>
-
-                    <MotionBox
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              y: [0, -14, 0],
-                            }
-                      }
-                      transition={{
-                        duration: 4.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: 0.4,
-                      }}
-                      sx={{
-                        position: "absolute",
-                        display: "grid",
-                        placeItems: "center",
-                        bottom: 34,
-                        right: -12,
-                        width: 76,
-                        height: 76,
-                        borderRadius: 4,
-                        bgcolor: "#ffffff",
-                        border: "1px solid #e2e8f0",
-                        boxShadow: "0 18px 50px rgba(15,23,42,0.12)",
-                        color: "#16a34a",
-                        zIndex: 2,
-                      }}
-                    >
-                      <DirectionsRunIcon sx={{ fontSize: 36 }} />
-                    </MotionBox>
-                  </>
-                )}
-
+                
                 <MotionPaper
                   elevation={0}
                   whileHover={reduceMotion || isMobile ? undefined : { y: -5 }}
