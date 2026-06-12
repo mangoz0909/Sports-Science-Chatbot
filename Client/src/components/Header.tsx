@@ -61,8 +61,7 @@ const Header: React.FC = () => {
   }, []);
 
   const isActive = (to: string) => {
-    if (to === "/") return pathname === "/";
-    return pathname.startsWith(to);
+    return pathname === to;
   };
 
   const closeDrawer = () => setDrawerOpen(false);
