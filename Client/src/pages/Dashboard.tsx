@@ -316,12 +316,18 @@ function getAIRecommendation(userProfile: any) {
                   </Typography>
                 </Stack>
 
-                <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#eff6ff", border: "1px solid #bfdbfe" }}>
-                  <Typography fontWeight={950} color="#1d4ed8">
-                    Recommendation
-                  </Typography>
-                  <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                  {getAIRecommendation(userProfile)}                  </Typography>
+                <Box sx={{ mt: 2, p: "14px 16px", borderRadius: 3, bgcolor: "#eff6ff", border: "1px solid #bfdbfe", position: "relative", overflow: "hidden" }}>
+                  <Box sx={{ position: "absolute", top: 0, left: 0, width: 4, bottom: 0, bgcolor: "#2563eb", borderRadius: "4px 0 0 4px" }} />
+                  <Box sx={{ pl: "8px" }}>
+                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.75 }}>
+                      <Typography fontSize={11} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb">
+                        AI Recommendation
+                      </Typography>
+                    </Stack>
+                    <Typography color="#1e3a5f" fontSize={14} lineHeight={1.8}>
+                      {getAIRecommendation(userProfile)}
+                    </Typography>
+                  </Box>
                 </Box>
 
                 <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>

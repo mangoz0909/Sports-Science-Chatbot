@@ -7,8 +7,8 @@ export default function UnifiedAIHome() {
       logoSrc="/static/mental_logo.png"
       emptyIcon="🏆"
       emptyTitle="Ask about sports performance or mental wellbeing"
-      emptySubtitle="Training • Recovery • Nutrition • Stress • Confidence • Focus"
-      inputPlaceholder="Ask SportLab AI anything..."
+      emptySubtitle="Training · Recovery · Nutrition · Stress · Confidence · Focus"
+      inputPlaceholder="Ask SportLab AI anything…"
       toolsTitle="Quick Actions"
       model="claude-haiku-4-5"
       systemPrompt={`
@@ -46,20 +46,24 @@ Always be supportive, practical, and student-friendly.
 `}
       quickActions={[
         {
+          icon: "📅",
           label: "Training Plan",
-          prompt: "Create a weekly training plan for tennis."
+          prompt: "Create a weekly training plan for tennis.",
         },
         {
+          icon: "💪",
           label: "Recovery",
-          prompt: "How can I recover faster after a hard workout?"
+          prompt: "How can I recover faster after a hard workout?",
         },
         {
+          icon: "🧠",
           label: "Confidence",
-          prompt: "Give me a pre-match confidence routine."
+          prompt: "Give me a pre-match confidence routine.",
         },
         {
+          icon: "🌿",
           label: "Stress Support",
-          prompt: "How can I manage stress during exams and sports?"
+          prompt: "How can I manage stress during exams and sports?",
         },
       ]}
       examplesTitle="Example Questions"
@@ -75,7 +79,7 @@ Always be supportive, practical, and student-friendly.
         <>
           🔒 Conversations run client-side through Puter.js.
           <br />
-          🚨 For emergencies or self-harm concerns, contact local emergency services or a trusted adult immediately.
+          🚨 For emergencies, contact local services or a trusted adult immediately.
         </>
       }
     />

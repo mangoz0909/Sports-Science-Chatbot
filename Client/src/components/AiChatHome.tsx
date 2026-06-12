@@ -1,10 +1,11 @@
-import type { FormEvent, ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./AiChatHome.css";
 
 type QuickAction = {
   label: string;
   prompt: string;
+  icon?: string;
 };
 
 type AiChatHomeProps = {
@@ -27,20 +28,13 @@ type AiChatHomeProps = {
 type ChatMessage = {
   role: "user" | "bot";
   content: string;
+  timestamp: Date;
 };
 
-type SpeechRecognitionResultLike = {
-  transcript: string;
-};
-
+type SpeechRecognitionResultLike = { transcript: string };
 type SpeechRecognitionEventLike = {
-  results: {
-    [index: number]: {
-      [index: number]: SpeechRecognitionResultLike;
-    };
-  };
+  results: { [index: number]: { [index: number]: SpeechRecognitionResultLike } };
 };
-
 type SpeechRecognitionLike = {
   lang: string;
   continuous: boolean;
@@ -52,16 +46,13 @@ type SpeechRecognitionLike = {
   onerror: (() => void) | null;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
 };
-
 type SpeechRecognitionConstructorLike = new () => SpeechRecognitionLike;
 
 type PuterChatResponse =
   | string
   | {
       text?: string;
-      message?: {
-        content?: Array<{ text?: string }> | string;
-      };
+      message?: { content?: Array<{ text?: string }> | string };
     };
 
 declare global {
@@ -70,7 +61,10 @@ declare global {
     webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
     puter?: {
       ai?: {
-        chat?: (prompt: string, options?: { model?: string }) => Promise<PuterChatResponse>;
+        chat?: (
+          prompt: string,
+          options?: { model?: string }
+        ) => Promise<PuterChatResponse>;
       };
     };
   }
@@ -81,21 +75,13 @@ const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 function loadPuterScript() {
   return new Promise<void>((resolve, reject) => {
-    if (window.puter?.ai?.chat) {
-      resolve();
+    if (window.puter?.ai?.chat) { resolve(); return; }
+    const existing = document.getElementById(PUTER_SCRIPT_ID) as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Failed to load Puter.js.")), { once: true });
       return;
     }
-
-    const existingScript = document.getElementById(PUTER_SCRIPT_ID) as HTMLScriptElement | null;
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
-      existingScript.addEventListener("error", () => reject(new Error("Failed to load Puter.js.")), {
-        once: true,
-      });
-      return;
-    }
-
     const script = document.createElement("script");
     script.id = PUTER_SCRIPT_ID;
     script.src = "https://js.puter.com/v2/";
@@ -109,61 +95,110 @@ function loadPuterScript() {
 function extractPuterText(response: PuterChatResponse) {
   if (typeof response === "string") return response;
   if (response?.text) return response.text;
-
   const content = response?.message?.content;
-
   if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content.map((item) => item.text).filter(Boolean).join("\n");
-  }
-
+  if (Array.isArray(content)) return content.map((i) => i.text).filter(Boolean).join("\n");
   return "No response received.";
 }
 
-function formatBotMessage(content: string) {
-  return content.split("\n").map((line, index) => {
+/** Full markdown-to-JSX renderer with bold, code, lists, headings, hr */
+function formatBotMessage(content: string): ReactNode {
+  const lines = content.split("\n");
+  const elements: ReactNode[] = [];
+  let listBuffer: string[] = [];
+
+  function flushList(key: string) {
+    if (!listBuffer.length) return;
+    elements.push(
+      <ul key={key} className="markdown-list">
+        {listBuffer.map((item, i) => {
+          const text = item.replace(/^[-*+]\s+/, "");
+          return (
+            <li key={i} className="markdown-list-item">
+              <span className="markdown-list-bullet" />
+              <span dangerouslySetInnerHTML={{ __html: renderInline(text) }} />
+            </li>
+          );
+        })}
+      </ul>
+    );
+    listBuffer = [];
+  }
+
+  function renderInline(text: string): string {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="markdown-bold">$1</strong>')
+      .replace(/`([^`]+)`/g, '<code class="markdown-code-inline">$1</code>');
+  }
+
+  lines.forEach((raw, i) => {
+    const line = raw;
     const trimmed = line.trim();
 
-    if (!trimmed) return <br key={index} />;
-
-    if (trimmed.startsWith("### ")) {
-      return (
-        <h3 key={index} className="markdown-heading">
-          {trimmed.replace("### ", "")}
-        </h3>
-      );
+    // Code block — simplified (just style as block if backtick fenced)
+    if (trimmed.startsWith("```")) {
+      flushList(`list-${i}`);
+      // skip fence markers
+      return;
     }
 
-    if (trimmed.startsWith("## ")) {
-      return (
-        <h2 key={index} className="markdown-heading">
-          {trimmed.replace("## ", "")}
-        </h2>
-      );
+    if (!trimmed) {
+      flushList(`list-${i}`);
+      elements.push(<br key={`br-${i}`} />);
+      return;
+    }
+
+    if (trimmed.startsWith("---") || trimmed.startsWith("***")) {
+      flushList(`list-${i}`);
+      elements.push(<hr key={`hr-${i}`} className="markdown-hr" />);
+      return;
     }
 
     if (trimmed.startsWith("# ")) {
-      return (
-        <h1 key={index} className="markdown-heading">
-          {trimmed.replace("# ", "")}
-        </h1>
+      flushList(`list-${i}`);
+      elements.push(
+        <h1 key={i} className="markdown-heading-h1"
+            dangerouslySetInnerHTML={{ __html: renderInline(trimmed.slice(2)) }} />
       );
+      return;
     }
 
-    if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-      return (
-        <div key={index} className="markdown-list-item">
-          • {trimmed.slice(2)}
-        </div>
+    if (trimmed.startsWith("## ")) {
+      flushList(`list-${i}`);
+      elements.push(
+        <h2 key={i} className="markdown-heading-h2"
+            dangerouslySetInnerHTML={{ __html: renderInline(trimmed.slice(3)) }} />
       );
+      return;
     }
 
-    return (
-      <p key={index} className="markdown-paragraph">
-        {trimmed}
-      </p>
+    if (trimmed.startsWith("### ")) {
+      flushList(`list-${i}`);
+      elements.push(
+        <h3 key={i} className="markdown-heading-h3"
+            dangerouslySetInnerHTML={{ __html: renderInline(trimmed.slice(4)) }} />
+      );
+      return;
+    }
+
+    if (/^[-*+]\s/.test(trimmed)) {
+      listBuffer.push(trimmed);
+      return;
+    }
+
+    flushList(`list-${i}`);
+    elements.push(
+      <p key={i} className="markdown-paragraph"
+         dangerouslySetInnerHTML={{ __html: renderInline(trimmed) }} />
     );
   });
+
+  flushList("list-end");
+  return <>{elements}</>;
+}
+
+function formatTime(date: Date) {
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function AiChatHome({
@@ -190,6 +225,7 @@ export default function AiChatHome({
   const [puterReady, setPuterReady] = useState(false);
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const canSend = message.trim().length > 0 && !isLoading;
@@ -202,67 +238,47 @@ export default function AiChatHome({
 
   useEffect(() => {
     let mounted = true;
-
     loadPuterScript()
-      .then(() => {
-        if (mounted) setPuterReady(true);
-      })
+      .then(() => { if (mounted) setPuterReady(true); })
       .catch(() => {
         if (mounted) setError("Puter.js failed to load. Check your connection and script permissions.");
       });
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
-    chatBoxRef.current?.scrollTo({
-      top: chatBoxRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isLoading]);
 
+  // Auto-grow textarea
   useEffect(() => {
-    const SpeechRecognitionConstructor =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+  }, [message]);
 
+  useEffect(() => {
+    const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognitionConstructor) return;
-
     const recognition = new SpeechRecognitionConstructor();
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
-
-    recognition.onstart = () => {
-      setIsRecording(true);
-      setError("");
-    };
-
+    recognition.onstart = () => { setIsRecording(true); setError(""); };
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
       const transcript = event.results[0]?.[0]?.transcript || "";
       setMessage(transcript);
     };
-
-    recognition.onerror = () => {
-      setIsRecording(false);
-      setError("Voice input failed. Please type your message instead.");
-    };
-
+    recognition.onerror = () => { setIsRecording(false); setError("Voice input failed. Please type instead."); };
     recognition.onend = () => setIsRecording(false);
     recognitionRef.current = recognition;
-
     return () => recognition.stop();
   }, []);
 
   const handleMicClick = () => {
     setError("");
-
-    if (!recognitionRef.current) {
-      setError("Voice input is not supported in this browser.");
-      return;
-    }
-
+    if (!recognitionRef.current) { setError("Voice input is not supported in this browser."); return; }
     recognitionRef.current.start();
   };
 
@@ -271,70 +287,82 @@ export default function AiChatHome({
       .slice(-8)
       .map((item) => `${item.role === "user" ? "User" : "Assistant"}: ${item.content}`)
       .join("\n");
-
     return [
       `System: ${systemPrompt || defaultSystemPrompt}`,
       recentHistory ? `Recent conversation:\n${recentHistory}` : "",
       `User: ${userMessage}`,
       "Assistant:",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    ].filter(Boolean).join("\n\n");
   };
 
-  const submitMessage = async (text: string) => {
+  const submitMessage = useCallback(async (text: string) => {
     const userMessage = text.trim();
     if (!userMessage || isLoading) return;
-
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    const now = new Date();
+    setMessages((prev) => [...prev, { role: "user", content: userMessage, timestamp: now }]);
     setMessage("");
     setIsLoading(true);
     setError("");
-
     try {
       await loadPuterScript();
-
-      if (!window.puter?.ai?.chat) {
-        throw new Error("Puter AI is unavailable.");
-      }
-
+      if (!window.puter?.ai?.chat) throw new Error("Puter AI is unavailable.");
       const response = await window.puter.ai.chat(buildPrompt(userMessage), { model });
       const reply = extractPuterText(response);
-
       setPuterReady(true);
-      setMessages((prev) => [...prev, { role: "bot", content: reply }]);
+      setMessages((prev) => [...prev, { role: "bot", content: reply, timestamp: new Date() }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI request failed. Try again.");
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          content:
-            "I could not connect to Puter.js right now. Check that https://js.puter.com/v2/ is allowed and retry.",
+          content: "I could not connect right now. Check that https://js.puter.com/v2/ is reachable and retry.",
+          timestamp: new Date(),
         },
       ]);
     } finally {
       setIsLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, messages, model, systemPrompt]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     submitMessage(message);
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (canSend) submitMessage(message);
+    }
+  };
+
+  const clearConversation = () => setMessages([]);
+
   return (
     <main className="ai-page">
       <section className="ai-shell">
+        {/* ── Main Chat Card ── */}
         <section className="chat-card">
           <header className="chat-header">
             <div className="brand-block">
               <img src={logoSrc} alt={`${title} logo`} className="brand-logo" />
               <div>
-                <p className="eyebrow">AI Assistant • {puterReady ? "Puter Ready" : "Loading Puter"}</p>
+                <p className="eyebrow">
+                  <span className={`status-dot ${puterReady ? "" : "offline"}`} />
+                  AI Assistant &nbsp;·&nbsp; {puterReady ? "Ready" : "Connecting…"}
+                </p>
                 <h1>{title}</h1>
               </div>
             </div>
+            {messages.length > 0 && (
+              <div className="header-actions">
+                <button className="clear-btn" type="button" onClick={clearConversation}>
+                  ✕ Clear chat
+                </button>
+              </div>
+            )}
           </header>
 
           <div className="chat-box" ref={chatBoxRef}>
@@ -349,17 +377,28 @@ export default function AiChatHome({
             {messages.map((item, index) => (
               <div
                 key={`${item.role}-${index}`}
-                className={`message ${item.role === "user" ? "user-message" : "bot-message"}`}
+                className={`message-row ${item.role === "user" ? "user-row" : ""}`}
               >
-                {item.role === "bot" ? formatBotMessage(item.content) : item.content}
+                <div className={`avatar ${item.role === "bot" ? "bot-avatar" : "user-avatar"}`}>
+                  {item.role === "bot" ? "AI" : "U"}
+                </div>
+                <div>
+                  <div className={`message ${item.role === "user" ? "user-message" : "bot-message"}`}>
+                    {item.role === "bot" ? formatBotMessage(item.content) : item.content}
+                  </div>
+                  <div className={`message-meta ${item.role === "bot" ? "bot-message" : ""}`}>
+                    {formatTime(item.timestamp)}
+                  </div>
+                </div>
               </div>
             ))}
 
             {isLoading && (
-              <div className="typing" aria-label="Assistant is typing">
-                <span />
-                <span />
-                <span />
+              <div className="typing-row">
+                <div className="avatar bot-avatar">AI</div>
+                <div className="typing" aria-label="Assistant is typing">
+                  <span /><span /><span />
+                </div>
               </div>
             )}
           </div>
@@ -375,36 +414,46 @@ export default function AiChatHome({
                   onClick={() => submitMessage(action.prompt)}
                   disabled={isLoading}
                 >
+                  {action.icon && <span>{action.icon}</span>}
                   {action.label}
                 </button>
               ))}
             </div>
 
-            <div className="input-container">
-              <input
-                type="text"
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                placeholder={isRecording ? "Listening..." : inputPlaceholder}
-                disabled={isLoading}
-              />
-
-              <button
-                type="button"
-                className={`icon-btn ${isRecording ? "recording" : ""}`}
-                onClick={handleMicClick}
-                aria-label="Use voice input"
-              >
-                🎤
-              </button>
-
-              <button type="submit" className="send-btn" disabled={!canSend} aria-label="Send message">
-                ↑
-              </button>
+            <div className="input-wrapper">
+              <div className="input-container">
+                <textarea
+                  ref={textareaRef}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={isRecording ? "Listening…" : inputPlaceholder}
+                  disabled={isLoading}
+                  rows={1}
+                />
+                <button
+                  type="button"
+                  className={`icon-btn ${isRecording ? "recording" : ""}`}
+                  onClick={handleMicClick}
+                  aria-label="Use voice input"
+                >
+                  🎤
+                </button>
+                <button
+                  type="submit"
+                  className="send-btn"
+                  disabled={!canSend}
+                  aria-label="Send message"
+                >
+                  ↑
+                </button>
+              </div>
+              <div className="input-hint">Enter to send · Shift+Enter for new line</div>
             </div>
           </form>
         </section>
 
+        {/* ── Side Panel ── */}
         <aside className="side-panel">
           {sideContent && <section className="panel-section side-custom">{sideContent}</section>}
 
@@ -412,7 +461,13 @@ export default function AiChatHome({
             <h3>{toolsTitle}</h3>
             <div className="quick-grid">
               {quickActions.map((action) => (
-                <button key={action.label} type="button" onClick={() => submitMessage(action.prompt)}>
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => submitMessage(action.prompt)}
+                  disabled={isLoading}
+                >
+                  {action.icon && <span className="qa-icon">{action.icon}</span>}
                   {action.label}
                 </button>
               ))}
@@ -423,7 +478,10 @@ export default function AiChatHome({
             <h3>{examplesTitle}</h3>
             <ul>
               {examples.map((example) => (
-                <li key={example}>{example}</li>
+                <li key={example} onClick={() => submitMessage(example)} role="button" tabIndex={0}
+                    onKeyDown={(e) => e.key === "Enter" && submitMessage(example)}>
+                  {example}
+                </li>
               ))}
             </ul>
             {footerNote && <div className="chat-footer-note">{footerNote}</div>}
