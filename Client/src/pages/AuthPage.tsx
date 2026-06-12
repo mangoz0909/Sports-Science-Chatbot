@@ -142,7 +142,7 @@ const AuthPage: React.FC = () => {
     >
       <Container maxWidth="lg">
         <Grid container spacing={3} alignItems="stretch">
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} md={5} sx={{ display: { xs: "none", md: "block" } }}>
             <Paper
               elevation={0}
               sx={{
@@ -245,7 +245,7 @@ const AuthPage: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={7}>
+          <Grid item xs={12} md={7} sx={{ mx: { xs: "auto" }, maxWidth: { xs: 520, sm: 560, md: "100%" } }}>
             <Paper
               elevation={0}
               component="form"

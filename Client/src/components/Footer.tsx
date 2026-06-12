@@ -53,9 +53,9 @@ const Footer: React.FC = () => {
 
         <Divider sx={{ my: 3, borderColor: "rgba(255,255,255,0.1)" }} />
 
-        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
-          <Typography color="rgba(255,255,255,0.58)" fontSize={14}>© {new Date().getFullYear()} SportLab AI. All rights reserved.</Typography>
-          <Typography color="rgba(255,255,255,0.58)" fontSize={14}>Built for sports science workflows.</Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={1}>
+          <Typography color="rgba(255,255,255,0.58)" fontSize={13}>© {new Date().getFullYear()} SportLab AI. All rights reserved.</Typography>
+          <Typography color="rgba(255,255,255,0.42)" fontSize={13}>Built for sports science workflows.</Typography>
         </Stack>
       </Container>
     </Box>

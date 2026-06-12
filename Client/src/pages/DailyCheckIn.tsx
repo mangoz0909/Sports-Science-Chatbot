@@ -433,7 +433,7 @@ export default function DailyCheckIn() {
           </Grid>
 
           <Grid item xs={12} lg={4}>
-            <Stack spacing={2.5}>
+            <Stack spacing={2.5} sx={{ position: { lg: "sticky" }, top: { lg: 88 } }}>
               <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
                 <CardContent sx={{ p: 3 }}>
                   <Stack direction="row" spacing={1.2} alignItems="center">
@@ -446,18 +446,23 @@ export default function DailyCheckIn() {
                   <Box
                     sx={{
                       mt: 2,
-                      p: 2,
+                      p: "14px 16px",
                       borderRadius: 3,
                       bgcolor: "#eff6ff",
                       border: "1px solid #bfdbfe",
+                      position: "relative",
+                      overflow: "hidden",
                     }}
                   >
-                    <Typography color="#1d4ed8" fontWeight={950}>
-                      Recommendation
-                    </Typography>
-                    <Typography color="#475569" lineHeight={1.75} sx={{ mt: 1 }}>
-                      {getAIAdvice(data)}
-                    </Typography>
+                    <Box sx={{ position: "absolute", top: 0, left: 0, width: 4, bottom: 0, bgcolor: "#2563eb", borderRadius: "4px 0 0 4px" }} />
+                    <Box sx={{ pl: "8px" }}>
+                      <Typography fontSize={11} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb" sx={{ mb: 0.75 }}>
+                        AI Recommendation
+                      </Typography>
+                      <Typography color="#1e3a5f" fontSize={14} lineHeight={1.8}>
+                        {getAIAdvice(data)}
+                      </Typography>
+                    </Box>
                   </Box>
                 </CardContent>
               </Card>
