@@ -31,6 +31,7 @@ import {
   loginUser,
   signUpUser,
   signInWithGoogle,
+  sendPasswordResetEmail,
 } from "../services/authService";
 
 type Mode = "login" | "signup";
@@ -58,6 +59,7 @@ const AuthPage: React.FC = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -85,6 +87,27 @@ const AuthPage: React.FC = () => {
     if (password.length < 6) return "Password must be at least 6 characters.";
 
     return null;
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setSuccessMsg(null);
+
+    if (!email.trim() || !email.includes("@")) {
+      setError("Enter your email first, then click Forgot password.");
+      return;
+    }
+
+    setResetSubmitting(true);
+
+    try {
+      await sendPasswordResetEmail(email);
+      setSuccessMsg("Password reset email sent. Check your inbox.");
+    } catch (err: any) {
+      setError(err?.message || "Failed to send password reset email.");
+    } finally {
+      setResetSubmitting(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -258,7 +281,12 @@ const AuthPage: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={7} sx={{ mx: { xs: "auto" }, maxWidth: { xs: 520, sm: 560, md: "100%" } }}>
+          <Grid
+            item
+            xs={12}
+            md={7}
+            sx={{ mx: { xs: "auto" }, maxWidth: { xs: 520, sm: 560, md: "100%" } }}
+          >
             <Paper
               elevation={0}
               component="form"
@@ -363,6 +391,7 @@ const AuthPage: React.FC = () => {
                   fullWidth
                   disabled={googleSubmitting}
                   onClick={handleGoogleSignIn}
+                  startIcon={<GoogleIcon />}
                   sx={{
                     borderRadius: 3,
                     py: 1.4,
@@ -422,21 +451,42 @@ const AuthPage: React.FC = () => {
                 />
 
                 {mode === "login" && (
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={remember}
-                        onChange={(event) => setRemember(event.target.checked)}
-                      />
-                    }
-                    label="Remember me"
-                  />
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    spacing={1}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={remember}
+                          onChange={(event) => setRemember(event.target.checked)}
+                        />
+                      }
+                      label="Remember me"
+                    />
+
+                    <Button
+                      type="button"
+                      variant="text"
+                      disabled={resetSubmitting}
+                      onClick={handleForgotPassword}
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 900,
+                        color: "#0369a1",
+                      }}
+                    >
+                      {resetSubmitting ? "Sending..." : "Forgot password?"}
+                    </Button>
+                  </Stack>
                 )}
 
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={submitting || googleSubmitting}
+                  disabled={submitting || googleSubmitting || resetSubmitting}
                   sx={{
                     borderRadius: 3,
                     bgcolor: "#0f172a",
