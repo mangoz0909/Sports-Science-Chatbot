@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const allowedOrigins = [
+  Deno.env.get("ALLOWED_ORIGIN") || "",
+  "http://localhost:3000",
+].filter(Boolean);
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const isAllowed = allowedOrigins.includes(origin);
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin : allowedOrigins[0] || "",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
 
 type ChatType = "sports" | "mental_health";
 
@@ -27,9 +38,11 @@ For injuries or medical concerns, do not diagnose. Recommend a qualified clinici
 }
 
 serve(async (req) => {
+  const reqCorsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", {
-      headers: corsHeaders,
+      headers: reqCorsHeaders,
     });
   }
 
@@ -48,7 +61,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing Authorization header." }), {
         status: 401,
         headers: {
-          ...corsHeaders,
+          ...reqCorsHeaders,
           "Content-Type": "application/json",
         },
       });
@@ -71,7 +84,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized." }), {
         status: 401,
         headers: {
-          ...corsHeaders,
+          ...reqCorsHeaders,
           "Content-Type": "application/json",
         },
       });
@@ -86,7 +99,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Message is required." }), {
         status: 400,
         headers: {
-          ...corsHeaders,
+          ...reqCorsHeaders,
           "Content-Type": "application/json",
         },
       });
@@ -96,7 +109,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid chat type." }), {
         status: 400,
         headers: {
-          ...corsHeaders,
+          ...reqCorsHeaders,
           "Content-Type": "application/json",
         },
       });
@@ -168,7 +181,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ reply }), {
       headers: {
-        ...corsHeaders,
+        ...reqCorsHeaders,
         "Content-Type": "application/json",
       },
     });
@@ -180,7 +193,7 @@ serve(async (req) => {
       {
         status: 500,
         headers: {
-          ...corsHeaders,
+          ...reqCorsHeaders,
           "Content-Type": "application/json",
         },
       }

@@ -125,8 +125,18 @@ function formatBotMessage(content: string): ReactNode {
     listBuffer = [];
   }
 
+  function escapeHtml(raw: string): string {
+    return raw
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   function renderInline(text: string): string {
-    return text
+    const safe = escapeHtml(text);
+    return safe
       .replace(/\*\*(.+?)\*\*/g, '<strong class="markdown-bold">$1</strong>')
       .replace(/`([^`]+)`/g, '<code class="markdown-code-inline">$1</code>');
   }

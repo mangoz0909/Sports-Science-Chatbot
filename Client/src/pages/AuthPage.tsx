@@ -48,7 +48,10 @@ const AuthPage: React.FC = () => {
   const initialMode = (qs.get("mode") === "signup" ? "signup" : "login") as Mode;
 
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    if (initialMode === "login") return localStorage.getItem("rememberedEmail") || "";
+    return "";
+  });
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -138,6 +141,11 @@ const AuthPage: React.FC = () => {
     try {
       if (mode === "login") {
         await loginUser(email, password);
+        if (remember) {
+          localStorage.setItem("rememberedEmail", email);
+        } else {
+          localStorage.removeItem("rememberedEmail");
+        }
         setSuccessMsg("Logged in successfully.");
       } else {
         await signUpUser(name, email, password);

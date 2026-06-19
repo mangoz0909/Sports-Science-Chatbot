@@ -13,10 +13,13 @@ export default function AuthCallback() {
       try {
         const {
           data: { session },
+          error: sessionError,
         } = await supabase.auth.getSession();
 
+        if (sessionError) throw sessionError;
+
         if (!session) {
-          navigate("/auth?mode=login", { replace: true });
+          navigate("/auth?mode=login&error=session_missing", { replace: true });
           return;
         }
 

@@ -29,6 +29,7 @@ const navItems: NavItem[] = [
   { label: "Sports AI", to: "/sports" },
   { label: "Sports Match", to: "/sports-list" },
   { label: "Dashboard", to: "/dashboard" },
+  { label: "Health", to: "/health/workout" },
   { label: "Check-In", to: "/daily-check-in" },
 ];
 
@@ -59,7 +60,8 @@ const Header: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const isActive = (to: string) => pathname === to;
+  const isActive = (to: string) =>
+    to === "/" ? pathname === "/" : pathname.startsWith(to.split("/").slice(0, 2).join("/"));
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = async () => {
