@@ -265,7 +265,7 @@ export default function DailyCheckIn() {
               fontWeight: 950,
               letterSpacing: -0.8,
               color: "#0f172a",
-              fontSize: { xs: "2rem", md: "3rem" },
+              fontSize: { xs: "1.6rem", md: "3rem" },
             }}
           >
             How are you feeling today?

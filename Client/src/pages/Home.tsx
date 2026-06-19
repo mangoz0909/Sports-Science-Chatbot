@@ -170,7 +170,7 @@ const Home: React.FC = () => {
         }}
       >
         <Container maxWidth="xl">
-          <Grid container spacing={{ xs: 5, md: 7 }} alignItems="center">
+          <Grid container spacing={{ xs: 2, md: 7 }} alignItems="center">
             <Grid item xs={12} md={6}>
               <MotionBox
                 variants={stagger}
@@ -299,7 +299,7 @@ const Home: React.FC = () => {
                         { label: "Risk Alerts", value: "Live" },
                         { label: "AI Guidance", value: "24/7" },
                       ].map((item) => (
-                        <Grid item xs={4} key={item.label}>
+                        <Grid item xs={12} sm={4} key={item.label}>
                           <MotionBox
                             whileHover={hoverLift}
                             sx={{

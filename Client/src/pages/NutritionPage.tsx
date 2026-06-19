@@ -210,7 +210,7 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
           {/* Macro targets */}
           {macros.map((macro, i) => (
-            <Grid item xs={6} sm={4} md={2.4} key={macro.label}>
+            <Grid item xs={12} sm={6} md={2.4} key={macro.label}>
               <Card
                 elevation={0}
                 sx={{
@@ -271,7 +271,7 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
           {/* Tip */}
           <Grid item xs={12}>
-            <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: "#fef3c7", border: "1px solid #fde68a" }}>
+            <Box sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 3, bgcolor: "#fef3c7", border: "1px solid #fde68a" }}>
               <Typography fontWeight={950} color="#92400e" sx={{ mb: 0.5 }}>
                 💡 Nutrition Tip
               </Typography>
