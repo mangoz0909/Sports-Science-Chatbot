@@ -18,15 +18,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
 
-declare global {
-  interface Window {
-    puter?: {
-      ai?: {
-        chat?: (prompt: string, options?: { model?: string }) => Promise<any>;
-      };
-    };
-  }
-}
+
 
 type WorkoutDay = {
   day: string;

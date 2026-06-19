@@ -18,7 +18,7 @@ import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+
 import HotelIcon from "@mui/icons-material/Hotel";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PsychologyIcon from "@mui/icons-material/Psychology";

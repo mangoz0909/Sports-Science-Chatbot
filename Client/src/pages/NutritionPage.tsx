@@ -19,15 +19,6 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
 
-declare global {
-  interface Window {
-    puter?: {
-      ai?: {
-        chat?: (prompt: string, options?: { model?: string }) => Promise<any>;
-      };
-    };
-  }
-}
 
 type MacroItem = { label: string; value: string; unit: string };
 type MealItem = { meal: string; foods: string; timing: string };
