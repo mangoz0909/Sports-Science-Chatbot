@@ -26,6 +26,7 @@ import {
   saveUserPreferences,
   UserPreferences,
 } from "../services/preferencesService";
+import { getLatestCheckIn } from "../services/checkinService";
 
 export default function ProfilePage() {
   const [loading, setLoading] = React.useState(true);
@@ -35,6 +36,7 @@ export default function ProfilePage() {
 
   const [email, setEmail] = React.useState("");
   const [name, setName] = React.useState("");
+  const [checkIn, setCheckIn] = React.useState<any>(null);
 
   const [form, setForm] = React.useState<UserPreferences>({
     primary_sport: "",
@@ -73,7 +75,12 @@ export default function ProfilePage() {
           ""
       );
 
-      const prefs = await getUserPreferences();
+      const [prefs, latestCheckIn] = await Promise.all([
+        getUserPreferences(),
+        getLatestCheckIn(),
+      ]);
+
+      setCheckIn(latestCheckIn);
 
       if (prefs) {
         setForm({
@@ -149,25 +156,25 @@ export default function ProfilePage() {
     {
       label: "Readiness",
       subtitle: "Training availability",
-      value: 84,
+      value: checkIn?.readiness_score ?? 0,
       icon: <MonitorHeartIcon />,
     },
     {
       label: "Recovery",
       subtitle: "Sleep, soreness, fatigue",
-      value: 78,
+      value: checkIn?.recovery_score ?? 0,
       icon: <FitnessCenterIcon />,
     },
     {
-      label: "Speed",
-      subtitle: "Sprint and acceleration",
-      value: 86,
+      label: "Training Load",
+      subtitle: "Session intensity",
+      value: checkIn?.training_intensity ? Math.round(checkIn.training_intensity * 10) : 0,
       icon: <SpeedIcon />,
     },
     {
-      label: "Focus",
+      label: "Sleep Quality",
       subtitle: "Mental performance",
-      value: 88,
+      value: checkIn?.sleep_quality ? Math.round(checkIn.sleep_quality * 10) : 0,
       icon: <PsychologyIcon />,
     },
   ];

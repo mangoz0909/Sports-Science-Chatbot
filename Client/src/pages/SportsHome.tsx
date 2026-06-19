@@ -1,6 +1,7 @@
 import React from "react";
 import AiChatHome from "../components/AiChatHome";
 import { getUserPreferences } from "../services/preferencesService";
+import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 
 export default function UnifiedAIHome() {
   const [profileContext, setProfileContext] = React.useState("");
@@ -8,13 +9,14 @@ export default function UnifiedAIHome() {
   React.useEffect(() => {
     async function loadProfile() {
       try {
-        const prefs = await getUserPreferences();
+        const [prefs, latest, last7] = await Promise.all([
+          getUserPreferences(),
+          getLatestCheckIn(),
+          getLast7CheckIns(),
+        ]);
 
-        if (!prefs) return;
-
-        setProfileContext(`
+        const athleteSection = prefs ? `
 ATHLETE PROFILE
-
 Primary Sport: ${prefs.primary_sport || "Not provided"}
 Experience Level: ${prefs.experience_level || "Not provided"}
 Main Goal: ${prefs.main_goal || "Not provided"}
@@ -24,7 +26,28 @@ Injuries / Concerns: ${prefs.injury_areas || "Not provided"}
 Training Priorities: ${prefs.priorities || "Not provided"}
 Average Sleep: ${prefs.sleep_range || "Not provided"}
 Athlete Type: ${prefs.athlete_type || "Not provided"}
-`);
+` : "";
+
+        const checkInSection = latest ? `
+TODAY'S CHECK-IN DATA
+Readiness: ${latest.readiness_score ?? "N/A"}%
+Recovery: ${latest.recovery_score ?? "N/A"}%
+Fatigue: ${latest.fatigue != null ? latest.fatigue * 10 : "N/A"}%
+Sleep Last Night: ${latest.sleep_hours ?? "N/A"}h (Quality: ${latest.sleep_quality ?? "N/A"}/10)
+Hydration: ${latest.hydration ?? "N/A"}L
+Injury Risk: ${latest.injury_risk ?? "N/A"}%
+Training Intensity: ${latest.training_intensity ?? "N/A"}/10
+` : "";
+
+        const trendSection = last7.length > 0 ? `
+7-DAY READINESS TREND (oldest → newest)
+Readiness: ${last7.map((d: any) => d.readiness_score ?? 0).join(", ")}
+Recovery: ${last7.map((d: any) => d.recovery_score ?? 0).join(", ")}
+Sleep (hrs): ${last7.map((d: any) => d.sleep_hours ?? 0).join(", ")}
+Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(", ")}
+` : "";
+
+        setProfileContext([athleteSection, checkInSection, trendSection].filter(Boolean).join("\n"));
       } catch (err) {
         console.error("Failed to load athlete profile:", err);
       }

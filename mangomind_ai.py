@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
+import os
 
 from dotenv import load_dotenv
 
@@ -25,7 +26,8 @@ load_dotenv()
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.isdir("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 2. Config the LLM with api keys
 llm = ChatOpenAI(model="gpt-4o-mini")
@@ -501,13 +503,14 @@ async def home(request: Request):
     )
 
 @app.post("/ask")
-async def ask(message: str = Form(...)):
+async def ask(request: Request, message: str = Form(...)):
 
     logger.info("USER QUESTION ---> %s", message)
 
+    user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or "anonymous"
     config = {
         "configurable": {
-            "thread_id": "user_session"
+            "thread_id": f"user_{user_id}"
         }
     }
 

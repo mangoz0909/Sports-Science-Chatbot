@@ -15,6 +15,9 @@ import SportsHome from "./pages/SportsHome";
 import SportsListPage from "./pages/SportsListPage";
 import ProfilePage from "./pages/ProfilePage";
 import OnboardingSurvey from "./pages/OnboardingSurvey";
+import HealthPage from "./pages/HealthPage";
+import WorkoutPage from "./pages/WorkoutPage";
+import NutritionPage from "./pages/NutritionPage";
 
 const App: React.FC = () => {
   return (
@@ -98,6 +101,24 @@ const App: React.FC = () => {
                   <ProfilePage />
                 </ProtectedRoute>
               }
+            />
+
+            <Route
+              path="/health"
+              element={
+                <ProtectedRoute>
+                  <HealthPage />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/health/workout" replace />} />
+              <Route path="workout" element={<WorkoutPage />} />
+              <Route path="nutrition" element={<NutritionPage />} />
+            </Route>
+
+            <Route
+              path="/mental-health"
+              element={<SportsHome />}
             />
 
             <Route path="*" element={<Navigate to="/" replace />} />

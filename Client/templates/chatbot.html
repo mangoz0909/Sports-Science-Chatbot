@@ -207,11 +207,10 @@ form.addEventListener("submit", async (e) => {
 
     /* SHOW USER MESSAGE */
 
-    chatBox.innerHTML += `
-        <div class="message user-message">
-            ${userMessage}
-        </div>
-    `;
+    const userBubble = document.createElement("div");
+    userBubble.className = "message user-message";
+    userBubble.textContent = userMessage;
+    chatBox.appendChild(userBubble);
 
     input.value = "";
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -247,11 +246,10 @@ form.addEventListener("submit", async (e) => {
 
     /* SHOW BOT RESPONSE */
 
-    chatBox.innerHTML += `
-        <div class="message bot-message">
-            ${marked.parse(data.reply)}
-        </div>
-    `;
+    const botBubble = document.createElement("div");
+    botBubble.className = "message bot-message";
+    const safeHtml = marked.parse(typeof data.reply === "string" ? data.reply : "");
+    botBubble.innerHTML = typeof safeHtml === "string" ? safeHtml : "";
 
     chatBox.scrollTop = chatBox.scrollHeight;
 

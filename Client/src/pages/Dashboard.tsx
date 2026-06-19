@@ -1,25 +1,31 @@
 import React from "react";
 import {
+  Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
   Container,
   Grid,
   LinearProgress,
+  Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
+import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import HotelIcon from "@mui/icons-material/Hotel";
-import RestaurantIcon from "@mui/icons-material/Restaurant";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
+import { getMyProfile } from "../services/profileService";
 import {
   Area,
   AreaChart,
@@ -45,30 +51,34 @@ const colors = {
 
 export default function Dashboard() {
   const [latestCheckIn, setLatestCheckIn] = React.useState<any>(null);
-const [weeklyCheckIns, setWeeklyCheckIns] = React.useState<any[]>([]);
-const [loading, setLoading] = React.useState(true);
+  const [weeklyCheckIns, setWeeklyCheckIns] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [profile, setProfile] = React.useState<any>(null);
+  const [snackError, setSnackError] = React.useState<string | null>(null);
 
-React.useEffect(() => {
-  async function loadCheckIns() {
-    try {
-      const latest = await getLatestCheckIn();
-      const last7 = await getLast7CheckIns();
-
-      setLatestCheckIn(latest);
-      setWeeklyCheckIns(last7);
-    } catch (error) {
-      console.error("Failed to load check-ins:", error);
-    } finally {
-      setLoading(false);
+  React.useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const [latest, last7, prof] = await Promise.all([
+          getLatestCheckIn(),
+          getLast7CheckIns(),
+          getMyProfile(),
+        ]);
+        setLatestCheckIn(latest);
+        setWeeklyCheckIns(last7);
+        setProfile(prof);
+      } catch (error: any) {
+        setSnackError(error?.message || "Failed to load dashboard data.");
+      } finally {
+        setLoading(false);
+      }
     }
-  }
-
-  loadCheckIns();
-}, []);
+    loadDashboard();
+  }, []);
 
 const userProfile = {
-  name: "Mango",
-  sport: "Tennis",
+  name: profile?.name || "Athlete",
+  sport: profile?.primary_sport || "Sport",
   readiness: latestCheckIn?.readiness_score ?? 0,
   recovery: latestCheckIn?.recovery_score ?? 0,
   load: latestCheckIn?.training_intensity ? latestCheckIn.training_intensity * 10 : 0,
@@ -76,11 +86,8 @@ const userProfile = {
   sleepQuality: latestCheckIn?.sleep_quality ? latestCheckIn.sleep_quality * 10 : 0,
   fatigue: latestCheckIn?.fatigue ? latestCheckIn.fatigue * 10 : 0,
   injuryRisk: latestCheckIn?.injury_risk ?? 0,
-  calories: 2900,
-  protein: 145,
   hydration: latestCheckIn?.hydration ?? 0,
   hydrationGoal: 10,
-  nutrition: latestCheckIn?.nutrition ? latestCheckIn.nutrition * 10 : 0,
 };
 
 const weeklyData = weeklyCheckIns.map((item) => ({
@@ -104,23 +111,6 @@ if (loading) {
 
 
 
-const trainingPlan = [
-  { day: "Monday", plan: "Tennis footwork + light strength", intensity: "Medium" },
-  { day: "Tuesday", plan: "Skill practice and serve accuracy", intensity: "Medium" },
-  { day: "Wednesday", plan: "Recovery mobility + stretching", intensity: "Low" },
-  { day: "Thursday", plan: "Speed and reaction drills", intensity: "High" },
-  { day: "Friday", plan: "Match simulation", intensity: "High" },
-  { day: "Saturday", plan: "Light cardio + flexibility", intensity: "Low" },
-  { day: "Sunday", plan: "Rest and sleep recovery", intensity: "Recovery" },
-];
-
-const dietPlan = [
-  { item: "Calories", target: `${userProfile.calories} kcal/day` },
-  { item: "Protein", target: `${userProfile.protein}g/day` },
-  { item: "Hydration", target: `${userProfile.hydrationGoal}L/day` },
-  { item: "Pre-workout", target: "Banana + water + light carbs" },
-  { item: "Post-workout", target: "Protein + carbs within 60 minutes" },
-];
 
 function riskColor(value: number) {
   if (value < 35) return colors.green;
@@ -194,6 +184,16 @@ function getAIRecommendation(userProfile: any) {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+      <Snackbar
+        open={!!snackError}
+        autoHideDuration={6000}
+        onClose={() => setSnackError(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert severity="error" onClose={() => setSnackError(null)}>
+          {snackError}
+        </Alert>
+      </Snackbar>
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={1.2} sx={{ mb: 3 }}>
           <Chip
@@ -404,98 +404,72 @@ function getAIRecommendation(userProfile: any) {
             </Card>
           </Grid>
 
-          <Grid item xs={12} lg={7}>
-            <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+          <Grid item xs={12} md={6}>
+            <Card
+              elevation={0}
+              sx={{
+                borderRadius: 4,
+                border: "1px solid #bfdbfe",
+                bgcolor: "#eff6ff",
+                height: "100%",
+              }}
+            >
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={950}>
-                  My Weekly Training Plan
-                </Typography>
-                <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  A balanced plan based on tennis performance, fatigue, and recovery.
-                </Typography>
-
-                <Stack spacing={1.3}>
-                  {trainingPlan.map((item) => (
-                    <Box
-                      key={item.day}
-                      sx={{
-                        p: 1.7,
-                        borderRadius: 3,
-                        bgcolor: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                      }}
-                    >
-                      <Stack direction="row" justifyContent="space-between" spacing={1}>
-                        <Box>
-                          <Typography fontWeight={950}>{item.day}</Typography>
-                          <Typography color="#475569" fontSize={14}>
-                            {item.plan}
-                          </Typography>
-                        </Box>
-                        <Chip
-                          label={item.intensity}
-                          size="small"
-                          sx={{
-                            bgcolor:
-                              item.intensity === "High"
-                                ? "#fee2e2"
-                                : item.intensity === "Medium"
-                                ? "#fef3c7"
-                                : "#dcfce7",
-                            color:
-                              item.intensity === "High"
-                                ? "#991b1b"
-                                : item.intensity === "Medium"
-                                ? "#92400e"
-                                : "#166534",
-                            fontWeight: 900,
-                          }}
-                        />
-                      </Stack>
-                    </Box>
-                  ))}
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                  <Box sx={{ width: 42, height: 42, borderRadius: 3, bgcolor: "#dbeafe", display: "grid", placeItems: "center", color: "#1d4ed8" }}>
+                    <FitnessCenterIcon />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" fontWeight={950} color="#1e3a5f">My Workout Plan</Typography>
+                    <Typography fontSize={13} color="#3b82f6">AI-personalised for {userProfile.sport}</Typography>
+                  </Box>
                 </Stack>
+                <Typography color="#1e40af" fontSize={14} lineHeight={1.8}>
+                  Get a full AI-generated weekly training plan tailored to your sport, fitness level, fatigue, and recovery data.
+                </Typography>
+                <Button
+                  component={RouterLink}
+                  to="/health/workout"
+                  variant="contained"
+                  sx={{ mt: 2.5, borderRadius: 3, bgcolor: "#1d4ed8", fontWeight: 800, textTransform: "none", boxShadow: "none", "&:hover": { bgcolor: "#1e40af", boxShadow: "none" } }}
+                >
+                  View Workout Plan →
+                </Button>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} lg={5}>
-            <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+          <Grid item xs={12} md={6}>
+            <Card
+              elevation={0}
+              sx={{
+                borderRadius: 4,
+                border: "1px solid #bbf7d0",
+                bgcolor: "#ecfdf5",
+                height: "100%",
+              }}
+            >
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={950}>
-                  My Diet Plan
-                </Typography>
-                <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Nutrition targets for training and recovery.
-                </Typography>
-
-                <Stack spacing={1.4}>
-                  {dietPlan.map((item) => (
-                    <Box
-                      key={item.item}
-                      sx={{
-                        p: 1.8,
-                        borderRadius: 3,
-                        bgcolor: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                      }}
-                    >
-                      <Typography fontWeight={950}>{item.item}</Typography>
-                      <Typography color="#475569" fontSize={14}>
-                        {item.target}
-                      </Typography>
-                    </Box>
-                  ))}
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                  <Box sx={{ width: 42, height: 42, borderRadius: 3, bgcolor: "#d1fae5", display: "grid", placeItems: "center", color: "#047857" }}>
+                    <RestaurantMenuIcon />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" fontWeight={950} color="#064e3b">My Nutrition Plan</Typography>
+                    <Typography fontSize={13} color="#10b981">AI-personalised for your goals</Typography>
+                  </Box>
                 </Stack>
-
-                <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#ecfdf5", border: "1px solid #bbf7d0" }}>
-                  <Typography fontWeight={950} color="#047857">
-                    Nutrition Tip
-                  </Typography>
-                  <Typography color="#475569" fontSize={14} lineHeight={1.7} sx={{ mt: 1 }}>
-                    For tennis, combine carbohydrates for energy with protein for muscle recovery after practice.
-                  </Typography>
-                </Box>
+                <Typography color="#065f46" fontSize={14} lineHeight={1.8}>
+                  Get an AI-generated nutrition plan with calorie targets, macros, hydration, and meal timing tailored to your training.
+                </Typography>
+                <Button
+                  component={RouterLink}
+                  to="/health/nutrition"
+                  variant="contained"
+                  sx={{ mt: 2.5, borderRadius: 3, bgcolor: "#047857", fontWeight: 800, textTransform: "none", boxShadow: "none", "&:hover": { bgcolor: "#065f46", boxShadow: "none" } }}
+                >
+                  View Nutrition Plan →
+                </Button>
               </CardContent>
             </Card>
           </Grid>

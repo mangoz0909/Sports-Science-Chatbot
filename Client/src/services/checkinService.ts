@@ -31,9 +31,18 @@ export async function createDailyCheckIn(checkInData: any) {
 }
 
 export async function getLatestCheckIn() {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) return null;
+
   const { data, error } = await supabase
     .from("daily_checkins")
     .select("*")
+    .eq("user_id", user.id)
     .order("checkin_date", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -43,9 +52,18 @@ export async function getLatestCheckIn() {
 }
 
 export async function getLast7CheckIns() {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("daily_checkins")
     .select("*")
+    .eq("user_id", user.id)
     .order("checkin_date", { ascending: false })
     .limit(7);
 
