@@ -13,8 +13,8 @@ import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import SportsHome from "./pages/SportsHome";
 import SportsListPage from "./pages/SportsListPage";
-
 import ProfilePage from "./pages/ProfilePage";
+import OnboardingSurvey from "./pages/OnboardingSurvey";
 
 const App: React.FC = () => {
   return (
@@ -58,14 +58,21 @@ const App: React.FC = () => {
 
         <Box component="main" sx={{ flex: 1, width: "100%" }}>
           <Routes>
-            {/* Public routes */}
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/sports" element={<SportsHome />} />
             <Route path="/sports-list" element={<SportsListPage />} />
 
-            {/* Protected routes */}
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <OnboardingSurvey />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/dashboard"
               element={
@@ -93,7 +100,6 @@ const App: React.FC = () => {
               }
             />
 
-            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Box>

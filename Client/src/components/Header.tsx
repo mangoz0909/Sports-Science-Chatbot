@@ -59,7 +59,7 @@ const Header: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
+  const isActive = (to: string) => pathname === to;
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = async () => {

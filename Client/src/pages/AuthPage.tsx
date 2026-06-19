@@ -121,7 +121,13 @@ const AuthPage: React.FC = () => {
         setSuccessMsg("Account created successfully.");
       }
 
-      setTimeout(() => navigate("/dashboard"), 600);
+      setTimeout(() => {
+        if (mode === "signup") {
+          navigate("/onboarding");
+        } else {
+          navigate("/dashboard");
+        }
+      }, 600);
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Try again.");
     } finally {

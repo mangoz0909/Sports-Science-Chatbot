@@ -17,73 +17,21 @@ import {
 
 import SportsTennisIcon from "@mui/icons-material/SportsTennis";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import { Sport, sports } from "../data/sportsData";
+import { getUserPreferences } from "../services/preferencesService";
 
 type SportsFinderProps = {
   compact?: boolean;
 };
 
-type PuterChatResponse =
-  | string
-  | {
-      text?: string;
-      message?: {
-        content?: Array<{ text?: string }> | string;
-      };
-    };
+type SurveyKey = "teamwork" | "intensity" | "contact" | "coordination";
+type SurveyAnswers = Record<SurveyKey, number>;
 
-declare global {
-  interface Window {
-    puter?: {
-      ai?: {
-        chat?: (prompt: string, options?: { model?: string }) => Promise<PuterChatResponse>;
-      };
-    };
-  }
-}
-
-const PUTER_SCRIPT_ID = "puter-js-v2";
-
-function loadPuterScript() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.puter?.ai?.chat) {
-      resolve();
-      return;
-    }
-
-    const existingScript = document.getElementById(PUTER_SCRIPT_ID) as HTMLScriptElement | null;
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
-      existingScript.addEventListener("error", () => reject(new Error("Failed to load Puter.js.")), {
-        once: true,
-      });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = PUTER_SCRIPT_ID;
-    script.src = "https://js.puter.com/v2/";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Puter.js."));
-    document.body.appendChild(script);
-  });
-}
-
-function extractPuterText(response: PuterChatResponse) {
-  if (typeof response === "string") return response;
-  if (response?.text) return response.text;
-
-  const content = response?.message?.content;
-
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content.map((item) => item.text).filter(Boolean).join("\n");
-  }
-
-  return "No response received.";
-}
+const defaultAnswers: SurveyAnswers = {
+  teamwork: 5,
+  intensity: 5,
+  contact: 3,
+  coordination: 7,
+};
 
 const questions = [
   {
@@ -104,72 +52,81 @@ const questions = [
   {
     key: "coordination",
     label: "Skill & Coordination",
-    description: "Do you enjoy hand-eye coordination and technical skill?",
+    description: "Do you enjoy technical skill and hand-eye coordination?",
   },
 ] as const;
 
-type SurveyKey = (typeof questions)[number]["key"];
-type SurveyAnswers = Record<SurveyKey, number>;
+type PuterChatResponse =
+  | string
+  | {
+      text?: string;
+      message?: {
+        content?: Array<{ text?: string }> | string;
+      };
+    };
 
-const defaultAnswers: SurveyAnswers = {
-  teamwork: 5,
-  intensity: 5,
-  contact: 3,
-  coordination: 7,
-};
-
-function getSportProfile(sport: Sport): SurveyAnswers {
-  const name = sport.name.toLowerCase();
-  const category = sport.category.toLowerCase();
-  const tags = sport.similarityTags.join(" ").toLowerCase();
-  const text = `${name} ${category} ${tags}`;
-
-  return {
-    teamwork:
-      text.includes("team") ||
-      text.includes("football") ||
-      text.includes("basketball") ||
-      text.includes("soccer")
-        ? 9
-        : 3,
-
-    intensity:
-      text.includes("running") ||
-      text.includes("football") ||
-      text.includes("basketball") ||
-      text.includes("soccer") ||
-      text.includes("swimming")
-        ? 9
-        : 6,
-
-    contact:
-      text.includes("football") || text.includes("rugby") || text.includes("wrestling")
-        ? 9
-        : text.includes("basketball") || text.includes("soccer")
-        ? 5
-        : 2,
-
-    coordination:
-      text.includes("tennis") ||
-      text.includes("baseball") ||
-      text.includes("golf") ||
-      text.includes("badminton") ||
-      text.includes("table tennis")
-        ? 9
-        : 6,
-  };
+declare global {
+  interface Window {
+    puter?: {
+      ai?: {
+        chat?: (
+          prompt: string,
+          options?: { model?: string }
+        ) => Promise<PuterChatResponse>;
+      };
+    };
+  }
 }
 
-function surveyMatchScore(answers: SurveyAnswers, profile: SurveyAnswers) {
-  const keys = Object.keys(answers) as SurveyKey[];
+const PUTER_SCRIPT_ID = "puter-js-v2";
 
-  const totalDifference = keys.reduce((sum, key) => {
-    return sum + Math.abs(answers[key] - profile[key]);
-  }, 0);
+function loadPuterScript() {
+  return new Promise<void>((resolve, reject) => {
+    if (window.puter?.ai?.chat) {
+      resolve();
+      return;
+    }
 
-  const maxDifference = keys.length * 9;
+    const existingScript = document.getElementById(
+      PUTER_SCRIPT_ID
+    ) as HTMLScriptElement | null;
 
-  return Math.round((1 - totalDifference / maxDifference) * 100);
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener(
+        "error",
+        () => reject(new Error("Failed to load Puter.js.")),
+        { once: true }
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = PUTER_SCRIPT_ID;
+    script.src = "https://js.puter.com/v2/";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Puter.js."));
+    document.body.appendChild(script);
+  });
+}
+
+function extractPuterText(response: PuterChatResponse) {
+  if (typeof response === "string") return response;
+  if (response?.text) return response.text;
+
+  const content = response?.message?.content;
+
+  if (typeof content === "string") return content;
+
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => item.text)
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return "No response received.";
 }
 
 export function SportsFinder({ compact = false }: SportsFinderProps) {
@@ -177,46 +134,36 @@ export function SportsFinder({ compact = false }: SportsFinderProps) {
   const [pastSports, setPastSports] = React.useState("");
   const [aiMatches, setAiMatches] = React.useState("");
   const [aiLoading, setAiLoading] = React.useState(false);
+  const [loadingPrefs, setLoadingPrefs] = React.useState(true);
   const [error, setError] = React.useState("");
-  const [showResults, setShowResults] = React.useState(false);
+  const [prefs, setPrefs] = React.useState<any>(null);
 
-  const rankedSports = React.useMemo(() => {
-    return sports
-      .map((sport) => {
-        const profile = getSportProfile(sport);
-        const matchScore = surveyMatchScore(answers, profile);
+  React.useEffect(() => {
+    async function loadPreferences() {
+      try {
+        const data = await getUserPreferences();
 
-        const pastSportsBonus = pastSports
-          .toLowerCase()
-          .split(",")
-          .some((pastSport) => {
-            const trimmed = pastSport.trim();
-            if (!trimmed) return false;
+        if (data) {
+          setPrefs(data);
 
-            return (
-              sport.name.toLowerCase().includes(trimmed) ||
-              sport.similarityTags.join(" ").toLowerCase().includes(trimmed) ||
-              sport.category.toLowerCase().includes(trimmed)
-            );
-          })
-          ? 8
-          : 0;
+          if (data.primary_sport) {
+            setPastSports(data.primary_sport);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load preferences:", err);
+      } finally {
+        setLoadingPrefs(false);
+      }
+    }
 
-        return {
-          ...sport,
-          matchScore: Math.min(100, matchScore + pastSportsBonus),
-        };
-      })
-      .sort((a, b) => b.matchScore - a.matchScore || a.name.localeCompare(b.name));
-  }, [answers, pastSports]);
-
-  const visibleSports = rankedSports.slice(0, compact ? 5 : 9);
+    loadPreferences();
+  }, []);
 
   const generateAiMatches = async () => {
     setAiLoading(true);
     setError("");
     setAiMatches("");
-    setShowResults(false);
 
     try {
       await loadPuterScript();
@@ -225,33 +172,36 @@ export function SportsFinder({ compact = false }: SportsFinderProps) {
         throw new Error("Puter AI is unavailable.");
       }
 
-      const topSports = visibleSports
-        .slice(0, 6)
-        .map((sport) => `${sport.name} (${sport.matchScore}%)`)
-        .join(", ");
-
       const prompt = `
-You are a sports matching assistant.
+You are SportLab's sports matching coach.
 
-The user has played these sports before:
-${pastSports || "No past sports listed"}
+Use the user's profile and preferences to recommend sports. Do not use a rigid scoring algorithm. Think like a coach: consider goals, current sport, experience, injury concerns, training style, sleep, and preferences.
 
-Survey answers from 1-10:
-Teamwork: ${answers.teamwork}
-Intensity: ${answers.intensity}
-Contact comfort: ${answers.contact}
-Coordination/technical skill: ${answers.coordination}
+User profile:
+Primary sport: ${prefs?.primary_sport || pastSports || "Not provided"}
+Experience level: ${prefs?.experience_level || "Not provided"}
+Main goal: ${prefs?.main_goal || "Not provided"}
+Competition level: ${prefs?.competition_level || "Not provided"}
+Training days per week: ${prefs?.training_days || "Not provided"}
+Injury areas: ${prefs?.injury_areas || "Not provided"}
+Training priorities: ${prefs?.priorities || "Not provided"}
+Sleep: ${prefs?.sleep_range || "Not provided"}
+Athlete type: ${prefs?.athlete_type || "Not provided"}
 
-Current algorithmic top matches:
-${topSports}
+Extra preference sliders:
+Team preference: ${answers.teamwork}/10
+Intensity preference: ${answers.intensity}/10
+Contact comfort: ${answers.contact}/10
+Coordination preference: ${answers.coordination}/10
 
-Give the user:
-1. Top 3 recommended sports
-2. A short reason for each
-3. One sport they might surprisingly enjoy
-4. A beginner next step
+Return:
+1. Top 5 recommended sports
+2. Match percentage for each
+3. Short explanation for each
+4. One surprising sport suggestion
+5. One next step for the user
 
-Keep it concise and student-friendly.
+Keep it concise, practical, and student-friendly.
 `;
 
       const response = await window.puter.ai.chat(prompt, {
@@ -259,9 +209,10 @@ Keep it concise and student-friendly.
       });
 
       setAiMatches(extractPuterText(response));
-      setShowResults(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate AI matches.");
+      setError(
+        err instanceof Error ? err.message : "Failed to generate AI matches."
+      );
     } finally {
       setAiLoading(false);
     }
@@ -269,12 +220,12 @@ Keep it concise and student-friendly.
 
   return (
     <Box className={compact ? "sports-finder-compact" : undefined}>
-      <Stack spacing={compact ? 2 : 3}>
+      <Stack spacing={{ xs: 2, md: compact ? 2 : 3 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Box
             sx={{
-              width: 44,
-              height: 44,
+              width: { xs: 38, md: 44 },
+              height: { xs: 38, md: 44 },
               borderRadius: 2.5,
               display: "grid",
               placeItems: "center",
@@ -282,42 +233,96 @@ Keep it concise and student-friendly.
               color: "#0284c7",
             }}
           >
-            <SportsTennisIcon />
+            <SportsTennisIcon fontSize="small" />
           </Box>
 
           <Box>
-            <Typography variant={compact ? "h6" : "h4"} fontWeight={950}>
-              Sports Match Survey
+            <Typography
+              variant={compact ? "h6" : "h4"}
+              fontWeight={950}
+              sx={{
+                fontSize: {
+                  xs: "1.45rem",
+                  md: compact ? "1.25rem" : "2.125rem",
+                },
+              }}
+            >
+              Sports Match
             </Typography>
-            <Typography color="#64748b" fontSize={compact ? 13 : 15}>
-              Answer a short survey, add past sports, and generate personalized matches.
+            <Typography
+              color="#64748b"
+              fontSize={{ xs: 12.5, md: compact ? 13 : 15 }}
+            >
+              AI uses your survey and preferences to recommend sports.
             </Typography>
           </Box>
         </Stack>
 
-        <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0", bgcolor: "#ffffff" }}>
-          <CardContent sx={{ p: compact ? 2 : 3 }}>
-            <Stack spacing={2.5}>
+        {loadingPrefs && (
+          <Alert severity="info">Loading your saved sport preferences...</Alert>
+        )}
+
+        {!loadingPrefs && prefs?.primary_sport && (
+          <Alert severity="success">
+            Loaded from your survey: <b>{prefs.primary_sport}</b>
+            {prefs.main_goal ? (
+              <>
+                {" "}
+                • Goal: <b>{prefs.main_goal}</b>
+              </>
+            ) : null}
+          </Alert>
+        )}
+
+        {!loadingPrefs && !prefs && (
+          <Alert severity="warning">
+            No saved survey found yet. You can still type your sport below.
+          </Alert>
+        )}
+
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: { xs: 3, md: 4 },
+            border: "1px solid #e2e8f0",
+            bgcolor: "#ffffff",
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2, md: compact ? 2 : 3 } }}>
+            <Stack spacing={{ xs: 2, md: 2.5 }}>
               <TextField
-                label="Sports you have played before"
-                placeholder="Example: tennis, badminton, soccer"
+                label="Your sport"
+                placeholder="Example: tennis, basketball, soccer"
                 value={pastSports}
                 onChange={(event) => {
-                  setShowResults(false);
                   setAiMatches("");
                   setPastSports(event.target.value);
                 }}
                 fullWidth
+                size="small"
               />
 
-              <Grid container spacing={compact ? 1.5 : 2.5}>
+              <Grid container spacing={{ xs: 1.5, md: compact ? 1.5 : 2.5 }}>
                 {questions.map((question) => (
                   <Grid item xs={12} md={compact ? 12 : 6} key={question.key}>
-                    <Stack spacing={0.7}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack spacing={{ xs: 0.35, md: 0.7 }}>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        spacing={1}
+                      >
                         <Box>
-                          <Typography fontWeight={900}>{question.label}</Typography>
-                          <Typography color="#64748b" fontSize={13}>
+                          <Typography
+                            fontWeight={900}
+                            sx={{ fontSize: { xs: 14, md: 16 } }}
+                          >
+                            {question.label}
+                          </Typography>
+                          <Typography
+                            color="#64748b"
+                            fontSize={{ xs: 11.5, md: 13 }}
+                          >
                             {question.description}
                           </Typography>
                         </Box>
@@ -329,6 +334,12 @@ Keep it concise and student-friendly.
                             bgcolor: "#eff6ff",
                             color: "#1d4ed8",
                             fontWeight: 950,
+                            minWidth: { xs: 26, md: 34 },
+                            height: { xs: 24, md: 30 },
+                            "& .MuiChip-label": {
+                              fontSize: { xs: 11, md: 13 },
+                              px: { xs: 0.8, md: 1 },
+                            },
                           }}
                         />
                       </Stack>
@@ -340,13 +351,56 @@ Keep it concise and student-friendly.
                         step={1}
                         marks
                         onChange={(_, value) => {
-                          setShowResults(false);
                           setAiMatches("");
 
                           setAnswers((prev) => ({
                             ...prev,
                             [question.key]: value as number,
                           }));
+                        }}
+                        sx={{
+                          width: {
+                            xs: "78%",
+                            md: "100%",
+                          },
+                          mx: "auto",
+                          mt: { xs: 0.5, md: 1 },
+
+                          "& .MuiSlider-thumb": {
+                            width: {
+                              xs: 16,
+                              md: 24,
+                            },
+                            height: {
+                              xs: 16,
+                              md: 24,
+                            },
+                          },
+
+                          "& .MuiSlider-track": {
+                            height: {
+                              xs: 4,
+                              md: 6,
+                            },
+                          },
+
+                          "& .MuiSlider-rail": {
+                            height: {
+                              xs: 4,
+                              md: 6,
+                            },
+                          },
+
+                          "& .MuiSlider-mark": {
+                            width: {
+                              xs: 3,
+                              md: 4,
+                            },
+                            height: {
+                              xs: 3,
+                              md: 4,
+                            },
+                          },
                         }}
                       />
                     </Stack>
@@ -356,16 +410,22 @@ Keep it concise and student-friendly.
 
               <Button
                 variant="contained"
-                startIcon={aiLoading ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon />}
+                startIcon={
+                  aiLoading ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <AutoAwesomeIcon />
+                  )
+                }
                 onClick={generateAiMatches}
                 disabled={aiLoading}
                 sx={{
-                  alignSelf: "flex-start",
+                  alignSelf: { xs: "stretch", sm: "flex-start" },
                   borderRadius: 3,
                   bgcolor: "#0f172a",
                   fontWeight: 950,
                   px: 3,
-                  py: 1.2,
+                  py: { xs: 1, md: 1.2 },
                   boxShadow: "none",
                   "&:hover": {
                     bgcolor: "#1e293b",
@@ -381,7 +441,7 @@ Keep it concise and student-friendly.
               {aiMatches && (
                 <Box
                   sx={{
-                    p: 2,
+                    p: { xs: 2, md: 2.5 },
                     borderRadius: 3,
                     bgcolor: "#eff6ff",
                     border: "1px solid #bfdbfe",
@@ -389,8 +449,9 @@ Keep it concise and student-friendly.
                   }}
                 >
                   <Typography fontWeight={950} color="#1d4ed8" sx={{ mb: 1 }}>
-                    AI Match Explanation
+                    AI Sport Recommendations
                   </Typography>
+
                   <Typography color="#475569" lineHeight={1.75}>
                     {aiMatches}
                   </Typography>
@@ -399,62 +460,6 @@ Keep it concise and student-friendly.
             </Stack>
           </CardContent>
         </Card>
-
-        {showResults && (
-          <Grid container spacing={compact ? 1.2 : 2}>
-            {visibleSports.map((sport) => (
-              <Grid item xs={12} sm={compact ? 12 : 6} lg={compact ? 12 : 4} key={sport.id}>
-                <Card
-                  elevation={0}
-                  sx={{
-                    height: "100%",
-                    borderRadius: 4,
-                    border: "1px solid #e2e8f0",
-                    bgcolor: "#fff",
-                  }}
-                >
-                  <CardContent sx={{ p: compact ? 2 : 2.5 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-                      <Stack direction="row" spacing={1.2} alignItems="center">
-                        <Typography fontSize={compact ? 24 : 32}>{sport.emoji}</Typography>
-                        <Box>
-                          <Typography fontWeight={950}>{sport.name}</Typography>
-                          <Typography color="#64748b" fontSize={13}>
-                            {sport.category} • {sport.intensity}
-                          </Typography>
-                        </Box>
-                      </Stack>
-
-                      <Chip
-                        size="small"
-                        label={`${sport.matchScore}%`}
-                        sx={{ bgcolor: "#ecfdf5", color: "#047857", fontWeight: 950 }}
-                      />
-                    </Stack>
-
-                    <Typography sx={{ mt: 1.5 }} color="#475569" fontSize={compact ? 13 : 14} lineHeight={1.65}>
-                      {sport.description}
-                    </Typography>
-
-                    {!compact && (
-                      <>
-                        <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap sx={{ mt: 1.5 }}>
-                          {sport.scienceFocus.map((item) => (
-                            <Chip key={item} size="small" label={item} sx={{ bgcolor: "#f1f5f9", fontWeight: 800 }} />
-                          ))}
-                        </Stack>
-
-                        <Typography sx={{ mt: 1.5 }} color="#0f172a" fontSize={14} fontWeight={850}>
-                          Starter drill: {sport.beginnerDrill}
-                        </Typography>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        )}
       </Stack>
     </Box>
   );
@@ -463,19 +468,38 @@ Keep it concise and student-friendly.
 export default function SportsListPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
-        <Stack spacing={1.2} sx={{ mb: 3 }}>
+      <Container
+        maxWidth="xl"
+        sx={{
+          py: { xs: 2.5, md: 5 },
+          px: { xs: 2, sm: 3 },
+        }}
+      >
+        <Stack spacing={1.2} sx={{ mb: { xs: 2, md: 3 } }}>
           <Chip
-            label="Sport Matching Engine"
-            sx={{ width: "fit-content", bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 950 }}
+            label="AI Sport Matching"
+            sx={{
+              width: "fit-content",
+              bgcolor: "#e0f2fe",
+              color: "#0369a1",
+              fontWeight: 950,
+            }}
           />
 
-          <Typography variant="h3" sx={{ fontWeight: 950, letterSpacing: -0.9 }}>
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 950,
+              letterSpacing: -0.9,
+              fontSize: { xs: "2rem", md: "3rem" },
+            }}
+          >
             Find your best-fit sport.
           </Typography>
 
           <Typography color="#64748b" maxWidth={760} lineHeight={1.8}>
-            Add sports you have played before, answer a short preference survey, and let AI explain which sports may fit you best.
+            SportLab uses AI to recommend sports based on your onboarding
+            survey, goals, preferences, and slider answers.
           </Typography>
         </Stack>
 
