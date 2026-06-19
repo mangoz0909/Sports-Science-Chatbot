@@ -28,7 +28,7 @@ export default function HealthPage() {
               fontWeight: 950,
               letterSpacing: -0.8,
               color: "#0f172a",
-              fontSize: { xs: "1.8rem", md: "2.6rem" },
+              fontSize: { xs: "1.5rem", md: "2.6rem" },
               mb: 0.5,
             }}
           >

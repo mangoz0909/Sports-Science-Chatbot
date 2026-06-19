@@ -207,14 +207,14 @@ export default function ProfilePage() {
               sx={{
                 fontWeight: 950,
                 letterSpacing: -1.2,
-                fontSize: { xs: "2.4rem", md: "4rem" },
+                fontSize: { xs: "1.75rem", md: "4rem" },
                 color: "#0f172a",
               }}
             >
               Your sports science workspace.
             </Typography>
 
-            <Typography color="#64748b" fontSize={18} sx={{ mt: 1 }}>
+            <Typography color="#64748b" fontSize={{ xs: 15, md: 18 }} sx={{ mt: 1 }}>
               Store athlete context, track profile metrics, and personalize SportLab AI.
             </Typography>
           </Box>
@@ -236,12 +236,12 @@ export default function ProfilePage() {
                 <Stack spacing={3} alignItems="center">
                   <Avatar
                     sx={{
-                      width: 112,
-                      height: 112,
+                      width: { xs: 88, md: 112 },
+                      height: { xs: 88, md: 112 },
                       bgcolor: "#0f172a",
                       color: "#38bdf8",
                       fontWeight: 950,
-                      fontSize: 34,
+                      fontSize: { xs: 26, md: 34 },
                     }}
                   >
                     {initials}

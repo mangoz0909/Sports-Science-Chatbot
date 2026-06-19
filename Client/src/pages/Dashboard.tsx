@@ -212,7 +212,7 @@ function getAIRecommendation(userProfile: any) {
               fontWeight: 950,
               letterSpacing: -0.8,
               color: "#0f172a",
-              fontSize: { xs: "2rem", md: "3rem" },
+              fontSize: { xs: "1.6rem", md: "3rem" },
             }}
           >
             Welcome back, {userProfile.name}
@@ -225,7 +225,7 @@ function getAIRecommendation(userProfile: any) {
 
         <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
           {kpis.map((item) => (
-            <Grid item xs={6} sm={4} md={4} lg={2} key={item.label}>
+            <Grid item xs={12} sm={6} md={4} lg={2} key={item.label}>
               <Card
                 elevation={0}
                 sx={{
@@ -283,7 +283,7 @@ function getAIRecommendation(userProfile: any) {
 
         <Grid container spacing={2.5}>
           <Grid item xs={12} lg={8}>
-          <Card elevation={0} sx={{ height: "100%", minHeight: 460, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ height: "100%", p: 3 }}>
+          <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" fontWeight={950}>
                   My Weekly Readiness Trend
                 </Typography>
@@ -309,7 +309,7 @@ function getAIRecommendation(userProfile: any) {
 
           <Grid item xs={12} lg={4}>
           <Box sx={{ position: { lg: "sticky" }, top: { lg: 88 } }}>
-          <Card elevation={0} sx={{ height: "100%", minHeight: 460, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ p: 3 }}>
+          <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <PsychologyIcon sx={{ color: colors.blue }} />
                   <Typography variant="h6" fontWeight={950}>
