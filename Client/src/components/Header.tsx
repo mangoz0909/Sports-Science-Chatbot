@@ -30,7 +30,6 @@ const navItems: NavItem[] = [
   { label: "Sports Match", to: "/sports-list" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Health", to: "/health/workout" },
-  { label: "Check-In", to: "/daily-check-in" },
 ];
 
 const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (

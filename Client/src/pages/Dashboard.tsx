@@ -24,6 +24,8 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { getMyProfile } from "../services/profileService";
 import {
@@ -137,6 +139,10 @@ function getAIRecommendation(userProfile: any) {
 
   return "You are in a stable training zone. Continue normal practice, but keep monitoring sleep and hydration.";
 }
+  const today = new Date().toDateString();
+  const lastCheckInDate = latestCheckIn?.created_at ? new Date(latestCheckIn.created_at).toDateString() : null;
+  const checkedInToday = lastCheckInDate === today;
+
   const kpis = [
     {
       label: "My Readiness",
@@ -222,6 +228,49 @@ function getAIRecommendation(userProfile: any) {
             Your personal dashboard for {userProfile.sport} training, recovery, sleep, nutrition, and injury prevention.
           </Typography>
         </Stack>
+
+        {/* Check-In Banner */}
+        <Box
+          component={checkedInToday ? "div" : RouterLink}
+          to={checkedInToday ? undefined : "/daily-check-in"}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            mb: 3,
+            px: { xs: 2, md: 2.5 },
+            py: 1.5,
+            borderRadius: 3,
+            border: "1px solid",
+            textDecoration: "none",
+            cursor: checkedInToday ? "default" : "pointer",
+            bgcolor: checkedInToday ? "#f0fdf4" : "#fffbeb",
+            borderColor: checkedInToday ? "#bbf7d0" : "#fde68a",
+            transition: "box-shadow 0.15s ease",
+            "&:hover": checkedInToday ? {} : { boxShadow: "0 4px 16px rgba(234,179,8,0.14)" },
+          }}
+        >
+          {checkedInToday ? (
+            <CheckCircleIcon sx={{ color: "#16a34a", fontSize: 22, flexShrink: 0 }} />
+          ) : (
+            <AddCircleOutlineIcon sx={{ color: "#d97706", fontSize: 22, flexShrink: 0 }} />
+          )}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography fontWeight={800} fontSize={14} color={checkedInToday ? "#15803d" : "#92400e"}>
+              {checkedInToday ? "Checked in today ✓" : "Log today's check-in"}
+            </Typography>
+            <Typography fontSize={12} color={checkedInToday ? "#4ade80" : "#b45309"} fontWeight={600}>
+              {checkedInToday
+                ? "Your dashboard stats reflect today's data."
+                : "Dashboard KPIs will update once you log your daily check-in."}
+            </Typography>
+          </Box>
+          {!checkedInToday && (
+            <Typography fontSize={13} fontWeight={800} color="#d97706" sx={{ flexShrink: 0 }}>
+              Tap to log →
+            </Typography>
+          )}
+        </Box>
 
         <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
           {kpis.map((item) => (

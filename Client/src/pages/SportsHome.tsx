@@ -1,10 +1,12 @@
 import React from "react";
+import { Box, Chip, Stack } from "@mui/material";
 import AiChatHome from "../components/AiChatHome";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 
 export default function UnifiedAIHome() {
   const [profileContext, setProfileContext] = React.useState("");
+  const [dataStatus, setDataStatus] = React.useState<"loading" | "full" | "profile-only" | "none">("loading");
 
   React.useEffect(() => {
     async function loadProfile() {
@@ -28,6 +30,12 @@ Average Sleep: ${prefs.sleep_range || "Not provided"}
 Athlete Type: ${prefs.athlete_type || "Not provided"}
 ` : "";
 
+        const readiness = latest?.readiness_score ?? null;
+        const readinessZone = readiness === null ? null
+          : readiness >= 75 ? "HIGH — athlete is in a strong readiness zone. Encourage full training and performance work."
+          : readiness >= 45 ? "MEDIUM — athlete has moderate readiness. Recommend moderate-intensity training with recovery focus."
+          : "LOW — athlete is in a low readiness zone. Strongly recommend light/recovery session only. Proactively address sleep, hydration, and fatigue.";
+
         const checkInSection = latest ? `
 TODAY'S CHECK-IN DATA
 Readiness: ${latest.readiness_score ?? "N/A"}%
@@ -37,6 +45,7 @@ Sleep Last Night: ${latest.sleep_hours ?? "N/A"}h (Quality: ${latest.sleep_quali
 Hydration: ${latest.hydration ?? "N/A"}L
 Injury Risk: ${latest.injury_risk ?? "N/A"}%
 Training Intensity: ${latest.training_intensity ?? "N/A"}/10
+${readinessZone ? `\nCURRENT READINESS STATE: ${readinessZone}` : ""}
 ` : "";
 
         const trendSection = last7.length > 0 ? `
@@ -48,15 +57,37 @@ Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(
 ` : "";
 
         setProfileContext([athleteSection, checkInSection, trendSection].filter(Boolean).join("\n"));
+        setDataStatus(prefs && latest ? "full" : prefs ? "profile-only" : "none");
       } catch (err) {
         console.error("Failed to load athlete profile:", err);
+        setDataStatus("none");
       }
     }
 
     loadProfile();
   }, []);
 
+  const statusChip = dataStatus === "loading" ? null : dataStatus === "full" ? (
+    <Chip
+      size="small"
+      label="🟢 Using your profile + today's check-in"
+      sx={{ bgcolor: "#ecfdf5", color: "#15803d", fontWeight: 700, fontSize: 12, border: "1px solid #bbf7d0" }}
+    />
+  ) : dataStatus === "profile-only" ? (
+    <Chip
+      size="small"
+      label="🟡 Using your profile — no check-in today"
+      sx={{ bgcolor: "#fffbeb", color: "#92400e", fontWeight: 700, fontSize: 12, border: "1px solid #fde68a" }}
+    />
+  ) : null;
+
   return (
+    <Box>
+      {statusChip && (
+        <Stack alignItems="flex-end" sx={{ px: { xs: 2, md: 3 }, pt: 1.5 }}>
+          {statusChip}
+        </Stack>
+      )}
     <AiChatHome
       title="Sports Health AI"
       logoSrc="/sportslab_logo.png"
@@ -162,5 +193,6 @@ Always be supportive, practical, personalized, and student-friendly.
         </>
       }
     />
+    </Box>
   );
 }

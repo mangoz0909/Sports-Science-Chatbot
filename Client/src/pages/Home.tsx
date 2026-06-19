@@ -15,7 +15,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
@@ -106,49 +106,83 @@ const metrics = [
 ];
 
 const fadeUp = {
-  hidden: {
-    opacity: 0,
-    y: 24,
-  },
-  visible: {
-    opacity: 1,
-    y: 0,
-  },
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0 },
 };
 
 const stagger = {
   hidden: {},
   visible: {
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.08,
-    },
+    transition: { staggerChildren: 0.08, delayChildren: 0.08 },
   },
 };
 
-const viewport = {
-  once: true,
-  amount: 0.18,
+const wordStagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.055, delayChildren: 0.18 } },
 };
+
+const wordReveal = {
+  hidden: { opacity: 0, y: 18, filter: "blur(4px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+};
+
+const viewport = { once: true, amount: 0.18 };
+
+function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
+  const [count, setCount] = React.useState(0);
+  const ref = React.useRef<HTMLSpanElement>(null);
+  const [started, setStarted] = React.useState(false);
+  const reduceMotion = useReducedMotion();
+
+  React.useEffect(() => {
+    if (reduceMotion) { setCount(target); return; }
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setStarted(true); observer.disconnect(); } },
+      { threshold: 0.5 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [reduceMotion, target]);
+
+  React.useEffect(() => {
+    if (!started) return;
+    let start = 0;
+    const duration = 900;
+    const step = 16;
+    const increment = target / (duration / step);
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= target) { setCount(target); clearInterval(timer); }
+      else setCount(Math.floor(start));
+    }, step);
+    return () => clearInterval(timer);
+  }, [started, target]);
+
+  return <span ref={ref}>{count}{suffix}</span>;
+}
 
 const Home: React.FC = () => {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+  const heroRef = React.useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
+
   const transition = reduceMotion
     ? { duration: 0 }
-    : {
-        duration: 0.55,
-        ease: [0.22, 1, 0.36, 1] as const,
-      };
+    : { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const };
 
-  const hoverLift = reduceMotion
-    ? undefined
-    : {
-        y: -8,
-        transition: { duration: 0.2 },
-      };
+  const wordTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const };
+
+  const hoverLift = reduceMotion ? undefined : { y: -8, transition: { duration: 0.2 } };
+
+  const heroTitle = "Make athlete decisions easier to understand.";
+  const heroWords = heroTitle.split(" ");
 
   return (
     <Box
@@ -160,15 +194,28 @@ const Home: React.FC = () => {
     >
       {/* HERO */}
       <Box
+        ref={heroRef}
         component="section"
         sx={{
           position: "relative",
           py: { xs: 7, md: 10, lg: 12 },
           borderBottom: "1px solid #e2e8f0",
+          overflow: "hidden",
           background:
             "radial-gradient(circle at 10% 10%, rgba(14,165,233,0.11), transparent 30%), radial-gradient(circle at 90% 20%, rgba(34,197,94,0.08), transparent 28%), linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
         }}
       >
+        {/* Parallax orbs */}
+        {!reduceMotion && (
+          <>
+            <motion.div
+              style={{ y: heroY, position: "absolute", top: "8%", right: "12%", width: 320, height: 320, borderRadius: "50%", background: "radial-gradient(circle, rgba(56,189,248,0.09) 0%, transparent 70%)", pointerEvents: "none" }}
+            />
+            <motion.div
+              style={{ y: heroY, position: "absolute", bottom: "10%", left: "5%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)", pointerEvents: "none" }}
+            />
+          </>
+        )}
         <Container maxWidth="xl">
           <Grid container spacing={{ xs: 2, md: 7 }} alignItems="center">
             <Grid item xs={12} md={6}>
@@ -204,13 +251,13 @@ const Home: React.FC = () => {
                     </Stack>
                   </MotionBox>
 
-                  <MotionBox variants={fadeUp} transition={transition}>
+                  <MotionBox variants={wordStagger} initial="hidden" animate="visible">
                     <Typography
-                      variant="h1"
+                      component="h1"
                       sx={{
                         fontWeight: 950,
                         letterSpacing: { xs: -1.1, md: -1.8 },
-                        lineHeight: 0.98,
+                        lineHeight: 1.02,
                         color: "#0f172a",
                         fontSize: {
                           xs: "2.55rem",
@@ -220,7 +267,16 @@ const Home: React.FC = () => {
                         },
                       }}
                     >
-                      Make athlete decisions easier to understand.
+                      {heroWords.map((word, i) => (
+                        <motion.span
+                          key={i}
+                          variants={wordReveal}
+                          transition={wordTransition}
+                          style={{ display: "inline-block", marginRight: "0.28em" }}
+                        >
+                          {word}
+                        </motion.span>
+                      ))}
                     </Typography>
                   </MotionBox>
 
@@ -295,9 +351,9 @@ const Home: React.FC = () => {
                   <MotionBox variants={fadeUp} transition={transition}>
                     <Grid container spacing={1.5} sx={{ pt: 2 }}>
                       {[
-                        { label: "Readiness", value: "84%" },
-                        { label: "Risk Alerts", value: "Live" },
-                        { label: "AI Guidance", value: "24/7" },
+                        { label: "Readiness Score", counter: 84, suffix: "%" },
+                        { label: "Sports Covered", counter: 50, suffix: "+" },
+                        { label: "AI Guidance", text: "24/7" },
                       ].map((item) => (
                         <Grid item xs={12} sm={4} key={item.label}>
                           <MotionBox
@@ -318,7 +374,9 @@ const Home: React.FC = () => {
                                 fontSize: { xs: "1.1rem", sm: "1.4rem" },
                               }}
                             >
-                              {item.value}
+                              {item.counter !== undefined
+                                ? <AnimatedCounter target={item.counter} suffix={item.suffix} />
+                                : item.text}
                             </Typography>
                             <Typography
                               sx={{
@@ -661,8 +719,27 @@ const Home: React.FC = () => {
           py: { xs: 5, md: 7 },
           bgcolor: "#0f172a",
           color: "#fff",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
+        {/* animated shimmer line */}
+        {!reduceMotion && (
+          <MotionBox
+            aria-hidden
+            animate={{ x: ["-100%", "200%"] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+            sx={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "50%",
+              height: "100%",
+              background: "linear-gradient(105deg, transparent 40%, rgba(56,189,248,0.04) 50%, transparent 60%)",
+              pointerEvents: "none",
+            }}
+          />
+        )}
         <Container maxWidth="xl">
           <MotionBox
             variants={stagger}
@@ -692,13 +769,15 @@ const Home: React.FC = () => {
                   <MotionBox
                     variants={fadeUp}
                     transition={transition}
-                    whileHover={hoverLift}
+                    whileHover={reduceMotion ? undefined : { y: -8, scale: 1.015, transition: { duration: 0.2 } }}
                     sx={{
                       p: 3,
                       height: "100%",
                       borderRadius: 4,
                       bgcolor: "rgba(255,255,255,0.05)",
                       border: "1px solid rgba(255,255,255,0.10)",
+                      transition: "background-color 200ms ease, border-color 200ms ease",
+                      "&:hover": { bgcolor: "rgba(255,255,255,0.08)", borderColor: "rgba(56,189,248,0.3)" },
                     }}
                   >
                     <Stack direction="row" spacing={2} alignItems="flex-start">
@@ -781,7 +860,7 @@ const Home: React.FC = () => {
                   <MotionCard
                     variants={fadeUp}
                     transition={transition}
-                    whileHover={hoverLift}
+                    whileHover={reduceMotion ? undefined : { y: -10, transition: { duration: 0.22 } }}
                     elevation={0}
                     sx={{
                       height: "100%",
@@ -791,6 +870,7 @@ const Home: React.FC = () => {
                       position: "relative",
                       overflow: "hidden",
                       boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
+                      transition: "border-color 200ms ease, box-shadow 200ms ease",
                       "&:hover": {
                         borderColor: "#bae6fd",
                         boxShadow: "0 24px 60px rgba(15,23,42,0.10)",
@@ -807,7 +887,9 @@ const Home: React.FC = () => {
                     }}
                   >
                     <CardContent sx={{ p: 3.5 }}>
-                      <Box
+                      <MotionBox
+                        animate={reduceMotion ? undefined : { y: [0, -5, 0] }}
+                        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
                         sx={{
                           width: 62,
                           height: 62,
@@ -821,7 +903,7 @@ const Home: React.FC = () => {
                         }}
                       >
                         {item.icon}
-                      </Box>
+                      </MotionBox>
 
                       <Typography variant="h5" fontWeight={950} sx={{ mb: 1 }}>
                         {item.title}
@@ -906,22 +988,26 @@ const Home: React.FC = () => {
                 animate={
                   reduceMotion
                     ? undefined
-                    : {
-                        y: [0, -10, 0],
-                      }
+                    : { y: [0, -12, 0] }
                 }
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                sx={{ display: "inline-block", position: "relative", mb: 2 }}
               >
+                {!reduceMotion && (
+                  <MotionBox
+                    animate={{ scale: [1, 1.55, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2.8, repeat: Infinity, ease: "easeOut" }}
+                    sx={{
+                      position: "absolute",
+                      inset: -14,
+                      borderRadius: "50%",
+                      border: "2px solid rgba(56,189,248,0.45)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
                 <SportsSoccerIcon
-                  sx={{
-                    fontSize: 54,
-                    color: "#38bdf8",
-                    mb: 2,
-                  }}
+                  sx={{ fontSize: 54, color: "#38bdf8", display: "block" }}
                 />
               </MotionBox>
 
