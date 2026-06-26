@@ -81,6 +81,7 @@ export default function ProfilePage() {
         ]);
 
         if (!mounted) return;
+
         setCheckIn(latestCheckIn);
 
         if (prefs) {
@@ -105,7 +106,10 @@ export default function ProfilePage() {
     }
 
     loadProfile();
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function updateField<K extends keyof UserPreferences>(
@@ -174,13 +178,17 @@ export default function ProfilePage() {
     {
       label: "Training Load",
       subtitle: "Session intensity",
-      value: checkIn?.training_intensity ? Math.round(checkIn.training_intensity * 10) : 0,
+      value: checkIn?.training_intensity
+        ? Math.round(checkIn.training_intensity * 10)
+        : 0,
       icon: <SpeedIcon />,
     },
     {
       label: "Sleep Quality",
       subtitle: "Mental performance",
-      value: checkIn?.sleep_quality ? Math.round(checkIn.sleep_quality * 10) : 0,
+      value: checkIn?.sleep_quality
+        ? Math.round(checkIn.sleep_quality * 10)
+        : 0,
       icon: <PsychologyIcon />,
     },
   ];
@@ -197,7 +205,7 @@ export default function ProfilePage() {
     <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }}>
       <Container maxWidth="xl">
         <Stack spacing={3}>
-          <Box>
+          <Box sx={{ textAlign: { xs: "center", md: "left" } }}>
             <Chip
               label="Athlete Profile"
               sx={{
@@ -220,8 +228,13 @@ export default function ProfilePage() {
               Your sports science workspace.
             </Typography>
 
-            <Typography color="#64748b" fontSize={{ xs: 15, md: 18 }} sx={{ mt: 1 }}>
-              Store athlete context, track profile metrics, and personalize SportLab AI.
+            <Typography
+              color="#64748b"
+              fontSize={{ xs: 15, md: 18 }}
+              sx={{ mt: 1 }}
+            >
+              Store athlete context, track profile metrics, and personalize
+              SportLab AI.
             </Typography>
           </Box>
 
@@ -237,6 +250,7 @@ export default function ProfilePage() {
                   borderRadius: 5,
                   border: "1px solid #e2e8f0",
                   height: "100%",
+                  textAlign: { xs: "center", md: "left" },
                 }}
               >
                 <Stack spacing={3} alignItems="center">
@@ -263,6 +277,8 @@ export default function ProfilePage() {
                       direction="row"
                       justifyContent="center"
                       spacing={1}
+                      flexWrap="wrap"
+                      useFlexGap
                       sx={{ mt: 2 }}
                     >
                       <Chip
@@ -284,22 +300,34 @@ export default function ProfilePage() {
                     {metrics.map((metric) => (
                       <Box key={metric.label}>
                         <Stack
-                          direction="row"
+                          direction={{ xs: "column", md: "row" }}
                           justifyContent="space-between"
                           alignItems="center"
-                          sx={{ mb: 0.8 }}
+                          spacing={{ xs: 1, md: 0 }}
+                          sx={{
+                            mb: 0.8,
+                            textAlign: { xs: "center", md: "left" },
+                          }}
                         >
-                          <Stack direction="row" spacing={1.2} alignItems="center">
+                          <Stack
+                            direction={{ xs: "column", sm: "row" }}
+                            spacing={1.2}
+                            alignItems="center"
+                          >
                             <Box sx={{ color: "#0284c7" }}>{metric.icon}</Box>
                             <Box>
-                              <Typography fontWeight={900}>{metric.label}</Typography>
+                              <Typography fontWeight={900}>
+                                {metric.label}
+                              </Typography>
                               <Typography color="#64748b" fontSize={13}>
                                 {metric.subtitle}
                               </Typography>
                             </Box>
                           </Stack>
 
-                          <Typography fontWeight={950}>{metric.value}%</Typography>
+                          <Typography fontWeight={950}>
+                            {metric.value}%
+                          </Typography>
                         </Stack>
 
                         <LinearProgress
@@ -327,6 +355,8 @@ export default function ProfilePage() {
                 <Card
                   elevation={0}
                   sx={{
+                    width: "100%",
+                    textAlign: { xs: "center", md: "left" },
                     borderRadius: 5,
                     border: "1px solid #e2e8f0",
                   }}
@@ -347,7 +377,12 @@ export default function ProfilePage() {
                       </Grid>
 
                       <Grid item xs={12} md={6}>
-                        <TextField fullWidth label="Email" value={email} disabled />
+                        <TextField
+                          fullWidth
+                          label="Email"
+                          value={email}
+                          disabled
+                        />
                       </Grid>
 
                       <Grid item xs={12} md={6}>
@@ -368,7 +403,9 @@ export default function ProfilePage() {
                           label="Main Goal"
                           placeholder="Example: Improve speed and recovery"
                           value={form.main_goal}
-                          onChange={(e) => updateField("main_goal", e.target.value)}
+                          onChange={(e) =>
+                            updateField("main_goal", e.target.value)
+                          }
                         />
                       </Grid>
                     </Grid>
@@ -378,6 +415,8 @@ export default function ProfilePage() {
                 <Card
                   elevation={0}
                   sx={{
+                    width: "100%",
+                    textAlign: { xs: "center", md: "left" },
                     borderRadius: 5,
                     border: "1px solid #e2e8f0",
                   }}
@@ -388,7 +427,8 @@ export default function ProfilePage() {
                     </Typography>
 
                     <Typography color="#64748b" sx={{ mb: 3 }}>
-                      Add extra survey details here. Sports Match and SportLab AI will use this information.
+                      Add extra survey details here. Sports Match and SportLab AI
+                      will use this information.
                     </Typography>
 
                     <Grid container spacing={2}>
@@ -434,7 +474,9 @@ export default function ProfilePage() {
                           label="Average Sleep"
                           placeholder="Example: 7–8 hours"
                           value={form.sleep_range}
-                          onChange={(e) => updateField("sleep_range", e.target.value)}
+                          onChange={(e) =>
+                            updateField("sleep_range", e.target.value)
+                          }
                         />
                       </Grid>
 
@@ -446,7 +488,9 @@ export default function ProfilePage() {
                           label="Training Priorities"
                           placeholder="Example: Speed, strength, recovery, flexibility"
                           value={form.priorities}
-                          onChange={(e) => updateField("priorities", e.target.value)}
+                          onChange={(e) =>
+                            updateField("priorities", e.target.value)
+                          }
                         />
                       </Grid>
 
@@ -458,7 +502,9 @@ export default function ProfilePage() {
                           label="Injuries or Areas of Concern"
                           placeholder="Example: Knee soreness, shoulder pain, none"
                           value={form.injury_areas}
-                          onChange={(e) => updateField("injury_areas", e.target.value)}
+                          onChange={(e) =>
+                            updateField("injury_areas", e.target.value)
+                          }
                         />
                       </Grid>
 
@@ -468,7 +514,9 @@ export default function ProfilePage() {
                           label="Athlete Type"
                           placeholder="Example: Power athlete, endurance athlete, team sport athlete"
                           value={form.athlete_type}
-                          onChange={(e) => updateField("athlete_type", e.target.value)}
+                          onChange={(e) =>
+                            updateField("athlete_type", e.target.value)
+                          }
                         />
                       </Grid>
                     </Grid>
@@ -479,6 +527,8 @@ export default function ProfilePage() {
                       onClick={handleSave}
                       sx={{
                         mt: 3,
+                        mx: { xs: "auto", md: 0 },
+                        display: "block",
                         borderRadius: 3,
                         bgcolor: "#0f172a",
                         fontWeight: 950,
