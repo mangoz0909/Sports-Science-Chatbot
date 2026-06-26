@@ -59,8 +59,17 @@ const Header: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const isActive = (to: string) =>
-    to === "/" ? pathname === "/" : pathname.startsWith(to.split("/").slice(0, 2).join("/"));
+  const isActive = (to: string) => {
+    if (to === "/") return pathname === "/";
+  
+    // Health has nested routes
+    if (to === "/health/workout") {
+      return pathname.startsWith("/health");
+    }
+  
+    // Everything else must match exactly
+    return pathname === to;
+  };
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = async () => {
@@ -170,71 +179,72 @@ const Header: React.FC = () => {
               alignItems="center"
               sx={{ display: { xs: "none", lg: "flex" }, flexShrink: 0 }}
             >
-              {isLoggedIn ? (
-                <>
-                  <IconButton
-                    onClick={(e) => setProfileAnchor(e.currentTarget)}
-                    aria-label="Profile menu"
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      bgcolor: isActive("/profile") ? "#e0f2fe" : "#f1f5f9",
-                      borderRadius: "10px",
-                      "&:hover": { bgcolor: "#e0f2fe" },
-                    }}
-                  >
-                    <PersonIcon sx={{ fontSize: 20 }} />
-                  </IconButton>
-                  <Menu
-                    anchorEl={profileAnchor}
-                    open={Boolean(profileAnchor)}
-                    onClose={() => setProfileAnchor(null)}
-                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                    transformOrigin={{ vertical: "top", horizontal: "right" }}
-                    PaperProps={{ sx: { borderRadius: 2, border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", mt: 0.5 } }}
-                  >
-                    <MenuItem component={RouterLink} to="/profile" onClick={() => setProfileAnchor(null)} sx={{ fontSize: 14, fontWeight: 600 }}>Profile</MenuItem>
-                    <MenuItem onClick={async () => { setProfileAnchor(null); await handleLogout(); }} sx={{ fontSize: 14, fontWeight: 600, color: "#ef4444" }}>Logout</MenuItem>
-                  </Menu>
-                </>
-              ) : (
-                <>
-                  <Button
-                    component={RouterLink}
-                    to="/auth?mode=login"
-                    sx={{
-                      borderRadius: "10px",
-                      fontWeight: 700,
-                      fontSize: "0.875rem",
-                      color: "#475569",
-                      textTransform: "none",
-                      px: 2,
-                      "&:hover": { bgcolor: "#f1f5f9", color: "#0f172a" },
-                    }}
-                  >
-                    Log in
-                  </Button>
-                  <Button
-                    component={RouterLink}
-                    to="/auth?mode=signup"
-                    variant="contained"
-                    sx={{
-                      borderRadius: "10px",
-                      fontWeight: 700,
-                      fontSize: "0.875rem",
-                      textTransform: "none",
-                      bgcolor: "#0f172a",
-                      color: "#fff",
-                      px: 2.25,
-                      py: 0.875,
-                      boxShadow: "none",
-                      "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
-                    }}
-                  >
-                    Get started
-                  </Button>
-                </>
-              )}
+{isLoggedIn ? (
+  <>
+    <IconButton
+      onClick={(e) => setProfileAnchor(e.currentTarget)}
+      aria-label="Profile menu"
+      sx={{
+        width: 36,
+        height: 36,
+        bgcolor: isActive("/profile") ? "#e0f2fe" : "#f1f5f9",
+        borderRadius: "10px",
+        "&:hover": { bgcolor: "#e0f2fe" },
+      }}
+    >
+      <PersonIcon sx={{ fontSize: 20 }} />
+    </IconButton>
+
+    <Menu
+      anchorEl={profileAnchor}
+      open={Boolean(profileAnchor)}
+      onClose={() => setProfileAnchor(null)}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "right" }}
+    >
+      <MenuItem
+        component={RouterLink}
+        to="/profile"
+        onClick={() => setProfileAnchor(null)}
+      >
+        Profile
+      </MenuItem>
+
+      <MenuItem
+        onClick={async () => {
+          setProfileAnchor(null);
+          await handleLogout();
+        }}
+        sx={{ color: "#ef4444" }}
+      >
+        Logout
+      </MenuItem>
+    </Menu>
+  </>
+) : (
+  <Button
+    component={RouterLink}
+    to="/auth?mode=signup"
+    variant="contained"
+    sx={{
+      borderRadius: "10px",
+      fontWeight: 700,
+      fontSize: "0.875rem",
+      textTransform: "none",
+      bgcolor: "#0f172a",
+      color: "#fff",
+      px: 2.25,
+      py: 0.875,
+      boxShadow: "none",
+      "&:hover": {
+        bgcolor: "#1e293b",
+        boxShadow: "none",
+      },
+    }}
+  >
+    Get started
+  </Button>
+)}
             </Stack>
 
             {/* ── Mobile Hamburger ── */}
@@ -336,49 +346,69 @@ const Header: React.FC = () => {
 
           <Divider sx={{ mb: 2 }} />
 
-          {/* Auth buttons */}
-          <Stack spacing={1}>
-            {isLoggedIn ? (
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={async () => { await handleLogout(); closeDrawer(); }}
-                sx={{ borderRadius: "10px", fontWeight: 700, textTransform: "none", color: "#ef4444", borderColor: "#fecaca" }}
-              >
-                Logout
-              </Button>
-            ) : (
-              <>
-                <Button
-                  fullWidth
-                  component={RouterLink}
-                  to="/auth?mode=login"
-                  variant="outlined"
-                  onClick={closeDrawer}
-                  sx={{ borderRadius: "10px", fontWeight: 700, textTransform: "none", borderColor: "#e2e8f0", color: "#334155" }}
-                >
-                  Log in
-                </Button>
-                <Button
-                  fullWidth
-                  component={RouterLink}
-                  to="/auth?mode=signup"
-                  variant="contained"
-                  onClick={closeDrawer}
-                  sx={{
-                    borderRadius: "10px",
-                    fontWeight: 700,
-                    textTransform: "none",
-                    bgcolor: "#0f172a",
-                    boxShadow: "none",
-                    "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
-                  }}
-                >
-                  Get started
-                </Button>
-              </>
-            )}
-          </Stack>
+{/* Account buttons */}
+<Stack spacing={1}>
+  {isLoggedIn ? (
+    <>
+      <Button
+        fullWidth
+        component={RouterLink}
+        to="/profile"
+        variant="outlined"
+        onClick={closeDrawer}
+        sx={{
+          borderRadius: "10px",
+          fontWeight: 700,
+          textTransform: "none",
+          borderColor: "#e2e8f0",
+          color: "#334155",
+        }}
+      >
+        Profile
+      </Button>
+
+      <Button
+        fullWidth
+        variant="outlined"
+        onClick={async () => {
+          await handleLogout();
+          closeDrawer();
+        }}
+        sx={{
+          borderRadius: "10px",
+          fontWeight: 700,
+          textTransform: "none",
+          color: "#ef4444",
+          borderColor: "#fecaca",
+        }}
+      >
+        Logout
+      </Button>
+    </>
+  ) : (
+    <Button
+      fullWidth
+      component={RouterLink}
+      to="/auth?mode=signup"
+      variant="contained"
+      onClick={closeDrawer}
+      sx={{
+        borderRadius: "10px",
+        fontWeight: 700,
+        textTransform: "none",
+        bgcolor: "#0f172a",
+        color: "#fff",
+        boxShadow: "none",
+        "&:hover": {
+          bgcolor: "#1e293b",
+          boxShadow: "none",
+        },
+      }}
+    >
+      Get started
+    </Button>
+  )}
+</Stack>
         </Box>
       </Drawer>
     </>
