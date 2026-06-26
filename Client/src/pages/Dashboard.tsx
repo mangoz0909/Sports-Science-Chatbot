@@ -59,6 +59,7 @@ export default function Dashboard() {
   const [snackError, setSnackError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    let mounted = true;
     async function loadDashboard() {
       try {
         const [latest, last7, prof] = await Promise.all([
@@ -66,16 +67,19 @@ export default function Dashboard() {
           getLast7CheckIns(),
           getMyProfile(),
         ]);
+        if (!mounted) return;
         setLatestCheckIn(latest);
         setWeeklyCheckIns(last7);
         setProfile(prof);
       } catch (error: any) {
+        if (!mounted) return;
         setSnackError(error?.message || "Failed to load dashboard data.");
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
     loadDashboard();
+    return () => { mounted = false; };
   }, []);
 
 const userProfile = {
@@ -110,6 +114,8 @@ if (loading) {
     </Box>
   );
 }
+
+const hasNoData = weeklyCheckIns.length === 0 && !latestCheckIn;
 
 
 
@@ -229,6 +235,42 @@ function getAIRecommendation(userProfile: any) {
           </Typography>
         </Stack>
 
+        {/* No data banner */}
+        {hasNoData && (
+          <Box
+            sx={{
+              mb: 3,
+              px: { xs: 2, md: 2.5 },
+              py: 2,
+              borderRadius: 3,
+              border: "1px solid #bfdbfe",
+              bgcolor: "#eff6ff",
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
+            <AddCircleOutlineIcon sx={{ color: "#2563eb", fontSize: 22, flexShrink: 0 }} />
+            <Box sx={{ flex: 1 }}>
+              <Typography fontWeight={800} fontSize={14} color="#1e3a5f">
+                Start tracking to unlock your dashboard
+              </Typography>
+              <Typography fontSize={12} color="#3b82f6" fontWeight={600}>
+                Log your first daily check-in to see readiness scores, trends, and AI recommendations.
+              </Typography>
+            </Box>
+            <Button
+              component={RouterLink}
+              to="/daily-check-in"
+              variant="contained"
+              size="small"
+              sx={{ borderRadius: 2, bgcolor: "#2563eb", fontWeight: 800, textTransform: "none", boxShadow: "none", flexShrink: 0, "&:hover": { bgcolor: "#1d4ed8", boxShadow: "none" } }}
+            >
+              Log check-in
+            </Button>
+          </Box>
+        )}
+
         {/* Check-In Banner */}
         <Box
           component={checkedInToday ? "div" : RouterLink}
@@ -340,18 +382,27 @@ function getAIRecommendation(userProfile: any) {
                   Readiness, recovery, fatigue, and training load over the week.
                 </Typography>
 
-                <ResponsiveContainer width="100%" height="82%">
-                  <LineChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="day" stroke="#64748b" />
-                    <YAxis stroke="#64748b" domain={[0, 110]} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="readiness" stroke={colors.green} strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="recovery" stroke={colors.purple} strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="load" stroke={colors.blue} strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="fatigue" stroke={colors.amber} strokeWidth={3} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {weeklyData.length === 0 ? (
+                  <Box sx={{ height: "82%", display: "grid", placeItems: "center" }}>
+                    <Box textAlign="center">
+                      <Typography fontWeight={700} color="#94a3b8">No data yet</Typography>
+                      <Typography fontSize={13} color="#cbd5e1" sx={{ mt: 0.5 }}>Complete daily check-ins to see your weekly trends.</Typography>
+                    </Box>
+                  </Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height="82%">
+                    <LineChart data={weeklyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="day" stroke="#64748b" />
+                      <YAxis stroke="#64748b" domain={[0, 110]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="readiness" stroke={colors.green} strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="recovery" stroke={colors.purple} strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="load" stroke={colors.blue} strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="fatigue" stroke={colors.amber} strokeWidth={3} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -410,22 +461,28 @@ function getAIRecommendation(userProfile: any) {
                   Sleep duration across the week.
                 </Typography>
 
-                <ResponsiveContainer width="100%" height="78%">
-                  <AreaChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="day" stroke="#64748b" />
-                    <YAxis stroke="#64748b" domain={[4, 10]} />
-                    <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="sleep"
-                      stroke={colors.purple}
-                      strokeWidth={3}
-                      fill={colors.purple}
-                      fillOpacity={0.2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {weeklyData.length === 0 ? (
+                  <Box sx={{ height: "78%", display: "grid", placeItems: "center" }}>
+                    <Typography fontWeight={700} color="#94a3b8">No sleep data yet</Typography>
+                  </Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height="78%">
+                    <AreaChart data={weeklyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="day" stroke="#64748b" />
+                      <YAxis stroke="#64748b" domain={[4, 10]} />
+                      <Tooltip />
+                      <Area
+                        type="monotone"
+                        dataKey="sleep"
+                        stroke={colors.purple}
+                        strokeWidth={3}
+                        fill={colors.purple}
+                        fillOpacity={0.2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -440,15 +497,21 @@ function getAIRecommendation(userProfile: any) {
                   Daily training load for this week.
                 </Typography>
 
-                <ResponsiveContainer width="100%" height="78%">
-                  <BarChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="day" stroke="#64748b" />
-                    <YAxis stroke="#64748b" />
-                    <Tooltip />
-                    <Bar dataKey="load" fill={colors.blue} radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {weeklyData.length === 0 ? (
+                  <Box sx={{ height: "78%", display: "grid", placeItems: "center" }}>
+                    <Typography fontWeight={700} color="#94a3b8">No training data yet</Typography>
+                  </Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height="78%">
+                    <BarChart data={weeklyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="day" stroke="#64748b" />
+                      <YAxis stroke="#64748b" />
+                      <Tooltip />
+                      <Bar dataKey="load" fill={colors.blue} radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -533,29 +596,35 @@ function getAIRecommendation(userProfile: any) {
                   Green = light/recovery, yellow = moderate, red = high load.
                 </Typography>
 
-                <Grid container spacing={1}>
-                  {weeklyData.map((item) => (
-                    <Grid item xs={6} sm={4} md={3} lg={2} key={item.day}>
-                      <Box
-                        sx={{
-                          height: 72,
-                          borderRadius: 3,
-                          bgcolor: riskColor(item.load),
-                          color: "#fff",
-                          display: "grid",
-                          placeItems: "center",
-                          textAlign: "center",
-                          fontWeight: 950,
-                        }}
-                      >
-                        <Box>
-                          <Typography fontWeight={950}>{item.day}</Typography>
-                          <Typography fontSize={13}>{item.load}</Typography>
+                {weeklyData.length === 0 ? (
+                  <Box sx={{ py: 4, textAlign: "center" }}>
+                    <Typography fontWeight={700} color="#94a3b8">No heatmap data yet — log daily check-ins to see your load distribution.</Typography>
+                  </Box>
+                ) : (
+                  <Grid container spacing={1}>
+                    {weeklyData.map((item) => (
+                      <Grid item xs={6} sm={4} md={3} lg={2} key={item.day}>
+                        <Box
+                          sx={{
+                            height: 72,
+                            borderRadius: 3,
+                            bgcolor: riskColor(item.load),
+                            color: "#fff",
+                            display: "grid",
+                            placeItems: "center",
+                            textAlign: "center",
+                            fontWeight: 950,
+                          }}
+                        >
+                          <Box>
+                            <Typography fontWeight={950}>{item.day}</Typography>
+                            <Typography fontSize={13}>{item.load}</Typography>
+                          </Box>
                         </Box>
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
               </CardContent>
             </Card>
           </Grid>
