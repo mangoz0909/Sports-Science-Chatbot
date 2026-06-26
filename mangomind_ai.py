@@ -12,6 +12,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, END
 
 from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -32,6 +33,22 @@ if not _openai_key:
     raise RuntimeError("OPENAI_API_KEY is not set. Add it to your .env file before starting the server.")
 
 app = FastAPI()
+
+# Restrict CORS to known frontend origins; extend this list for production deployments
+_allowed_origins = [o for o in [
+    os.getenv("FRONTEND_ORIGIN"),          # e.g. https://your-app.vercel.app
+    "http://localhost:3000",
+    "http://localhost:5173",
+] if o]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 templates = Jinja2Templates(directory="templates")
 
 # Simple in-memory rate limiter: max 20 requests per minute per user

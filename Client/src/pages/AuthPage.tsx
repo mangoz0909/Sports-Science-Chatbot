@@ -5,6 +5,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  CircularProgress,
   Container,
   FormControlLabel,
   Grid,
@@ -487,6 +488,7 @@ const AuthPage: React.FC = () => {
                   type="submit"
                   variant="contained"
                   disabled={submitting || googleSubmitting || resetSubmitting}
+                  startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : undefined}
                   sx={{
                     borderRadius: 3,
                     bgcolor: "#0f172a",
