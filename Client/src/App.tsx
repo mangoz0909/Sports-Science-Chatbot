@@ -5,6 +5,7 @@ import { Box, CssBaseline, GlobalStyles } from "@mui/material";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import DailyCheckIn from "./pages/DailyCheckIn";
 import Home from "./pages/Home";
@@ -18,6 +19,7 @@ import OnboardingSurvey from "./pages/OnboardingSurvey";
 import HealthPage from "./pages/HealthPage";
 import WorkoutPage from "./pages/WorkoutPage";
 import NutritionPage from "./pages/NutritionPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 const App: React.FC = () => {
   return (
@@ -57,6 +59,7 @@ const App: React.FC = () => {
       />
 
       <BrowserRouter>
+        <ErrorBoundary>
         <Header />
 
         <Box component="main" sx={{ flex: 1, width: "100%" }}>
@@ -121,11 +124,12 @@ const App: React.FC = () => {
               element={<SportsHome />}
             />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Box>
 
         <Footer />
+        </ErrorBoundary>
       </BrowserRouter>
     </>
   );

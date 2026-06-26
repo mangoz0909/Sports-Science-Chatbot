@@ -11,12 +11,14 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from langgraph.graph import StateGraph, END
 
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
 import os
+import time
+from collections import defaultdict
 
 from dotenv import load_dotenv
 
@@ -24,8 +26,18 @@ from utilities.logger_QA import logger
 
 load_dotenv()
 
+# Validate required env vars at startup
+_openai_key = os.getenv("OPENAI_API_KEY")
+if not _openai_key:
+    raise RuntimeError("OPENAI_API_KEY is not set. Add it to your .env file before starting the server.")
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
+
+# Simple in-memory rate limiter: max 20 requests per minute per user
+_rate_store: dict = defaultdict(list)
+_RATE_LIMIT = 20
+_RATE_WINDOW = 60
 if os.path.isdir("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -508,6 +520,14 @@ async def ask(request: Request, message: str = Form(...)):
     logger.info("USER QUESTION ---> %s", message)
 
     user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or "anonymous"
+
+    # Rate limiting
+    now = time.time()
+    timestamps = _rate_store[user_id]
+    _rate_store[user_id] = [t for t in timestamps if now - t < _RATE_WINDOW]
+    if len(_rate_store[user_id]) >= _RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait a moment before sending another message.")
+    _rate_store[user_id].append(now)
     config = {
         "configurable": {
             "thread_id": f"user_{user_id}"
