@@ -18,13 +18,29 @@ export default function AuthCallback() {
 
         if (sessionError) throw sessionError;
 
-        if (!session) {
+        if (!session?.user) {
           navigate("/auth?mode=login&error=session_missing", { replace: true });
           return;
         }
 
         await syncGoogleProfile();
-        navigate("/dashboard", { replace: true });
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("primary_sport, experience_level, main_goal")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        const needsOnboarding =
+          !profile?.primary_sport ||
+          !profile?.experience_level ||
+          !profile?.main_goal;
+
+        navigate(needsOnboarding ? "/onboarding" : "/dashboard", {
+          replace: true,
+        });
       } catch (err: any) {
         setError(err?.message || "Could not finish Google sign in.");
       }
