@@ -434,6 +434,27 @@
   font-size: 14px;
 }
 
+.chat-error span {
+  flex: 1;
+}
+
+.retry-btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid #ffccd5;
+  background: #fff;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.retry-btn:hover {
+  background: #fff1f3;
+}
+
 /* ─── Input Area ─── */
 .chat-input {
   padding: 14px 18px 18px;

@@ -89,6 +89,7 @@ Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(
         </Stack>
       )}
     <AiChatHome
+      chatType="sports"
       title="Sports Health AI"
       logoSrc="/sportslab_logo.png"
       emptyIcon="🏆"

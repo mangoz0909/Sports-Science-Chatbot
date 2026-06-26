@@ -22,7 +22,7 @@ import RestaurantIcon from "@mui/icons-material/Restaurant";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 
-import { createDailyCheckIn } from "../services/checkinService";
+import { createDailyCheckIn, getLatestCheckIn } from "../services/checkinService";
 
 type CheckInData = {
   sleepHours: number;
@@ -173,6 +173,19 @@ export default function DailyCheckIn() {
   const [submitted, setSubmitted] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [alreadyCheckedIn, setAlreadyCheckedIn] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    getLatestCheckIn().then((latest) => {
+      if (!mounted || !latest) return;
+      const today = new Date().toDateString();
+      if (new Date(latest.created_at).toDateString() === today) {
+        setAlreadyCheckedIn(true);
+      }
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const readiness = calculateReadiness(data);
   const injuryRisk = calculateInjuryRisk(data);
@@ -277,9 +290,15 @@ export default function DailyCheckIn() {
           </Typography>
         </Stack>
 
+        {alreadyCheckedIn && !submitted && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            You've already logged a check-in today. Saving again will update your existing entry.
+          </Alert>
+        )}
+
         {submitted && (
           <Alert severity="success" sx={{ mb: 2 }}>
-            Daily check-in saved successfully.
+            Daily check-in {alreadyCheckedIn ? "updated" : "saved"} successfully.
           </Alert>
         )}
 
