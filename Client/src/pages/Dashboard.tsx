@@ -30,7 +30,15 @@ import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { getMyProfile } from "../services/profileService";
 import { supabase } from "../lib/supabaseClient";
 
-
+const DEMO_WEEKLY = [
+  { day: "Mon", readiness: 72, recovery: 68, load: 60, sleep: 7,   fatigue: 35 },
+  { day: "Tue", readiness: 78, recovery: 74, load: 75, sleep: 7.5, fatigue: 28 },
+  { day: "Wed", readiness: 65, recovery: 60, load: 85, sleep: 6.5, fatigue: 45 },
+  { day: "Thu", readiness: 80, recovery: 76, load: 55, sleep: 8,   fatigue: 22 },
+  { day: "Fri", readiness: 84, recovery: 78, load: 69, sleep: 7.5, fatigue: 30 },
+  { day: "Sat", readiness: 70, recovery: 65, load: 90, sleep: 7,   fatigue: 40 },
+  { day: "Sun", readiness: 75, recovery: 72, load: 40, sleep: 8.5, fatigue: 20 },
+];
 import {
   Area,
   AreaChart,
@@ -44,6 +52,16 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+const DEMO_WEEKLY = [
+  { day: "Mon", readiness: 72, recovery: 68, load: 60, sleep: 7,   fatigue: 35 },
+  { day: "Tue", readiness: 78, recovery: 74, load: 75, sleep: 7.5, fatigue: 28 },
+  { day: "Wed", readiness: 65, recovery: 60, load: 85, sleep: 6.5, fatigue: 45 },
+  { day: "Thu", readiness: 80, recovery: 76, load: 55, sleep: 8,   fatigue: 22 },
+  { day: "Fri", readiness: 84, recovery: 78, load: 69, sleep: 7.5, fatigue: 30 },
+  { day: "Sat", readiness: 70, recovery: 65, load: 90, sleep: 7,   fatigue: 40 },
+  { day: "Sun", readiness: 75, recovery: 72, load: 40, sleep: 8.5, fatigue: 20 },
+];
 
 const colors = {
   green: "#22c55e",
