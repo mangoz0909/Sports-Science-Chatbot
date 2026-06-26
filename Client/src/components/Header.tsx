@@ -24,12 +24,7 @@ import { supabase } from "../lib/supabaseClient";
 
 type NavItem = { label: string; to: string };
 
-const publicNavItems: NavItem[] = [
-  { label: "Home", to: "/" },
-];
-
-const authNavItems: NavItem[] = [
-  { label: "Home", to: "/" },
+const navItems: NavItem[] = [
   { label: "Sports AI", to: "/sports" },
   { label: "Sports Match", to: "/sports-list" },
   { label: "Dashboard", to: "/dashboard" },
@@ -62,8 +57,6 @@ const Header: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setIsLoggedIn(!!s));
     return () => subscription.unsubscribe();
   }, []);
-
-  const navItems = isLoggedIn ? authNavItems : publicNavItems;
 
   const isActive = (to: string) => {
     if (to === "/") return pathname === "/";

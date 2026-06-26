@@ -1,6 +1,7 @@
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./AiChatHome.css";
+import { getChatHistory, saveChatMessage, type ChatType } from "../services/chatService";
 
 type QuickAction = {
   label: string;
@@ -23,6 +24,7 @@ type AiChatHomeProps = {
   model?: string;
   systemPrompt?: string;
   sideContent?: ReactNode;
+  chatType?: ChatType;
 };
 
 type ChatMessage = {
@@ -226,6 +228,7 @@ export default function AiChatHome({
   model = DEFAULT_MODEL,
   systemPrompt,
   sideContent,
+  chatType,
 }: AiChatHomeProps) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -233,6 +236,8 @@ export default function AiChatHome({
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState("");
   const [puterReady, setPuterReady] = useState(false);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(!!chatType);
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -255,6 +260,26 @@ export default function AiChatHome({
       });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!chatType) return;
+    let mounted = true;
+    getChatHistory(chatType)
+      .then((history) => {
+        if (!mounted || !history?.length) return;
+        setMessages(
+          history.map((row: any) => ({
+            role: row.role as "user" | "bot",
+            content: row.content,
+            timestamp: new Date(row.created_at),
+          }))
+        );
+      })
+      .catch(() => {})
+      .finally(() => { if (mounted) setHistoryLoading(false); });
+    return () => { mounted = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatType]);
 
   useEffect(() => {
     chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: "smooth" });
@@ -313,6 +338,8 @@ export default function AiChatHome({
     setMessage("");
     setIsLoading(true);
     setError("");
+    setLastFailedMessage(null);
+    if (chatType) saveChatMessage(userMessage, "user", chatType);
     try {
       await loadPuterScript();
       if (!window.puter?.ai?.chat) throw new Error("Puter AI is unavailable.");
@@ -320,21 +347,16 @@ export default function AiChatHome({
       const reply = extractPuterText(response);
       setPuterReady(true);
       setMessages((prev) => [...prev, { role: "bot", content: reply, timestamp: new Date() }]);
+      if (chatType) saveChatMessage(reply, "bot", chatType);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "AI request failed. Try again.");
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "bot",
-          content: "I could not connect right now. Check that https://js.puter.com/v2/ is reachable and retry.",
-          timestamp: new Date(),
-        },
-      ]);
+      const msg = err instanceof Error ? err.message : "AI request failed. Try again.";
+      setError(msg);
+      setLastFailedMessage(userMessage);
     } finally {
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, messages, model, systemPrompt]);
+  }, [isLoading, messages, model, systemPrompt, chatType]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -376,7 +398,13 @@ export default function AiChatHome({
           </header>
 
           <div className="chat-box" ref={chatBoxRef}>
-            {messages.length === 0 && !isLoading && (
+            {historyLoading && (
+              <div className="empty-state">
+                <p>Loading conversation history…</p>
+              </div>
+            )}
+
+            {!historyLoading && messages.length === 0 && !isLoading && (
               <div className="empty-state">
                 <div className="empty-icon">{emptyIcon}</div>
                 <h2>{emptyTitle}</h2>
@@ -413,7 +441,23 @@ export default function AiChatHome({
             )}
           </div>
 
-          {error && <div className="chat-error">{error}</div>}
+          {error && (
+            <div className="chat-error">
+              <span>{error}</span>
+              {lastFailedMessage && (
+                <button
+                  type="button"
+                  className="retry-btn"
+                  onClick={() => {
+                    setError("");
+                    submitMessage(lastFailedMessage);
+                  }}
+                >
+                  ↻ Retry
+                </button>
+              )}
+            </div>
+          )}
 
           <form className="chat-input" onSubmit={handleSubmit}>
           <div className="mobile-quick-actions">

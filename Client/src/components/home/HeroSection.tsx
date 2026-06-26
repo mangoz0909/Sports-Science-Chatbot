@@ -109,7 +109,7 @@ export default function HeroSection() {
         <Grid container spacing={{ xs: 2, md: 7 }} alignItems="center">
           <Grid item xs={12} md={6}>
             <MotionBox variants={stagger} initial="hidden" animate="visible">
-              <Stack spacing={3}>
+              <Stack spacing={3} sx={{ alignItems: { xs: "center", md: "flex-start" }, textAlign: { xs: "center", md: "left" } }}>
                 <MotionBox variants={fadeUp} transition={transition}>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Chip label="Sports Science AI Platform" sx={{ width: "fit-content", bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 900, borderRadius: 999 }} />
@@ -148,7 +148,7 @@ export default function HeroSection() {
                 </MotionBox>
 
                 <MotionBox variants={fadeUp} transition={transition}>
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ pt: 1 }}>
+                  <Stack direction="row" spacing={1.5} sx={{ pt: 1, flexWrap: "wrap", justifyContent: { xs: "center", md: "flex-start" } }}>
                     <Button
                       component={RouterLink}
                       to="/sports"
@@ -187,7 +187,7 @@ export default function HeroSection() {
                       { label: "Sports Covered", counter: 50, suffix: "+" },
                       { label: "AI Guidance", text: "24/7" },
                     ].map((item) => (
-                      <Grid item xs={12} sm={4} key={item.label}>
+                      <Grid item xs={4} key={item.label}>
                         <MotionBox
                           whileHover={hoverLift}
                           sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 3, bgcolor: "#fff", border: "1px solid #e2e8f0", textAlign: "center", boxShadow: "0 10px 28px rgba(15,23,42,0.04)" }}
@@ -214,7 +214,7 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 28, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={transition}
-              sx={{ position: "relative" }}
+              sx={{ position: "relative", mt: { xs: 1, md: 0 } }}
             >
               <MotionPaper
                 elevation={0}
@@ -240,7 +240,7 @@ export default function HeroSection() {
                   }}
                 />
                 <Stack spacing={2.5}>
-                  <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.5}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
                     <Box>
                       <Typography variant="h5" fontWeight={950}>Athlete Snapshot</Typography>
                       <Typography color="#64748b">Today's performance readiness</Typography>

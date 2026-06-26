@@ -5,7 +5,9 @@ import { Box, CssBaseline, GlobalStyles } from "@mui/material";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
+import DemoRoute from "./components/DemoRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ScrollToTop from "./components/ScrollToTop";
 
 import DailyCheckIn from "./pages/DailyCheckIn";
 import Home from "./pages/Home";
@@ -60,6 +62,7 @@ const App: React.FC = () => {
 
       <BrowserRouter>
         <ErrorBoundary>
+        <ScrollToTop />
         <Header />
 
         <Box component="main" sx={{ flex: 1, width: "100%" }}>
@@ -67,8 +70,22 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/sports" element={<SportsHome />} />
-            <Route path="/sports-list" element={<SportsListPage />} />
+            <Route
+              path="/sports"
+              element={
+                <DemoRoute>
+                  <SportsHome />
+                </DemoRoute>
+              }
+            />
+            <Route
+              path="/sports-list"
+              element={
+                <DemoRoute>
+                  <SportsListPage />
+                </DemoRoute>
+              }
+            />
 
             <Route
               path="/onboarding"
@@ -82,9 +99,9 @@ const App: React.FC = () => {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute>
+                <DemoRoute>
                   <Dashboard />
-                </ProtectedRoute>
+                </DemoRoute>
               }
             />
 
@@ -109,9 +126,9 @@ const App: React.FC = () => {
             <Route
               path="/health"
               element={
-                <ProtectedRoute>
+                <DemoRoute>
                   <HealthPage />
-                </ProtectedRoute>
+                </DemoRoute>
               }
             >
               <Route index element={<Navigate to="/health/workout" replace />} />
@@ -121,7 +138,11 @@ const App: React.FC = () => {
 
             <Route
               path="/mental-health"
-              element={<SportsHome />}
+              element={
+                <DemoRoute>
+                  <SportsHome />
+                </DemoRoute>
+              }
             />
 
             <Route path="*" element={<NotFoundPage />} />

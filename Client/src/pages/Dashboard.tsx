@@ -28,6 +28,17 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { getMyProfile } from "../services/profileService";
+import { supabase } from "../lib/supabaseClient";
+
+const DEMO_WEEKLY = [
+  { day: "Mon", readiness: 72, recovery: 68, load: 60, sleep: 7,   fatigue: 35 },
+  { day: "Tue", readiness: 78, recovery: 74, load: 75, sleep: 7.5, fatigue: 28 },
+  { day: "Wed", readiness: 65, recovery: 60, load: 85, sleep: 6.5, fatigue: 45 },
+  { day: "Thu", readiness: 80, recovery: 76, load: 55, sleep: 8,   fatigue: 22 },
+  { day: "Fri", readiness: 84, recovery: 78, load: 69, sleep: 7.5, fatigue: 30 },
+  { day: "Sat", readiness: 70, recovery: 65, load: 90, sleep: 7,   fatigue: 40 },
+  { day: "Sun", readiness: 75, recovery: 72, load: 40, sleep: 8.5, fatigue: 20 },
+];
 import {
   Area,
   AreaChart,
@@ -57,11 +68,21 @@ export default function Dashboard() {
   const [loading, setLoading] = React.useState(true);
   const [profile, setProfile] = React.useState<any>(null);
   const [snackError, setSnackError] = React.useState<string | null>(null);
+  const [isGuest, setIsGuest] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
     async function loadDashboard() {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+
+        if (!session) {
+          setIsGuest(true);
+          setLoading(false);
+          return;
+        }
+
         const [latest, last7, prof] = await Promise.all([
           getLatestCheckIn(),
           getLast7CheckIns(),
@@ -82,7 +103,19 @@ export default function Dashboard() {
     return () => { mounted = false; };
   }, []);
 
-const userProfile = {
+const userProfile = isGuest ? {
+  name: "Demo Athlete",
+  sport: "Tennis",
+  readiness: 84,
+  recovery: 78,
+  load: 69,
+  sleep: 7.5,
+  sleepQuality: 80,
+  fatigue: 30,
+  injuryRisk: 15,
+  hydration: 7,
+  hydrationGoal: 10,
+} : {
   name: profile?.name || "Athlete",
   sport: profile?.primary_sport || "Sport",
   readiness: latestCheckIn?.readiness_score ?? 0,
@@ -96,10 +129,8 @@ const userProfile = {
   hydrationGoal: 10,
 };
 
-const weeklyData = weeklyCheckIns.map((item) => ({
-  day: new Date(item.created_at).toLocaleDateString("en-US", {
-    weekday: "short",
-  }),
+const weeklyData = isGuest ? DEMO_WEEKLY : weeklyCheckIns.map((item) => ({
+  day: new Date(item.created_at).toLocaleDateString("en-US", { weekday: "short" }),
   readiness: item.readiness_score ?? 0,
   recovery: item.recovery_score ?? 0,
   load: item.training_intensity ? item.training_intensity * 10 : 0,
@@ -115,7 +146,7 @@ if (loading) {
   );
 }
 
-const hasNoData = weeklyCheckIns.length === 0 && !latestCheckIn;
+const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
 
 
@@ -146,7 +177,7 @@ function getAIRecommendation(userProfile: any) {
   return "You are in a stable training zone. Continue normal practice, but keep monitoring sleep and hydration.";
 }
   const today = new Date().toDateString();
-  const lastCheckInDate = latestCheckIn?.created_at ? new Date(latestCheckIn.created_at).toDateString() : null;
+  const lastCheckInDate = !isGuest && latestCheckIn?.created_at ? new Date(latestCheckIn.created_at).toDateString() : null;
   const checkedInToday = lastCheckInDate === today;
 
   const kpis = [
@@ -231,7 +262,9 @@ function getAIRecommendation(userProfile: any) {
           </Typography>
 
           <Typography color="#64748b">
-            Your personal dashboard for {userProfile.sport} training, recovery, sleep, nutrition, and injury prevention.
+            {isGuest
+              ? "Showing demo data — sign in to see your real training, recovery, and readiness metrics."
+              : `Your personal dashboard for ${userProfile.sport} training, recovery, sleep, nutrition, and injury prevention.`}
           </Typography>
         </Stack>
 
@@ -272,7 +305,7 @@ function getAIRecommendation(userProfile: any) {
         )}
 
         {/* Check-In Banner */}
-        <Box
+        {!isGuest && <Box
           component={checkedInToday ? "div" : RouterLink}
           to={checkedInToday ? undefined : "/daily-check-in"}
           sx={{
@@ -312,7 +345,7 @@ function getAIRecommendation(userProfile: any) {
               Tap to log →
             </Typography>
           )}
-        </Box>
+        </Box>}
 
         <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
           {kpis.map((item) => (
