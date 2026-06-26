@@ -13,8 +13,8 @@ const Footer: React.FC = () => {
         borderTop: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      <Container maxWidth="xl" sx={{ py: { xs: 5, md: 7 } }}>
-        <Grid container spacing={{ xs: 4, md: 5 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 7 } }}>
+        <Grid container spacing={{ xs: 3, md: 5 }}>
           {/* Brand column */}
           <Grid item xs={12} md={4.5}>
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5 }}>
@@ -109,7 +109,7 @@ const Footer: React.FC = () => {
           </Grid>
 
           {/* Focus blurb */}
-          <Grid item xs={12} sm={4} md={3.3}>
+          <Grid item xs={12} sm={4} md={3.3} sx={{ display: { xs: "none", sm: "block" } }}>
             <Typography fontWeight={700} fontSize={13} sx={{ mb: 2, color: "rgba(255,255,255,0.85)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
               What we cover
             </Typography>
@@ -130,7 +130,7 @@ const Footer: React.FC = () => {
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: 4, borderColor: "rgba(255,255,255,0.07)" }} />
+        <Divider sx={{ my: { xs: 3, md: 4 }, borderColor: "rgba(255,255,255,0.07)" }} />
 
         <Stack
           direction={{ xs: "column", sm: "row" }}

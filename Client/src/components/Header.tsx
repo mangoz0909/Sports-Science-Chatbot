@@ -58,8 +58,6 @@ const Header: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const navItems = isLoggedIn ? authNavItems : publicNavItems;
-
   const isActive = (to: string) => {
     if (to === "/") return pathname === "/";
   
