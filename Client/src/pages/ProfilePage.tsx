@@ -51,56 +51,62 @@ export default function ProfilePage() {
   });
 
   React.useEffect(() => {
-    loadProfile();
-  }, []);
+    let mounted = true;
 
-  async function loadProfile() {
-    setLoading(true);
-    setError(null);
+    async function loadProfile() {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError) throw userError;
-      if (!user) throw new Error("You must be logged in.");
+        if (!mounted) return;
+        if (userError) throw userError;
+        if (!user) throw new Error("You must be logged in.");
 
-      setEmail(user.email || "");
-      setName(
-        user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.email?.split("@")[0] ||
-          ""
-      );
+        setEmail(user.email || "");
+        setName(
+          user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.email?.split("@")[0] ||
+            ""
+        );
 
-      const [prefs, latestCheckIn] = await Promise.all([
-        getUserPreferences(),
-        getLatestCheckIn(),
-      ]);
+        const [prefs, latestCheckIn] = await Promise.all([
+          getUserPreferences(),
+          getLatestCheckIn(),
+        ]);
 
-      setCheckIn(latestCheckIn);
+        if (!mounted) return;
+        setCheckIn(latestCheckIn);
 
-      if (prefs) {
-        setForm({
-          primary_sport: prefs.primary_sport || "",
-          experience_level: prefs.experience_level || "",
-          main_goal: prefs.main_goal || "",
-          training_days: prefs.training_days || "",
-          competition_level: prefs.competition_level || "",
-          injury_areas: prefs.injury_areas || "",
-          priorities: prefs.priorities || "",
-          sleep_range: prefs.sleep_range || "",
-          athlete_type: prefs.athlete_type || "",
-        });
+        if (prefs) {
+          setForm({
+            primary_sport: prefs.primary_sport || "",
+            experience_level: prefs.experience_level || "",
+            main_goal: prefs.main_goal || "",
+            training_days: prefs.training_days || "",
+            competition_level: prefs.competition_level || "",
+            injury_areas: prefs.injury_areas || "",
+            priorities: prefs.priorities || "",
+            sleep_range: prefs.sleep_range || "",
+            athlete_type: prefs.athlete_type || "",
+          });
+        }
+      } catch (err: any) {
+        if (!mounted) return;
+        setError(err?.message || "Failed to load profile.");
+      } finally {
+        if (mounted) setLoading(false);
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to load profile.");
-    } finally {
-      setLoading(false);
     }
-  }
+
+    loadProfile();
+    return () => { mounted = false; };
+  }, []);
 
   function updateField<K extends keyof UserPreferences>(
     key: K,
