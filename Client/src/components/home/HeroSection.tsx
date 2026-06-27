@@ -2,7 +2,6 @@ import React from "react";
 import {
   Box,
   Button,
-  Card,
   Chip,
   Container,
   Grid,
