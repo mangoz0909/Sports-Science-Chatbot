@@ -14,11 +14,38 @@ const MotionBox = motion(Box);
 const MotionCard = motion(Card);
 
 const workspaceCards = [
-  { title: "Daily Athlete Check-In", desc: "Log your daily sleep, fatigue, soreness, hydration, recovery, training intensity, and wellness data.", icon: <MonitorHeartIcon />, to: "/daily-check-in", cta: "Open Check-In", color: "#ec4899" },
-  { title: "Sports AI Assistant", desc: "Ask about rules, tactics, drills, coaching cues, match strategy, and sports science.", icon: <SportsCricketIcon />, to: "/sports", cta: "Open Sports AI", color: "#38bdf8" },
-  { title: "Mental Health Assistant", desc: "Get supportive guidance around stress, anxiety, confidence, and emotional wellbeing.", icon: <PsychologyIcon />, to: "/mental-health", cta: "Open MangoMind", color: "#8b5cf6" },
-  { title: "Sports Matching Engine", desc: "Search one sport and discover similar sports based on movement, equipment, intensity, and sport science profile.", icon: <SportsSoccerIcon />, to: "/sports-list", cta: "Find Sports", color: "#f59e0b" },
-  { title: "Athlete Dashboard", desc: "Explore performance, recovery, workload, injury risk, and team readiness visuals.", icon: <AnalyticsIcon />, to: "/dashboard", cta: "View Dashboard", color: "#22c55e" },
+  {
+    title: "Daily Athlete Check-In",
+    desc: "Log sleep, fatigue, soreness, hydration, recovery, training intensity, and wellness data.",
+    icon: <MonitorHeartIcon />,
+    to: "/daily-check-in",
+    cta: "Open Check-In",
+    color: "#ec4899",
+  },
+  {
+    title: "Sports Health AI",
+    desc: "Ask about training, recovery, performance, injury prevention, nutrition, stress, focus, and confidence.",
+    icon: <PsychologyIcon />,
+    to: "/sports",
+    cta: "Open AI Coach",
+    color: "#38bdf8",
+  },
+  {
+    title: "Sports Match",
+    desc: "Find sports that match your interests, movement style, intensity, and athletic profile.",
+    icon: <SportsSoccerIcon />,
+    to: "/sports-list",
+    cta: "Find Sports",
+    color: "#f59e0b",
+  },
+  {
+    title: "Athlete Dashboard",
+    desc: "Track readiness, recovery, workload, fatigue, sleep, hydration, injury risk, and weekly trends.",
+    icon: <AnalyticsIcon />,
+    to: "/dashboard",
+    cta: "View Dashboard",
+    color: "#22c55e",
+  },
 ];
 
 export default function WorkspacesSection() {
