@@ -9,6 +9,12 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
   Grid,
   LinearProgress,
   Paper,
@@ -153,6 +159,40 @@ export default function ProfilePage() {
       setError(err?.message || "Failed to update information.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("You must be logged in.");
+
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Failed to delete account.");
+
+      await supabase.auth.signOut();
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete account.");
+      setDeleteDialogOpen(false);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -572,8 +612,123 @@ export default function ProfilePage() {
               </Stack>
             </Grid>
           </Grid>
+
+          {/* Danger Zone */}
+          <Box>
+            <Divider sx={{ mb: 3 }} />
+            <Card
+              elevation={0}
+              sx={{
+                borderRadius: 5,
+                border: "1px solid #fecaca",
+                bgcolor: "#fff5f5",
+              }}
+            >
+              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                <Typography variant="h6" fontWeight={950} color="#b91c1c" gutterBottom>
+                  Danger Zone
+                </Typography>
+
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: "flex-start", sm: "center" }}
+                  spacing={2}
+                >
+                  <Box>
+                    <Typography fontWeight={700} color="#0f172a">
+                      Delete Account
+                    </Typography>
+                    <Typography color="#64748b" fontSize={14}>
+                      Permanently deletes your account and all associated data. This cannot be undone.
+                    </Typography>
+                  </Box>
+
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      setDeleteConfirmText("");
+                      setDeleteDialogOpen(true);
+                    }}
+                    sx={{
+                      borderRadius: 3,
+                      fontWeight: 900,
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      borderColor: "#fca5a5",
+                      color: "#b91c1c",
+                      "&:hover": {
+                        borderColor: "#ef4444",
+                        bgcolor: "#fee2e2",
+                      },
+                    }}
+                  >
+                    Delete Account
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Box>
         </Stack>
       </Container>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => !deleting && setDeleteDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 950, color: "#b91c1c" }}>
+          Delete Account
+        </DialogTitle>
+
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            This will permanently delete your account and all your data including profile, preferences, and check-in history. <strong>This cannot be undone.</strong>
+          </DialogContentText>
+
+          <DialogContentText sx={{ mb: 1.5, fontWeight: 700, color: "#0f172a" }}>
+            Type <strong>DELETE</strong> to confirm:
+          </DialogContentText>
+
+          <TextField
+            fullWidth
+            placeholder="DELETE"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            disabled={deleting}
+            autoComplete="off"
+          />
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={deleting}
+            sx={{ borderRadius: 3, fontWeight: 900 }}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            color="error"
+            disabled={deleteConfirmText !== "DELETE" || deleting}
+            onClick={handleDeleteAccount}
+            sx={{
+              borderRadius: 3,
+              fontWeight: 900,
+              boxShadow: "none",
+              "&:hover": { boxShadow: "none" },
+            }}
+          >
+            {deleting ? "Deleting..." : "Delete My Account"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
