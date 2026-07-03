@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Container,
   Paper,
   Stack,
@@ -14,6 +15,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
+  getUserPreferences,
   saveUserPreferences,
   UserPreferences,
 } from "../services/preferencesService";
@@ -33,8 +35,30 @@ export default function OnboardingSurvey() {
     athlete_type: "",
   });
 
+  const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    getUserPreferences()
+      .then((prefs) => {
+        if (prefs) {
+          setForm({
+            primary_sport: prefs.primary_sport || "",
+            experience_level: prefs.experience_level || "",
+            main_goal: prefs.main_goal || "",
+            training_days: prefs.training_days || "",
+            competition_level: prefs.competition_level || "",
+            injury_areas: prefs.injury_areas || "",
+            priorities: prefs.priorities || "",
+            sleep_range: prefs.sleep_range || "",
+            athlete_type: prefs.athlete_type || "",
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   function updateField<K extends keyof UserPreferences>(
     key: K,
@@ -90,6 +114,14 @@ export default function OnboardingSurvey() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f8fafc" }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (

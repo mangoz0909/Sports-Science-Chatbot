@@ -9,12 +9,14 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Grid,
   LinearProgress,
   Paper,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import SpeedIcon from "@mui/icons-material/Speed";
@@ -28,6 +30,7 @@ import {
 import { getLatestCheckIn } from "../services/checkinService";
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -150,6 +153,40 @@ export default function ProfilePage() {
       setError(err?.message || "Failed to update information.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("You must be logged in.");
+
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Failed to delete account.");
+
+      await supabase.auth.signOut();
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete account.");
+      setDeleteDialogOpen(false);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -459,19 +496,19 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              <Card
-                elevation={0}
-                sx={{
-                  width: "100%",
-                  borderRadius: 5,
-                  border: "1px solid #e2e8f0",
-                  boxSizing: "border-box",
-                }}
-              >
-                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                  <Typography variant="h5" fontWeight={950} gutterBottom>
-                    Add / Update Athlete Information
-                  </Typography>
+                <Card
+                  elevation={0}
+                  sx={{
+                    width: "100%",
+                    textAlign: { xs: "center", md: "left" },
+                    borderRadius: 5,
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                    <Typography variant="h5" fontWeight={950} gutterBottom>
+                      Add / Update Athlete Information
+                    </Typography>
 
                   <Typography color="#64748b" sx={{ mb: 3 }}>
                     Add extra survey details here. Sports Match and SportLab AI
@@ -557,32 +594,92 @@ export default function ProfilePage() {
                     />
                   </Box>
 
-                  <Button
-                    variant="contained"
-                    disabled={saving}
-                    onClick={handleSave}
-                    sx={{
-                      mt: 3,
-                      borderRadius: 3,
-                      bgcolor: "#0f172a",
-                      fontWeight: 950,
-                      px: 3,
-                      py: 1.1,
-                      boxShadow: "none",
-                      "&:hover": {
-                        bgcolor: "#1e293b",
+                    <Button
+                      variant="contained"
+                      disabled={saving}
+                      onClick={handleSave}
+                      sx={{
+                        mt: 3,
+                        mx: { xs: "auto", md: 0 },
+                        display: "block",
+                        borderRadius: 3,
+                        bgcolor: "#0f172a",
+                        fontWeight: 950,
+                        px: 3,
+                        py: 1.1,
                         boxShadow: "none",
-                      },
-                    }}
-                  >
-                    {saving ? "Updating..." : "Update Information"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </Stack>
-          </Box>
+                        "&:hover": {
+                          bgcolor: "#1e293b",
+                          boxShadow: "none",
+                        },
+                      }}
+                    >
+                      {saving ? "Updating..." : "Update Information"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Stack>
+            </Grid>
+          </Grid>
         </Stack>
       </Container>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => !deleting && setDeleteDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 950, color: "#b91c1c" }}>
+          Delete Account
+        </DialogTitle>
+
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            This will permanently delete your account and all your data including profile, preferences, and check-in history. <strong>This cannot be undone.</strong>
+          </DialogContentText>
+
+          <DialogContentText sx={{ mb: 1.5, fontWeight: 700, color: "#0f172a" }}>
+            Type <strong>DELETE</strong> to confirm:
+          </DialogContentText>
+
+          <TextField
+            fullWidth
+            placeholder="DELETE"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            disabled={deleting}
+            autoComplete="off"
+          />
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={deleting}
+            sx={{ borderRadius: 3, fontWeight: 900 }}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            color="error"
+            disabled={deleteConfirmText !== "DELETE" || deleting}
+            onClick={handleDeleteAccount}
+            sx={{
+              borderRadius: 3,
+              fontWeight: 900,
+              boxShadow: "none",
+              "&:hover": { boxShadow: "none" },
+            }}
+          >
+            {deleting ? "Deleting..." : "Delete My Account"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
