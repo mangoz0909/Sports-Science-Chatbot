@@ -14,19 +14,18 @@ export async function saveChatMessage(content: string, role: "user" | "bot", cha
   if (error) console.warn("Failed to save chat message:", error.message);
 }
 
-export async function sendAiMessage(message: string, chatType: ChatType) {
-  const { data, error } = await supabase.functions.invoke("ai-chat", {
-    body: {
-      message,
-      chatType,
-    },
-  });
+export async function clearChatHistory(chatType: ChatType) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) return;
 
-  if (error) throw error;
+  const { error } = await supabase
+    .from("chat_messages")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("chat_type", chatType);
 
-  return data as {
-    reply: string;
-  };
+  if (error) console.warn("Failed to clear chat history:", error.message);
 }
 
 export async function getChatHistory(chatType: ChatType) {

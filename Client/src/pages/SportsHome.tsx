@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Chip, Stack } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import AiChatHome from "../components/AiChatHome";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
@@ -79,6 +80,15 @@ Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(
       label="🟡 Using your profile — no check-in today"
       sx={{ bgcolor: "#fffbeb", color: "#92400e", fontWeight: 700, fontSize: 12, border: "1px solid #fde68a" }}
     />
+  ) : dataStatus === "none" ? (
+    <Chip
+      size="small"
+      component={RouterLink}
+      to="/profile"
+      clickable
+      label="⚪ Complete your profile for personalized advice →"
+      sx={{ bgcolor: "#f1f5f9", color: "#475569", fontWeight: 700, fontSize: 12, border: "1px solid #e2e8f0", textDecoration: "none" }}
+    />
   ) : null;
 
   return (
@@ -97,7 +107,7 @@ Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(
       emptySubtitle="Training · Recovery · Nutrition · Stress · Confidence · Focus"
       inputPlaceholder="Ask SportLab AI anything…"
       toolsTitle="Quick Actions"
-      model="claude-haiku-4-5"
+      model="gpt-4o-mini"
       systemPrompt={`
 You are SportLab AI and MangoMind AI combined.
 
@@ -186,7 +196,7 @@ Always be supportive, practical, personalized, and student-friendly.
       ]}
       footerNote={
         <>
-          🔒 Conversations run client-side through Puter.js.
+          🔒 Conversations are powered by OpenAI and saved to your account.
           <br />
           🏆 Responses are personalized using your athlete profile.
           <br />

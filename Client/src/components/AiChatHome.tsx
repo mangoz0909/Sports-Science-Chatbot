@@ -1,7 +1,7 @@
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./AiChatHome.css";
-import { getChatHistory, saveChatMessage, type ChatType } from "../services/chatService";
+import { getChatHistory, saveChatMessage, clearChatHistory, type ChatType } from "../services/chatService";
 
 type QuickAction = {
   label: string;
@@ -50,64 +50,47 @@ type SpeechRecognitionLike = {
 };
 type SpeechRecognitionConstructorLike = new () => SpeechRecognitionLike;
 
-type PuterChatResponse =
-  | string
-  | {
-      text?: string;
-      message?: { content?: Array<{ text?: string }> | string };
-    };
-
 declare global {
   interface Window {
     SpeechRecognition?: SpeechRecognitionConstructorLike;
     webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
-    puter?: {
-      ai?: {
-        chat?: (
-          prompt: string,
-          options?: { model?: string }
-        ) => Promise<PuterChatResponse>;
-      };
-    };
   }
 }
 
-const PUTER_SCRIPT_ID = "puter-js-v2";
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+const DEFAULT_MODEL = "gpt-4o-mini";
+const MAX_MESSAGE_LENGTH = 2000;
 
-function loadPuterScript() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.puter?.ai?.chat) { resolve(); return; }
-    const existing = document.getElementById(PUTER_SCRIPT_ID) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Failed to load Puter.js.")), { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = PUTER_SCRIPT_ID;
-    script.src = "https://js.puter.com/v2/";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Puter.js."));
-    document.body.appendChild(script);
+async function callOpenAI(
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  model: string
+): Promise<string> {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured. Add VITE_OPENAI_API_KEY to your .env file.");
+  }
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({ model, messages, max_tokens: 1024 }),
   });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `OpenAI request failed (${response.status})`);
+  }
+  const data = await response.json();
+  return data.choices[0]?.message?.content || "No response received.";
 }
 
-function extractPuterText(response: PuterChatResponse) {
-  if (typeof response === "string") return response;
-  if (response?.text) return response.text;
-  const content = response?.message?.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) return content.map((i) => i.text).filter(Boolean).join("\n");
-  return "No response received.";
-}
-
-/** Full markdown-to-JSX renderer with bold, code, lists, headings, hr */
+/** Full markdown-to-JSX renderer with bold, inline code, fenced code blocks, lists, headings, hr */
 function formatBotMessage(content: string): ReactNode {
   const lines = content.split("\n");
   const elements: ReactNode[] = [];
   let listBuffer: string[] = [];
+  let inCodeBlock = false;
+  let codeLines: string[] = [];
 
   function flushList(key: string) {
     if (!listBuffer.length) return;
@@ -144,13 +127,27 @@ function formatBotMessage(content: string): ReactNode {
   }
 
   lines.forEach((raw, i) => {
-    const line = raw;
-    const trimmed = line.trim();
+    const trimmed = raw.trim();
 
-    // Code block — simplified (just style as block if backtick fenced)
     if (trimmed.startsWith("```")) {
-      flushList(`list-${i}`);
-      // skip fence markers
+      if (!inCodeBlock) {
+        flushList(`list-${i}`);
+        inCodeBlock = true;
+        codeLines = [];
+      } else {
+        elements.push(
+          <pre key={`code-${i}`} className="markdown-code-block">
+            <code>{codeLines.join("\n")}</code>
+          </pre>
+        );
+        inCodeBlock = false;
+        codeLines = [];
+      }
+      return;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(raw);
       return;
     }
 
@@ -205,6 +202,15 @@ function formatBotMessage(content: string): ReactNode {
     );
   });
 
+  // flush unclosed code block
+  if (inCodeBlock && codeLines.length > 0) {
+    elements.push(
+      <pre key="code-end" className="markdown-code-block">
+        <code>{codeLines.join("\n")}</code>
+      </pre>
+    );
+  }
+
   flushList("list-end");
   return <>{elements}</>;
 }
@@ -235,7 +241,6 @@ export default function AiChatHome({
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState("");
-  const [puterReady, setPuterReady] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(!!chatType);
 
@@ -243,23 +248,15 @@ export default function AiChatHome({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  const canSend = message.trim().length > 0 && !isLoading;
+  const apiReady = Boolean(OPENAI_API_KEY);
+  const overLimit = message.length > MAX_MESSAGE_LENGTH;
+  const canSend = message.trim().length > 0 && !isLoading && !overLimit;
 
   const defaultSystemPrompt = useMemo(
     () =>
       "You are SportLab AI, a concise sports science assistant. Explain sports rules, training, recovery, injury-risk concepts, athlete readiness, tactics, nutrition basics, and mental performance clearly. Avoid medical diagnosis. Tell users to seek qualified professional help for injuries, emergencies, or severe mental health concerns.",
     []
   );
-
-  useEffect(() => {
-    let mounted = true;
-    loadPuterScript()
-      .then(() => { if (mounted) setPuterReady(true); })
-      .catch(() => {
-        if (mounted) setError("Puter.js failed to load. Check your connection and script permissions.");
-      });
-    return () => { mounted = false; };
-  }, []);
 
   useEffect(() => {
     if (!chatType) return;
@@ -317,22 +314,25 @@ export default function AiChatHome({
     recognitionRef.current.start();
   };
 
-  const buildPrompt = (userMessage: string) => {
-    const recentHistory = messages
-      .slice(-8)
-      .map((item) => `${item.role === "user" ? "User" : "Assistant"}: ${item.content}`)
-      .join("\n");
-    return [
-      `System: ${systemPrompt || defaultSystemPrompt}`,
-      recentHistory ? `Recent conversation:\n${recentHistory}` : "",
-      `User: ${userMessage}`,
-      "Assistant:",
-    ].filter(Boolean).join("\n\n");
-  };
+  const buildMessages = useCallback(
+    (userMessage: string) => {
+      const sys = systemPrompt || defaultSystemPrompt;
+      const history = messages.slice(-8).map((m) => ({
+        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+        content: m.content,
+      }));
+      return [
+        { role: "system" as const, content: sys },
+        ...history,
+        { role: "user" as const, content: userMessage },
+      ];
+    },
+    [messages, systemPrompt, defaultSystemPrompt]
+  );
 
   const submitMessage = useCallback(async (text: string) => {
     const userMessage = text.trim();
-    if (!userMessage || isLoading) return;
+    if (!userMessage || isLoading || userMessage.length > MAX_MESSAGE_LENGTH) return;
     const now = new Date();
     setMessages((prev) => [...prev, { role: "user", content: userMessage, timestamp: now }]);
     setMessage("");
@@ -341,11 +341,7 @@ export default function AiChatHome({
     setLastFailedMessage(null);
     if (chatType) saveChatMessage(userMessage, "user", chatType);
     try {
-      await loadPuterScript();
-      if (!window.puter?.ai?.chat) throw new Error("Puter AI is unavailable.");
-      const response = await window.puter.ai.chat(buildPrompt(userMessage), { model });
-      const reply = extractPuterText(response);
-      setPuterReady(true);
+      const reply = await callOpenAI(buildMessages(userMessage), model);
       setMessages((prev) => [...prev, { role: "bot", content: reply, timestamp: new Date() }]);
       if (chatType) saveChatMessage(reply, "bot", chatType);
     } catch (err) {
@@ -355,8 +351,7 @@ export default function AiChatHome({
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, messages, model, systemPrompt, chatType]);
+  }, [isLoading, buildMessages, model, chatType]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -370,7 +365,10 @@ export default function AiChatHome({
     }
   };
 
-  const clearConversation = () => setMessages([]);
+  const clearConversation = () => {
+    setMessages([]);
+    if (chatType) clearChatHistory(chatType).catch(() => {});
+  };
 
   return (
     <main className="ai-page">
@@ -382,8 +380,8 @@ export default function AiChatHome({
               <img src={logoSrc} alt={`${title} logo`} className="brand-logo" />
               <div>
                 <p className="eyebrow">
-                  <span className={`status-dot ${puterReady ? "" : "offline"}`} />
-                  AI Assistant &nbsp;·&nbsp; {puterReady ? "Ready" : "Connecting…"}
+                  <span className={`status-dot ${apiReady ? "" : "offline"}`} />
+                  AI Assistant &nbsp;·&nbsp; {apiReady ? "Ready" : "API key not configured"}
                 </p>
                 <h1>{title}</h1>
               </div>
@@ -460,20 +458,20 @@ export default function AiChatHome({
           )}
 
           <form className="chat-input" onSubmit={handleSubmit}>
-          <div className="mobile-quick-actions">
-  {quickActions.map((action) => (
-    <button
-      key={action.label}
-      type="button"
-      className="mobile-action-btn"
-      onClick={() => submitMessage(action.prompt)}
-      disabled={isLoading}
-    >
-      <span>{action.icon}</span>
-      <span>{action.label}</span>
-    </button>
-  ))}
-</div>
+            <div className="mobile-quick-actions">
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  className="mobile-action-btn"
+                  onClick={() => submitMessage(action.prompt)}
+                  disabled={isLoading}
+                >
+                  <span>{action.icon}</span>
+                  <span>{action.label}</span>
+                </button>
+              ))}
+            </div>
 
             <div className="input-wrapper">
               <div className="input-container">
@@ -485,6 +483,7 @@ export default function AiChatHome({
                   placeholder={isRecording ? "Listening…" : inputPlaceholder}
                   disabled={isLoading}
                   rows={1}
+                  maxLength={MAX_MESSAGE_LENGTH + 100}
                 />
                 <button
                   type="button"
@@ -503,7 +502,11 @@ export default function AiChatHome({
                   ↑
                 </button>
               </div>
-              <div className="input-hint">Enter to send · Shift+Enter for new line</div>
+              <div className="input-hint">
+                {overLimit
+                  ? `Message too long (${message.length}/${MAX_MESSAGE_LENGTH})`
+                  : "Enter to send · Shift+Enter for new line"}
+              </div>
             </div>
           </form>
         </section>
