@@ -54,21 +54,22 @@ const Header: React.FC = () => {
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsLoggedIn(!!data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setIsLoggedIn(!!s));
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
   const isActive = (to: string) => {
     if (to === "/") return pathname === "/";
-  
-    // Health has nested routes
-    if (to === "/health/workout") {
-      return pathname.startsWith("/health");
-    }
-  
-    // Everything else must match exactly
+    if (to === "/health/workout") return pathname.startsWith("/health");
     return pathname === to;
   };
+
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = async () => {
@@ -89,17 +90,22 @@ const Header: React.FC = () => {
           WebkitBackdropFilter: "blur(16px)",
         }}
       >
-        <Container maxWidth="xl">
+        <Container
+          maxWidth="lg"
+          sx={{
+            px: { xs: 2, sm: 3, md: 4 },
+            mx: "auto",
+          }}
+        >
           <Toolbar
             disableGutters
             sx={{
-              minHeight: { xs: 60, md: 68 },
+              minHeight: { xs: 64, md: 72 },
               display: "flex",
               justifyContent: "space-between",
               gap: 2,
             }}
           >
-            {/* ── Brand ── */}
             <Box
               component={RouterLink}
               to="/"
@@ -113,39 +119,28 @@ const Header: React.FC = () => {
               }}
             >
               <Logo size={40} />
-              <Box>
-                <Typography
-                  sx={{
-                    fontWeight: 900,
-                    lineHeight: 1.1,
-                    letterSpacing: "-0.02em",
-                    fontSize: { xs: "1rem", md: "1.1rem" },
-                    color: "#0f172a",
-                  }}
-                >
-                  SportLab AI
-                </Typography>
-                <Typography
-                  sx={{
-                    display: { xs: "none", sm: "block" },
-                    fontSize: 11,
-                    color: "#94a3b8",
-                    fontWeight: 600,
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Sports Science
-                </Typography>
-              </Box>
+              <Typography
+                sx={{
+                  fontWeight: 900,
+                  lineHeight: 1.1,
+                  letterSpacing: "-0.02em",
+                  fontSize: { xs: "1.25rem", md: "1.35rem" },
+                  color: "#0f172a",
+                }}
+              >
+                SportLab AI
+              </Typography>
             </Box>
 
-            {/* ── Desktop Nav ── */}
             <Stack
               direction="row"
               spacing={0.5}
               alignItems="center"
-              sx={{ display: { xs: "none", lg: "flex" }, flex: 1, justifyContent: "center" }}
+              sx={{
+                display: { xs: "none", lg: "flex" },
+                flex: 1,
+                justifyContent: "center",
+              }}
             >
               {navItems.map((item) => (
                 <Button
@@ -163,7 +158,6 @@ const Header: React.FC = () => {
                     bgcolor: isActive(item.to) ? "#e0f2fe" : "transparent",
                     textTransform: "none",
                     "&:hover": { bgcolor: "#f1f5f9", color: "#0f172a" },
-                    transition: "all 0.15s ease",
                   }}
                 >
                   {item.label}
@@ -171,7 +165,6 @@ const Header: React.FC = () => {
               ))}
             </Stack>
 
-            {/* ── Desktop Auth ── */}
             <Stack
               direction="row"
               spacing={1}
@@ -184,8 +177,8 @@ const Header: React.FC = () => {
                     onClick={(e) => setProfileAnchor(e.currentTarget)}
                     aria-label="Profile menu"
                     sx={{
-                      width: 36,
-                      height: 36,
+                      width: 38,
+                      height: 38,
                       bgcolor: isActive("/profile") ? "#e0f2fe" : "#f1f5f9",
                       borderRadius: "10px",
                       "&:hover": { bgcolor: "#e0f2fe" },
@@ -193,16 +186,40 @@ const Header: React.FC = () => {
                   >
                     <PersonIcon sx={{ fontSize: 20 }} />
                   </IconButton>
+
                   <Menu
                     anchorEl={profileAnchor}
                     open={Boolean(profileAnchor)}
                     onClose={() => setProfileAnchor(null)}
                     anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                     transformOrigin={{ vertical: "top", horizontal: "right" }}
-                    PaperProps={{ sx: { borderRadius: 2, border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", mt: 0.5 } }}
+                    PaperProps={{
+                      sx: {
+                        borderRadius: 2,
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+                        mt: 0.5,
+                      },
+                    }}
                   >
-                    <MenuItem component={RouterLink} to="/profile" onClick={() => setProfileAnchor(null)} sx={{ fontSize: 14, fontWeight: 600 }}>Profile</MenuItem>
-                    <MenuItem onClick={async () => { setProfileAnchor(null); await handleLogout(); }} sx={{ fontSize: 14, fontWeight: 600, color: "#ef4444" }}>Logout</MenuItem>
+                    <MenuItem
+                      component={RouterLink}
+                      to="/profile"
+                      onClick={() => setProfileAnchor(null)}
+                      sx={{ fontSize: 14, fontWeight: 600 }}
+                    >
+                      Profile
+                    </MenuItem>
+
+                    <MenuItem
+                      onClick={async () => {
+                        setProfileAnchor(null);
+                        await handleLogout();
+                      }}
+                      sx={{ fontSize: 14, fontWeight: 600, color: "#ef4444" }}
+                    >
+                      Logout
+                    </MenuItem>
                   </Menu>
                 </>
               ) : (
@@ -222,6 +239,7 @@ const Header: React.FC = () => {
                   >
                     Log in
                   </Button>
+
                   <Button
                     component={RouterLink}
                     to="/auth?mode=signup"
@@ -245,26 +263,24 @@ const Header: React.FC = () => {
               )}
             </Stack>
 
-            {/* ── Mobile Hamburger ── */}
             <IconButton
               onClick={() => setDrawerOpen(true)}
               sx={{
                 display: { xs: "inline-flex", lg: "none" },
-                width: 40,
-                height: 40,
-                borderRadius: "10px",
+                width: 48,
+                height: 48,
+                borderRadius: "16px",
                 bgcolor: "#f1f5f9",
                 "&:hover": { bgcolor: "#e2e8f0" },
               }}
               aria-label="Open navigation menu"
             >
-              <MenuIcon sx={{ fontSize: 20 }} />
+              <MenuIcon sx={{ fontSize: 24 }} />
             </IconButton>
           </Toolbar>
         </Container>
       </AppBar>
 
-      {/* ── Mobile Drawer ── */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -279,17 +295,14 @@ const Header: React.FC = () => {
         }}
       >
         <Box sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column" }}>
-          {/* Drawer header */}
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Stack direction="row" spacing={1.25} alignItems="center">
               <Logo size={36} />
-              <Box>
-                <Typography fontWeight={800} fontSize="0.95rem" lineHeight={1.2}>SportLab AI</Typography>
-                <Typography fontSize={11} color="text.secondary" fontWeight={600} sx={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  Sports Science
-                </Typography>
-              </Box>
+              <Typography fontWeight={800} fontSize="0.95rem">
+                SportLab AI
+              </Typography>
             </Stack>
+
             <IconButton
               onClick={closeDrawer}
               sx={{ width: 32, height: 32, bgcolor: "#f1f5f9", borderRadius: "8px" }}
@@ -300,7 +313,6 @@ const Header: React.FC = () => {
 
           <Divider sx={{ mb: 1.5 }} />
 
-          {/* Nav links */}
           <List sx={{ flex: 1, p: 0 }}>
             {navItems.map((item) => (
               <ListItemButton
@@ -319,10 +331,14 @@ const Header: React.FC = () => {
               >
                 <ListItemText
                   primary={item.label}
-                  primaryTypographyProps={{ fontWeight: isActive(item.to) ? 800 : 600, fontSize: 15 }}
+                  primaryTypographyProps={{
+                    fontWeight: isActive(item.to) ? 800 : 600,
+                    fontSize: 15,
+                  }}
                 />
               </ListItemButton>
             ))}
+
             {isLoggedIn && (
               <ListItemButton
                 component={RouterLink}
@@ -337,21 +353,32 @@ const Header: React.FC = () => {
                   "&:hover": { bgcolor: "#f8fafc" },
                 }}
               >
-                <ListItemText primary="Profile" primaryTypographyProps={{ fontWeight: 600, fontSize: 15 }} />
+                <ListItemText
+                  primary="Profile"
+                  primaryTypographyProps={{ fontWeight: 600, fontSize: 15 }}
+                />
               </ListItemButton>
             )}
           </List>
 
           <Divider sx={{ mb: 2 }} />
 
-          {/* Auth buttons */}
           <Stack spacing={1}>
             {isLoggedIn ? (
               <Button
                 fullWidth
                 variant="outlined"
-                onClick={async () => { await handleLogout(); closeDrawer(); }}
-                sx={{ borderRadius: "10px", fontWeight: 700, textTransform: "none", color: "#ef4444", borderColor: "#fecaca" }}
+                onClick={async () => {
+                  await handleLogout();
+                  closeDrawer();
+                }}
+                sx={{
+                  borderRadius: "10px",
+                  fontWeight: 700,
+                  textTransform: "none",
+                  color: "#ef4444",
+                  borderColor: "#fecaca",
+                }}
               >
                 Logout
               </Button>
@@ -363,10 +390,17 @@ const Header: React.FC = () => {
                   to="/auth?mode=login"
                   variant="outlined"
                   onClick={closeDrawer}
-                  sx={{ borderRadius: "10px", fontWeight: 700, textTransform: "none", borderColor: "#e2e8f0", color: "#334155" }}
+                  sx={{
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    textTransform: "none",
+                    borderColor: "#e2e8f0",
+                    color: "#334155",
+                  }}
                 >
                   Log in
                 </Button>
+
                 <Button
                   fullWidth
                   component={RouterLink}
