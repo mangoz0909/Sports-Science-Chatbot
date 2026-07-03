@@ -16,6 +16,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import SpeedIcon from "@mui/icons-material/Speed";
@@ -29,6 +30,7 @@ import {
 import { getLatestCheckIn } from "../services/checkinService";
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -422,9 +424,31 @@ export default function ProfilePage() {
                   }}
                 >
                   <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                    <Typography variant="h5" fontWeight={950} gutterBottom>
-                      Add / Update Athlete Information
-                    </Typography>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: "flex-start", sm: "center" }}
+                      spacing={1.5}
+                      sx={{ mb: 1 }}
+                    >
+                      <Typography variant="h5" fontWeight={950}>
+                        Add / Update Athlete Information
+                      </Typography>
+
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => navigate("/onboarding")}
+                        sx={{
+                          borderRadius: 3,
+                          fontWeight: 900,
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                        }}
+                      >
+                        Retake Survey
+                      </Button>
+                    </Stack>
 
                     <Typography color="#64748b" sx={{ mb: 3 }}>
                       Add extra survey details here. Sports Match and SportLab AI
