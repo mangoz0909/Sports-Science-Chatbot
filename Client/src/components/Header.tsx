@@ -19,7 +19,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import CloseIcon from "@mui/icons-material/Close";
-import { Link as RouterLink, useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
 type NavItem = { label: string; to: string };
@@ -49,8 +49,10 @@ const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (
 const Header: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [loggingOut, setLoggingOut] = React.useState(false);
   const [profileAnchor, setProfileAnchor] = React.useState<null | HTMLElement>(null);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsLoggedIn(!!data.session));
@@ -66,15 +68,20 @@ const Header: React.FC = () => {
 
   const isActive = (to: string) => {
     if (to === "/") return pathname === "/";
-    if (to === "/health/workout") return pathname.startsWith("/health");
-    return pathname === to;
+    return pathname === to || pathname.startsWith(to + "/");
   };
 
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsLoggedIn(false);
+    setLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+      setIsLoggedIn(false);
+      navigate("/", { replace: true });
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -212,13 +219,14 @@ const Header: React.FC = () => {
                     </MenuItem>
 
                     <MenuItem
+                      disabled={loggingOut}
                       onClick={async () => {
                         setProfileAnchor(null);
                         await handleLogout();
                       }}
                       sx={{ fontSize: 14, fontWeight: 600, color: "#ef4444" }}
                     >
-                      Logout
+                      {loggingOut ? "Logging out..." : "Logout"}
                     </MenuItem>
                   </Menu>
                 </>
@@ -368,6 +376,7 @@ const Header: React.FC = () => {
               <Button
                 fullWidth
                 variant="outlined"
+                disabled={loggingOut}
                 onClick={async () => {
                   await handleLogout();
                   closeDrawer();
@@ -380,7 +389,7 @@ const Header: React.FC = () => {
                   borderColor: "#fecaca",
                 }}
               >
-                Logout
+                {loggingOut ? "Logging out..." : "Logout"}
               </Button>
             ) : (
               <>

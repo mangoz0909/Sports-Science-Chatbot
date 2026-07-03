@@ -159,6 +159,7 @@ export default function ProfilePage() {
       });
 
       setSuccess("Information updated.");
+      setTimeout(() => setSuccess(null), 3500);
     } catch (err: any) {
       setError(err?.message || "Failed to update information.");
     } finally {
@@ -207,6 +208,7 @@ export default function ProfilePage() {
   const initials =
     name
       .split(" ")
+      .filter(Boolean)
       .map((part) => part[0])
       .join("")
       .slice(0, 2)
@@ -490,9 +492,16 @@ export default function ProfilePage() {
                 }}
               >
                 <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                  <Typography variant="h5" fontWeight={950} gutterBottom>
-                    Add / Update Athlete Information
-                  </Typography>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    spacing={1.5}
+                    sx={{ mb: 1 }}
+                  >
+                    <Typography variant="h5" fontWeight={950}>
+                      Add / Update Athlete Information
+                    </Typography>
 
                     <Button
                       variant="outlined"
@@ -607,7 +616,10 @@ export default function ProfilePage() {
                     <Button
                       variant="outlined"
                       color="error"
-                      onClick={() => setDeleteDialogOpen(true)}
+                      onClick={() => {
+                        setDeleteConfirmText("");
+                        setDeleteDialogOpen(true);
+                      }}
                       sx={{
                         borderRadius: 3,
                         fontWeight: 950,
@@ -670,6 +682,7 @@ export default function ProfilePage() {
             color="error"
             disabled={deleteConfirmText !== "DELETE" || deleting}
             onClick={handleDeleteAccount}
+            startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{
               borderRadius: 3,
               fontWeight: 900,

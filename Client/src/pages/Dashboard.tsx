@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Container,
   Grid,
   LinearProgress,
@@ -62,6 +63,34 @@ const DEMO_WEEKLY = [
   { day: "Sun", readiness: 75, recovery: 72, load: 40, sleep: 8.5, fatigue: 20 },
 ];
 
+
+function riskColor(value: number) {
+  if (value < 35) return colors.green;
+  if (value < 65) return colors.amber;
+  return colors.red;
+}
+
+function getAIRecommendation(profile: {
+  injuryRisk: number;
+  sleep: number;
+  fatigue: number;
+  load: number;
+  recovery: number;
+}) {
+  if (profile.injuryRisk >= 60) {
+    return "Your injury risk is high. Reduce high-intensity training and focus on mobility, hydration, and sleep.";
+  }
+  if (profile.sleep < 7) {
+    return "Your sleep is slightly low. Avoid increasing training load until your sleep improves.";
+  }
+  if (profile.fatigue >= 60) {
+    return "Your fatigue level is elevated. Today should be a low-intensity recovery day.";
+  }
+  if (profile.load > 80 && profile.recovery < 70) {
+    return "Your training load is high compared to your recovery. Reduce sprint work and add recovery time.";
+  }
+  return "You are in a stable training zone. Continue normal practice, but keep monitoring sleep and hydration.";
+}
 
 export default function Dashboard() {
   const [latestCheckIn, setLatestCheckIn] = React.useState<any>(null);
@@ -141,45 +170,16 @@ const weeklyData = isGuest ? DEMO_WEEKLY : weeklyCheckIns.map((item) => ({
 
 if (loading) {
   return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <Typography fontWeight={950}>Loading dashboard...</Typography>
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f8fafc" }}>
+      <CircularProgress />
     </Box>
   );
 }
 
 const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
-
-
-
-function riskColor(value: number) {
-  if (value < 35) return colors.green;
-  if (value < 65) return colors.amber;
-  return colors.red;
-}
-
-function getAIRecommendation(userProfile: any) {
-  if (userProfile.injuryRisk >= 60) {
-    return "Your injury risk is high. Reduce high-intensity training and focus on mobility, hydration, and sleep.";
-  }
-
-  if (userProfile.sleep < 7) {
-    return "Your sleep is slightly low. Avoid increasing training load until your sleep improves.";
-  }
-
-  if (userProfile.fatigue >= 60) {
-    return "Your fatigue level is elevated. Today should be a low-intensity recovery day.";
-  }
-
-  if (userProfile.load > 80 && userProfile.recovery < 70) {
-    return "Your training load is high compared to your recovery. Reduce sprint work and add recovery time.";
-  }
-
-  return "You are in a stable training zone. Continue normal practice, but keep monitoring sleep and hydration.";
-}
-  const today = new Date().toDateString();
-  const lastCheckInDate = !isGuest && latestCheckIn?.created_at ? new Date(latestCheckIn.created_at).toDateString() : null;
-  const checkedInToday = lastCheckInDate === today;
+  const today = new Date().toISOString().slice(0, 10);
+  const checkedInToday = !isGuest && latestCheckIn?.checkin_date === today;
 
   const kpis = [
     {
@@ -468,7 +468,11 @@ function getAIRecommendation(userProfile: any) {
                 <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
                   <Typography fontWeight={950}>Today’s Focus</Typography>
                   <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                    Keep today balanced: tennis skill work, hydration, and at least 8 hours of sleep tonight.
+                    {userProfile.fatigue >= 60
+                      ? `High fatigue detected. Keep ${userProfile.sport} work technical and low-intensity today — prioritise sleep and hydration.`
+                      : userProfile.recovery < 50
+                      ? `Recovery is low. Focus on ${userProfile.sport} skill drills rather than high-load sessions, and aim for 8+ hours sleep tonight.`
+                      : `Keep today balanced: ${userProfile.sport} skill work, stay hydrated, and aim for at least 8 hours of sleep tonight.`}
                   </Typography>
                 </Box>
 

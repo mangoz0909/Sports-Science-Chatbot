@@ -43,7 +43,8 @@ export async function getChatHistory(chatType: ChatType) {
     .select("*")
     .eq("user_id", user.id)
     .eq("chat_type", chatType)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(100);
 
   if (error) throw error;
 

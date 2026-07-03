@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { syncGoogleProfile } from "../services/profileService";
@@ -9,6 +9,14 @@ export default function AuthCallback() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    let cancelled = false;
+
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        setError("Sign-in is taking too long. Please try again.");
+      }
+    }, 10000);
+
     async function finishLogin() {
       try {
         const {
@@ -16,6 +24,7 @@ export default function AuthCallback() {
           error: sessionError,
         } = await supabase.auth.getSession();
 
+        if (cancelled) return;
         if (sessionError) throw sessionError;
 
         if (!session?.user) {
@@ -31,6 +40,7 @@ export default function AuthCallback() {
           .eq("id", session.user.id)
           .maybeSingle();
 
+        if (cancelled) return;
         if (profileError) throw profileError;
 
         const needsOnboarding =
@@ -42,11 +52,20 @@ export default function AuthCallback() {
           replace: true,
         });
       } catch (err: any) {
-        setError(err?.message || "Could not finish Google sign in.");
+        if (!cancelled) {
+          setError(err?.message || "Could not finish Google sign in.");
+        }
+      } finally {
+        clearTimeout(timeout);
       }
     }
 
     finishLogin();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [navigate]);
 
   return (
@@ -61,7 +80,16 @@ export default function AuthCallback() {
     >
       <Box textAlign="center">
         {error ? (
-          <Alert severity="error">{error}</Alert>
+          <>
+            <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+            <Button
+              variant="outlined"
+              onClick={() => navigate("/auth?mode=login")}
+              sx={{ borderRadius: 3, fontWeight: 900 }}
+            >
+              Back to login
+            </Button>
+          </>
         ) : (
           <>
             <CircularProgress />

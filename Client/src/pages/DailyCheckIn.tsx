@@ -179,9 +179,23 @@ export default function DailyCheckIn() {
     let mounted = true;
     getLatestCheckIn().then((latest) => {
       if (!mounted || !latest) return;
-      const today = new Date().toDateString();
-      if (new Date(latest.created_at).toDateString() === today) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (latest.checkin_date === today) {
         setAlreadyCheckedIn(true);
+        setData({
+          sleepHours: latest.sleep_hours ?? defaultData.sleepHours,
+          sleepQuality: latest.sleep_quality ?? defaultData.sleepQuality,
+          energy: latest.energy ?? defaultData.energy,
+          soreness: latest.soreness ?? defaultData.soreness,
+          fatigue: latest.fatigue ?? defaultData.fatigue,
+          stress: latest.stress ?? defaultData.stress,
+          mood: latest.mood ?? defaultData.mood,
+          hydration: latest.hydration ?? defaultData.hydration,
+          nutrition: latest.nutrition ?? defaultData.nutrition,
+          trainingIntensity: latest.training_intensity ?? defaultData.trainingIntensity,
+          painLevel: latest.pain_level ?? defaultData.painLevel,
+          notes: latest.notes ?? "",
+        });
       }
     }).catch(() => {});
     return () => { mounted = false; };

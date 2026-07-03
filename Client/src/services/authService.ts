@@ -63,44 +63,6 @@ export async function signInWithGoogle() {
   return data;
 }
 
-export async function syncGoogleProfile() {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) return null;
-
-  const name =
-    user.user_metadata?.full_name ||
-    user.user_metadata?.name ||
-    user.email?.split("@")[0] ||
-    "User";
-
-  const email = user.email || "";
-
-  const { data: existingProfile, error: existingError } = await supabase
-    .from("profiles")
-    .select("id, name, email")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (existingError) throw existingError;
-
-  if (!existingProfile) {
-    const { error: insertError } = await supabase.from("profiles").insert({
-      id: user.id,
-      name,
-      email,
-    });
-
-    if (insertError) throw insertError;
-  }
-
-  return user;
-}
-
 export async function logoutUser() {
   const { error } = await supabase.auth.signOut();
 

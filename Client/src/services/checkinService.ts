@@ -1,6 +1,24 @@
 import { supabase } from "../lib/supabaseClient";
 
-export async function createDailyCheckIn(checkInData: any) {
+export type CheckInInput = {
+  sleep_hours: number;
+  sleep_quality: number;
+  energy: number;
+  soreness: number;
+  fatigue: number;
+  stress: number;
+  mood: number;
+  hydration: number;
+  nutrition: number;
+  training_intensity: number;
+  pain_level: number;
+  notes: string;
+  readiness_score: number;
+  recovery_score: number;
+  injury_risk: number;
+};
+
+export async function createDailyCheckIn(checkInData: CheckInInput) {
   const {
     data: { user },
     error: userError,
