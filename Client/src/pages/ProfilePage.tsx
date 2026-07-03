@@ -14,7 +14,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Divider,
   LinearProgress,
   Paper,
   Stack,
@@ -36,14 +35,20 @@ import { getLatestCheckIn } from "../services/checkinService";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
   const [email, setEmail] = React.useState("");
   const [name, setName] = React.useState("");
   const [checkIn, setCheckIn] = React.useState<any>(null);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
 
   const [form, setForm] = React.useState<UserPreferences>({
     primary_sport: "",
@@ -161,10 +166,6 @@ export default function ProfilePage() {
     }
   }
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
-
   async function handleDeleteAccount() {
     setDeleting(true);
     setError(null);
@@ -173,9 +174,12 @@ export default function ProfilePage() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
       if (!session) throw new Error("You must be logged in.");
 
       const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error("Missing REACT_APP_SUPABASE_URL.");
+
       const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
         method: "POST",
         headers: {
@@ -184,8 +188,11 @@ export default function ProfilePage() {
         },
       });
 
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Failed to delete account.");
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error || "Failed to delete account.");
+      }
 
       await supabase.auth.signOut();
       navigate("/", { replace: true });
@@ -270,15 +277,7 @@ export default function ProfilePage() {
         }}
       >
         <Stack spacing={3} sx={{ width: "100%", alignItems: "center" }}>
-          {/* Page header */}
-          <Box
-            sx={{
-              width: "100%",
-              maxWidth: 900,
-              mx: "auto",
-              textAlign: "center",
-            }}
-          >
+          <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", textAlign: "center" }}>
             <Chip
               label="Athlete Profile"
               sx={{
@@ -306,8 +305,7 @@ export default function ProfilePage() {
               fontSize={{ xs: 16, md: 18 }}
               sx={{ mt: 1, maxWidth: 680, mx: "auto", lineHeight: 1.7 }}
             >
-              Store athlete context, track profile metrics, and personalize
-              SportLab AI.
+              Store athlete context, track profile metrics, and personalize SportLab AI.
             </Typography>
           </Box>
 
@@ -380,10 +378,7 @@ export default function ProfilePage() {
                     useFlexGap
                     sx={{ mt: 2 }}
                   >
-                    <Chip
-                      label={form.primary_sport || "Sport"}
-                      sx={{ fontWeight: 900 }}
-                    />
+                    <Chip label={form.primary_sport || "Sport"} sx={{ fontWeight: 900 }} />
                     <Chip
                       label="Active"
                       sx={{
@@ -406,20 +401,12 @@ export default function ProfilePage() {
                         sx={{ mb: 0.8, textAlign: "left" }}
                       >
                         <Stack direction="row" spacing={1.5} alignItems="center">
-                          <Box
-                            sx={{
-                              color: "#0284c7",
-                              display: "flex",
-                              alignItems: "center",
-                            }}
-                          >
+                          <Box sx={{ color: "#0284c7", display: "flex" }}>
                             {metric.icon}
                           </Box>
 
                           <Box>
-                            <Typography fontWeight={900}>
-                              {metric.label}
-                            </Typography>
+                            <Typography fontWeight={900}>{metric.label}</Typography>
                             <Typography color="#64748b" fontSize={13}>
                               {metric.subtitle}
                             </Typography>
@@ -479,9 +466,7 @@ export default function ProfilePage() {
                       label="Primary Sport"
                       placeholder="Example: Tennis"
                       value={form.primary_sport}
-                      onChange={(e) =>
-                        updateField("primary_sport", e.target.value)
-                      }
+                      onChange={(e) => updateField("primary_sport", e.target.value)}
                     />
 
                     <TextField
@@ -505,16 +490,9 @@ export default function ProfilePage() {
                 }}
               >
                 <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    justifyContent="space-between"
-                    alignItems={{ xs: "flex-start", sm: "center" }}
-                    spacing={1.5}
-                    sx={{ mb: 1 }}
-                  >
-                    <Typography variant="h5" fontWeight={950}>
-                      Add / Update Athlete Information
-                    </Typography>
+                  <Typography variant="h5" fontWeight={950} gutterBottom>
+                    Add / Update Athlete Information
+                  </Typography>
 
                     <Button
                       variant="outlined"
@@ -532,8 +510,8 @@ export default function ProfilePage() {
                   </Stack>
 
                   <Typography color="#64748b" sx={{ mb: 3 }}>
-                    Add extra survey details here. Sports Match and SportLab AI
-                    will use this information.
+                    Add extra survey details here. Sports Match and SportLab AI will use
+                    this information.
                   </Typography>
 
                   <Box sx={inputGridSx}>
@@ -542,9 +520,7 @@ export default function ProfilePage() {
                       label="Experience Level"
                       placeholder="Example: Beginner, intermediate, advanced"
                       value={form.experience_level}
-                      onChange={(e) =>
-                        updateField("experience_level", e.target.value)
-                      }
+                      onChange={(e) => updateField("experience_level", e.target.value)}
                     />
 
                     <TextField
@@ -552,9 +528,7 @@ export default function ProfilePage() {
                       label="Training Days Per Week"
                       placeholder="Example: 5"
                       value={form.training_days}
-                      onChange={(e) =>
-                        updateField("training_days", e.target.value)
-                      }
+                      onChange={(e) => updateField("training_days", e.target.value)}
                     />
 
                     <TextField
@@ -562,9 +536,7 @@ export default function ProfilePage() {
                       label="Competition Level"
                       placeholder="Example: School team, club team, regional"
                       value={form.competition_level}
-                      onChange={(e) =>
-                        updateField("competition_level", e.target.value)
-                      }
+                      onChange={(e) => updateField("competition_level", e.target.value)}
                     />
 
                     <TextField
@@ -572,9 +544,7 @@ export default function ProfilePage() {
                       label="Average Sleep"
                       placeholder="Example: 7–8 hours"
                       value={form.sleep_range}
-                      onChange={(e) =>
-                        updateField("sleep_range", e.target.value)
-                      }
+                      onChange={(e) => updateField("sleep_range", e.target.value)}
                     />
 
                     <TextField
@@ -595,9 +565,7 @@ export default function ProfilePage() {
                       label="Injuries or Areas of Concern"
                       placeholder="Example: Knee soreness, shoulder pain, none"
                       value={form.injury_areas}
-                      onChange={(e) =>
-                        updateField("injury_areas", e.target.value)
-                      }
+                      onChange={(e) => updateField("injury_areas", e.target.value)}
                       sx={{ gridColumn: "1 / -1" }}
                     />
 
@@ -606,105 +574,57 @@ export default function ProfilePage() {
                       label="Athlete Type"
                       placeholder="Example: Power athlete, endurance athlete, team sport athlete"
                       value={form.athlete_type}
-                      onChange={(e) =>
-                        updateField("athlete_type", e.target.value)
-                      }
+                      onChange={(e) => updateField("athlete_type", e.target.value)}
                       sx={{ gridColumn: "1 / -1" }}
                     />
                   </Box>
 
-                  <Button
-                    variant="contained"
-                    disabled={saving}
-                    onClick={handleSave}
-                    sx={{
-                      mt: 3,
-                      borderRadius: 3,
-                      bgcolor: "#0f172a",
-                      fontWeight: 950,
-                      px: 3,
-                      py: 1.1,
-                      boxShadow: "none",
-                      "&:hover": {
-                        bgcolor: "#1e293b",
-                        boxShadow: "none",
-                      },
-                    }}
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1.5}
+                    sx={{ mt: 3 }}
                   >
-                    {saving ? "Updating..." : "Update Information"}
-                  </Button>
+                    <Button
+                      variant="contained"
+                      disabled={saving}
+                      onClick={handleSave}
+                      sx={{
+                        borderRadius: 3,
+                        bgcolor: "#0f172a",
+                        fontWeight: 950,
+                        px: 3,
+                        py: 1.1,
+                        boxShadow: "none",
+                        "&:hover": {
+                          bgcolor: "#1e293b",
+                          boxShadow: "none",
+                        },
+                      }}
+                    >
+                      {saving ? "Updating..." : "Update Information"}
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      sx={{
+                        borderRadius: 3,
+                        fontWeight: 950,
+                        px: 3,
+                        py: 1.1,
+                      }}
+                    >
+                      Delete Account
+                    </Button>
+                  </Stack>
                 </CardContent>
               </Card>
             </Stack>
           </Box>
-
-          {/* Danger Zone */}
-          <Box sx={{ width: "100%", maxWidth: 1180, mx: "auto" }}>
-            <Divider sx={{ mb: 3 }} />
-            <Card
-              elevation={0}
-              sx={{
-                borderRadius: 5,
-                border: "1px solid #fecaca",
-                bgcolor: "#fff5f5",
-              }}
-            >
-              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                <Typography
-                  variant="h6"
-                  fontWeight={950}
-                  color="#b91c1c"
-                  gutterBottom
-                >
-                  Danger Zone
-                </Typography>
-
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  justifyContent="space-between"
-                  alignItems={{ xs: "flex-start", sm: "center" }}
-                  spacing={2}
-                >
-                  <Box>
-                    <Typography fontWeight={700} color="#0f172a">
-                      Delete Account
-                    </Typography>
-                    <Typography color="#64748b" fontSize={14}>
-                      Permanently deletes your account and all associated data.
-                      This cannot be undone.
-                    </Typography>
-                  </Box>
-
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => {
-                      setDeleteConfirmText("");
-                      setDeleteDialogOpen(true);
-                    }}
-                    sx={{
-                      borderRadius: 3,
-                      fontWeight: 900,
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                      borderColor: "#fca5a5",
-                      color: "#b91c1c",
-                      "&:hover": {
-                        borderColor: "#ef4444",
-                        bgcolor: "#fee2e2",
-                      },
-                    }}
-                  >
-                    Delete Account
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Box>
         </Stack>
       </Container>
 
-      {/* Delete confirmation dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => !deleting && setDeleteDialogOpen(false)}
@@ -718,9 +638,8 @@ export default function ProfilePage() {
 
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            This will permanently delete your account and all your data
-            including profile, preferences, and check-in history.{" "}
-            <strong>This cannot be undone.</strong>
+            This will permanently delete your account and all your data including profile,
+            preferences, and check-in history. <strong>This cannot be undone.</strong>
           </DialogContentText>
 
           <DialogContentText sx={{ mb: 1.5, fontWeight: 700, color: "#0f172a" }}>
