@@ -9,7 +9,12 @@ import {
   Chip,
   CircularProgress,
   Container,
-  Grid,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
   LinearProgress,
   Paper,
   Stack,
@@ -165,14 +170,16 @@ export default function ProfilePage() {
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) throw new Error("You must be logged in.");
 
       const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
       const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
         },
       });
@@ -263,6 +270,7 @@ export default function ProfilePage() {
         }}
       >
         <Stack spacing={3} sx={{ width: "100%", alignItems: "center" }}>
+          {/* Page header */}
           <Box
             sx={{
               width: "100%",
@@ -315,6 +323,7 @@ export default function ProfilePage() {
             </Alert>
           )}
 
+          {/* Two-column layout */}
           <Box
             sx={{
               width: "100%",
@@ -326,6 +335,7 @@ export default function ProfilePage() {
               alignItems: "stretch",
             }}
           >
+            {/* Left: avatar + metrics */}
             <Paper
               elevation={0}
               sx={{
@@ -358,12 +368,7 @@ export default function ProfilePage() {
                     {name || "Athlete"}
                   </Typography>
 
-                  <Typography
-                    color="#64748b"
-                    sx={{
-                      wordBreak: "break-word",
-                    }}
-                  >
+                  <Typography color="#64748b" sx={{ wordBreak: "break-word" }}>
                     {email}
                   </Typography>
 
@@ -398,10 +403,7 @@ export default function ProfilePage() {
                         justifyContent="space-between"
                         alignItems="center"
                         spacing={2}
-                        sx={{
-                          mb: 0.8,
-                          textAlign: "left",
-                        }}
+                        sx={{ mb: 0.8, textAlign: "left" }}
                       >
                         <Stack direction="row" spacing={1.5} alignItems="center">
                           <Box
@@ -424,9 +426,7 @@ export default function ProfilePage() {
                           </Box>
                         </Stack>
 
-                        <Typography fontWeight={950}>
-                          {metric.value}%
-                        </Typography>
+                        <Typography fontWeight={950}>{metric.value}%</Typography>
                       </Stack>
 
                       <LinearProgress
@@ -448,6 +448,7 @@ export default function ProfilePage() {
               </Stack>
             </Paper>
 
+            {/* Right: forms */}
             <Stack spacing={3} sx={{ width: "100%", minWidth: 0 }}>
               <Card
                 elevation={0}
@@ -488,27 +489,47 @@ export default function ProfilePage() {
                       label="Main Goal"
                       placeholder="Example: Improve speed and recovery"
                       value={form.main_goal}
-                      onChange={(e) =>
-                        updateField("main_goal", e.target.value)
-                      }
+                      onChange={(e) => updateField("main_goal", e.target.value)}
                     />
                   </Box>
                 </CardContent>
               </Card>
 
-                <Card
-                  elevation={0}
-                  sx={{
-                    width: "100%",
-                    textAlign: { xs: "center", md: "left" },
-                    borderRadius: 5,
-                    border: "1px solid #e2e8f0",
-                  }}
-                >
-                  <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                    <Typography variant="h5" fontWeight={950} gutterBottom>
+              <Card
+                elevation={0}
+                sx={{
+                  width: "100%",
+                  borderRadius: 5,
+                  border: "1px solid #e2e8f0",
+                  boxSizing: "border-box",
+                }}
+              >
+                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    spacing={1.5}
+                    sx={{ mb: 1 }}
+                  >
+                    <Typography variant="h5" fontWeight={950}>
                       Add / Update Athlete Information
                     </Typography>
+
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate("/onboarding")}
+                      sx={{
+                        borderRadius: 3,
+                        fontWeight: 900,
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Retake Survey
+                    </Button>
+                  </Stack>
 
                   <Typography color="#64748b" sx={{ mb: 3 }}>
                     Add extra survey details here. Sports Match and SportLab AI
@@ -563,9 +584,7 @@ export default function ProfilePage() {
                       label="Training Priorities"
                       placeholder="Example: Speed, strength, recovery, flexibility"
                       value={form.priorities}
-                      onChange={(e) =>
-                        updateField("priorities", e.target.value)
-                      }
+                      onChange={(e) => updateField("priorities", e.target.value)}
                       sx={{ gridColumn: "1 / -1" }}
                     />
 
@@ -594,33 +613,94 @@ export default function ProfilePage() {
                     />
                   </Box>
 
-                    <Button
-                      variant="contained"
-                      disabled={saving}
-                      onClick={handleSave}
-                      sx={{
-                        mt: 3,
-                        mx: { xs: "auto", md: 0 },
-                        display: "block",
-                        borderRadius: 3,
-                        bgcolor: "#0f172a",
-                        fontWeight: 950,
-                        px: 3,
-                        py: 1.1,
+                  <Button
+                    variant="contained"
+                    disabled={saving}
+                    onClick={handleSave}
+                    sx={{
+                      mt: 3,
+                      borderRadius: 3,
+                      bgcolor: "#0f172a",
+                      fontWeight: 950,
+                      px: 3,
+                      py: 1.1,
+                      boxShadow: "none",
+                      "&:hover": {
+                        bgcolor: "#1e293b",
                         boxShadow: "none",
-                        "&:hover": {
-                          bgcolor: "#1e293b",
-                          boxShadow: "none",
-                        },
-                      }}
-                    >
-                      {saving ? "Updating..." : "Update Information"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Stack>
-            </Grid>
-          </Grid>
+                      },
+                    }}
+                  >
+                    {saving ? "Updating..." : "Update Information"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </Stack>
+          </Box>
+
+          {/* Danger Zone */}
+          <Box sx={{ width: "100%", maxWidth: 1180, mx: "auto" }}>
+            <Divider sx={{ mb: 3 }} />
+            <Card
+              elevation={0}
+              sx={{
+                borderRadius: 5,
+                border: "1px solid #fecaca",
+                bgcolor: "#fff5f5",
+              }}
+            >
+              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                <Typography
+                  variant="h6"
+                  fontWeight={950}
+                  color="#b91c1c"
+                  gutterBottom
+                >
+                  Danger Zone
+                </Typography>
+
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: "flex-start", sm: "center" }}
+                  spacing={2}
+                >
+                  <Box>
+                    <Typography fontWeight={700} color="#0f172a">
+                      Delete Account
+                    </Typography>
+                    <Typography color="#64748b" fontSize={14}>
+                      Permanently deletes your account and all associated data.
+                      This cannot be undone.
+                    </Typography>
+                  </Box>
+
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      setDeleteConfirmText("");
+                      setDeleteDialogOpen(true);
+                    }}
+                    sx={{
+                      borderRadius: 3,
+                      fontWeight: 900,
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      borderColor: "#fca5a5",
+                      color: "#b91c1c",
+                      "&:hover": {
+                        borderColor: "#ef4444",
+                        bgcolor: "#fee2e2",
+                      },
+                    }}
+                  >
+                    Delete Account
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Box>
         </Stack>
       </Container>
 
@@ -638,7 +718,9 @@ export default function ProfilePage() {
 
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            This will permanently delete your account and all your data including profile, preferences, and check-in history. <strong>This cannot be undone.</strong>
+            This will permanently delete your account and all your data
+            including profile, preferences, and check-in history.{" "}
+            <strong>This cannot be undone.</strong>
           </DialogContentText>
 
           <DialogContentText sx={{ mb: 1.5, fontWeight: 700, color: "#0f172a" }}>
