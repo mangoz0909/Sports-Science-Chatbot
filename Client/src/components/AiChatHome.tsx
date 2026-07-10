@@ -1,7 +1,9 @@
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./AiChatHome.css";
-import { getChatHistory, saveChatMessage, clearChatHistory, type ChatType } from "../services/chatService";
+import { getChatHistory, clearChatHistory, type ChatType } from "../services/chatService";
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 
 type QuickAction = {
   label: string;
@@ -21,7 +23,6 @@ type AiChatHomeProps = {
   examplesTitle: string;
   examples: string[];
   footerNote?: ReactNode;
-  model?: string;
   systemPrompt?: string;
   sideContent?: ReactNode;
   chatType?: ChatType;
@@ -57,38 +58,7 @@ declare global {
   }
 }
 
-const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-const DEFAULT_MODEL = "gpt-4o-mini";
 const MAX_MESSAGE_LENGTH = 2000;
-
-async function callOpenAI(
-  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  model: string
-): Promise<string> {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key not configured. Add REACT_APP_OPENAI_API_KEY to your .env file or Render environment variables.");
-  }
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({ model, messages, max_tokens: 1024 }),
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `OpenAI request failed (${response.status})`);
-  }
-  const data = await response.json();
-  const reply = data?.choices?.[0]?.message?.content;
-
-  if (typeof reply !== "string" || !reply.trim()) {
-    throw new Error("The ChatGPT model returned an empty response.");
-  }
-
-  return reply.trim();
-}
 
 /** Full markdown-to-JSX renderer with bold, inline code, fenced code blocks, lists, headings, hr */
 function formatBotMessage(content: string): ReactNode {
@@ -237,11 +207,10 @@ export default function AiChatHome({
   examplesTitle,
   examples,
   footerNote,
-  model = DEFAULT_MODEL,
-  systemPrompt,
   sideContent,
   chatType,
 }: AiChatHomeProps) {
+  const { session } = useAuth();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -254,15 +223,10 @@ export default function AiChatHome({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  const apiReady = Boolean(OPENAI_API_KEY);
+  const isLoggedIn = Boolean(session);
   const overLimit = message.length > MAX_MESSAGE_LENGTH;
   const canSend = message.trim().length > 0 && !isLoading && !overLimit;
 
-  const defaultSystemPrompt = useMemo(
-    () =>
-      "You are SportLab AI, a concise sports science assistant. Explain sports rules, training, recovery, injury-risk concepts, athlete readiness, tactics, nutrition basics, and mental performance clearly. Avoid medical diagnosis. Tell users to seek qualified professional help for injuries, emergencies, or severe mental health concerns.",
-    []
-  );
 
   useEffect(() => {
     if (!chatType) return;
@@ -320,36 +284,35 @@ export default function AiChatHome({
     recognitionRef.current.start();
   };
 
-  const buildMessages = useCallback(
-    (userMessage: string) => {
-      const sys = systemPrompt || defaultSystemPrompt;
-      const history = messages.slice(-8).map((m) => ({
-        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
-        content: m.content,
-      }));
-      return [
-        { role: "system" as const, content: sys },
-        ...history,
-        { role: "user" as const, content: userMessage },
-      ];
-    },
-    [messages, systemPrompt, defaultSystemPrompt]
-  );
-
   const submitMessage = useCallback(async (text: string) => {
     const userMessage = text.trim();
     if (!userMessage || isLoading || userMessage.length > MAX_MESSAGE_LENGTH) return;
+
+    if (!isLoggedIn) {
+      setError("Sign in to start chatting with the AI.");
+      return;
+    }
+
     const now = new Date();
     setMessages((prev) => [...prev, { role: "user", content: userMessage, timestamp: now }]);
     setMessage("");
     setIsLoading(true);
     setError("");
     setLastFailedMessage(null);
-    if (chatType) saveChatMessage(userMessage, "user", chatType);
+
     try {
-      const reply = await callOpenAI(buildMessages(userMessage), model);
-      setMessages((prev) => [...prev, { role: "bot", content: reply, timestamp: new Date() }]);
-      if (chatType) saveChatMessage(reply, "bot", chatType);
+      const { data, error: fnError } = await supabase.functions.invoke("ai-chat", {
+        body: { message: userMessage, chatType: chatType || "sports" },
+      });
+
+      if (fnError) throw fnError;
+
+      const reply = data?.reply;
+      if (typeof reply !== "string" || !reply.trim()) {
+        throw new Error("The AI returned an empty response.");
+      }
+
+      setMessages((prev) => [...prev, { role: "bot", content: reply.trim(), timestamp: new Date() }]);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI request failed. Try again.";
       setError(msg);
@@ -357,7 +320,7 @@ export default function AiChatHome({
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, buildMessages, model, chatType]);
+  }, [isLoading, isLoggedIn, chatType]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -386,8 +349,8 @@ export default function AiChatHome({
               <img src={logoSrc} alt={`${title} logo`} className="brand-logo" />
               <div>
                 <p className="eyebrow">
-                  <span className={`status-dot ${apiReady ? "" : "offline"}`} />
-                  AI Assistant &nbsp;·&nbsp; {apiReady ? "Ready" : "API key not configured"}
+                  <span className={`status-dot ${isLoggedIn ? "" : "offline"}`} />
+                  AI Assistant &nbsp;·&nbsp; {isLoggedIn ? "Ready" : "Sign in to chat"}
                 </p>
                 <h1>{title}</h1>
               </div>

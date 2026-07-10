@@ -107,7 +107,6 @@ Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(
       emptySubtitle="Training · Recovery · Nutrition · Stress · Confidence · Focus"
       inputPlaceholder="Ask SportLab AI anything…"
       toolsTitle="Quick Actions"
-      model="gpt-4o-mini"
       systemPrompt={`
 You are SportLab AI and MangoMind AI combined.
 

@@ -466,7 +466,8 @@ async def health():
 @app.post("/mental-health/ask")
 async def mental_health_ask(request: Request, message: str = Form(...)):
     logger.info("MH QUESTION --> %s", message)
-    user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or "anonymous"
+    client_ip = request.client.host if request.client else None
+    user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or client_ip or "anonymous"
     _check_rate_limit(user_id)
     result = mental_health_graph.invoke(
         {"question": message},
@@ -478,7 +479,8 @@ async def mental_health_ask(request: Request, message: str = Form(...)):
 @app.post("/sports/ask")
 async def sports_ask(request: Request, message: str = Form(...)):
     logger.info("SPORTS QUESTION --> %s", message)
-    user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or "anonymous"
+    client_ip = request.client.host if request.client else None
+    user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or client_ip or "anonymous"
     _check_rate_limit(user_id)
     result = sports_graph.invoke(
         {"question": message},

@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 
 function DemoBanner() {
   return (
@@ -77,25 +77,13 @@ function DemoBanner() {
 type Props = { children: React.ReactNode };
 
 export default function DemoRoute({ children }: Props) {
-  const [isGuest, setIsGuest] = React.useState(false);
-  const [checking, setChecking] = React.useState(true);
+  const { session, loading } = useAuth();
 
-  React.useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setIsGuest(!data.session);
-      setChecking(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setIsGuest(!session);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (checking) return null;
+  if (loading) return null;
 
   return (
     <>
-      {isGuest && <DemoBanner />}
+      {!session && <DemoBanner />}
       {children}
     </>
   );

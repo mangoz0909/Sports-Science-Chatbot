@@ -160,7 +160,7 @@ const userProfile = isGuest ? {
 };
 
 const weeklyData = isGuest ? DEMO_WEEKLY : weeklyCheckIns.map((item) => ({
-  day: new Date(item.created_at).toLocaleDateString("en-US", { weekday: "short" }),
+  day: new Date(item.checkin_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" }),
   readiness: item.readiness_score ?? 0,
   recovery: item.recovery_score ?? 0,
   load: item.training_intensity ? item.training_intensity * 10 : 0,
@@ -456,7 +456,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   <Box sx={{ pl: "8px" }}>
                     <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.75 }}>
                       <Typography fontSize={11} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb">
-                        AI Recommendation
+                        Coach Tip
                       </Typography>
                     </Stack>
                     <Typography color="#1e3a5f" fontSize={14} lineHeight={1.8}>

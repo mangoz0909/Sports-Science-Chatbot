@@ -19,20 +19,24 @@ export async function signUpUser(name: string, email: string, password: string) 
 
   const user = data.user;
 
-  if (user) {
-    const { error: profileError } = await supabase.from("profiles").upsert(
-      {
-        id: user.id,
-        name: cleanName,
-        email: cleanEmail,
-      },
-      {
-        onConflict: "id",
-      }
+  if (!user) {
+    throw new Error(
+      "Account created — check your email to confirm your address before signing in."
     );
-
-    if (profileError) throw profileError;
   }
+
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      name: cleanName,
+      email: cleanEmail,
+    },
+    {
+      onConflict: "id",
+    }
+  );
+
+  if (profileError) throw profileError;
 
   return data;
 }

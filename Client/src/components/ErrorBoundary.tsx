@@ -3,17 +3,16 @@ import { Box, Button, Container, Typography } from "@mui/material";
 
 interface State {
   hasError: boolean;
-  message: string;
 }
 
 export default class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   State
 > {
-  state: State = { hasError: false, message: "" };
+  state: State = { hasError: false };
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, message: error.message };
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
@@ -21,7 +20,7 @@ export default class ErrorBoundary extends React.Component<
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, message: "" });
+    this.setState({ hasError: false });
     window.location.href = "/";
   };
 
@@ -49,22 +48,6 @@ export default class ErrorBoundary extends React.Component<
             <Typography color="#64748b" sx={{ mt: 1.5, lineHeight: 1.8 }}>
               An unexpected error occurred. Your data is safe — try going back to the home page.
             </Typography>
-            {this.state.message && (
-              <Typography
-                sx={{
-                  mt: 2,
-                  px: 2,
-                  py: 1,
-                  bgcolor: "#fee2e2",
-                  borderRadius: 2,
-                  fontSize: 13,
-                  color: "#991b1b",
-                  fontFamily: "monospace",
-                }}
-              >
-                {this.state.message}
-              </Typography>
-            )}
             <Button
               onClick={this.handleReset}
               variant="contained"

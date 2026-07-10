@@ -127,7 +127,7 @@ serve(async (req) => {
       history
         ?.reverse()
         .map((item) => ({
-          role: item.role,
+          role: item.role === "bot" ? "assistant" : item.role,
           content: item.content,
         })) || [];
 
@@ -175,7 +175,7 @@ serve(async (req) => {
     await supabase.from("chat_messages").insert({
       user_id: user.id,
       chat_type: chatType,
-      role: "assistant",
+      role: "bot",
       content: reply,
     });
 

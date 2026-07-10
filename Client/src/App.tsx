@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import DemoRoute from "./components/DemoRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
+import { AuthProvider } from "./contexts/AuthContext";
 
 import DailyCheckIn from "./pages/DailyCheckIn";
 import Home from "./pages/Home";
@@ -61,6 +62,7 @@ const App: React.FC = () => {
       />
 
       <BrowserRouter>
+        <AuthProvider>
         <ErrorBoundary>
         <ScrollToTop />
         <Header />
@@ -151,6 +153,7 @@ const App: React.FC = () => {
 
         <Footer />
         </ErrorBoundary>
+        </AuthProvider>
       </BrowserRouter>
     </>
   );

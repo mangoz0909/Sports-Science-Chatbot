@@ -21,6 +21,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import CloseIcon from "@mui/icons-material/Close";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 
 type NavItem = { label: string; to: string };
 
@@ -48,23 +49,12 @@ const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (
 
 const Header: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
   const [profileAnchor, setProfileAnchor] = React.useState<null | HTMLElement>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
-
-  React.useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setIsLoggedIn(!!data.session));
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { session } = useAuth();
+  const isLoggedIn = Boolean(session);
 
   const isActive = (to: string) => {
     if (to === "/") return pathname === "/";
@@ -77,7 +67,6 @@ const Header: React.FC = () => {
     setLoggingOut(true);
     try {
       await supabase.auth.signOut();
-      setIsLoggedIn(false);
       navigate("/", { replace: true });
     } finally {
       setLoggingOut(false);
