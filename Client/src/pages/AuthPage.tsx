@@ -48,7 +48,14 @@ const AuthPage: React.FC = () => {
 
   const initialMode = (qs.get("mode") === "signup" ? "signup" : "login") as Mode;
 
-  const [mode, setMode] = useState<Mode>(initialMode);
+  const [mode, setModeRaw] = useState<Mode>(initialMode);
+
+  const setMode = (next: Mode) => {
+    setModeRaw(next);
+    setError(null);
+    setSuccessMsg(null);
+    setPassword("");
+  };
   const [email, setEmail] = useState(() => {
     if (initialMode === "login") return localStorage.getItem("rememberedEmail") || "";
     return "";

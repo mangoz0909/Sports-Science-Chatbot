@@ -29,7 +29,7 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { getMyProfile } from "../services/profileService";
-import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Area,
   AreaChart,
@@ -93,26 +93,23 @@ function getAIRecommendation(profile: {
 }
 
 export default function Dashboard() {
+  const { session } = useAuth();
   const [latestCheckIn, setLatestCheckIn] = React.useState<any>(null);
   const [weeklyCheckIns, setWeeklyCheckIns] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [profile, setProfile] = React.useState<any>(null);
   const [snackError, setSnackError] = React.useState<string | null>(null);
-  const [isGuest, setIsGuest] = React.useState(false);
+
+  const isGuest = !session;
 
   React.useEffect(() => {
     let mounted = true;
     async function loadDashboard() {
+      if (!session) {
+        setLoading(false);
+        return;
+      }
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        if (!session) {
-          setIsGuest(true);
-          setLoading(false);
-          return;
-        }
-
         const [latest, last7, prof] = await Promise.all([
           getLatestCheckIn(),
           getLast7CheckIns(),
@@ -131,7 +128,8 @@ export default function Dashboard() {
     }
     loadDashboard();
     return () => { mounted = false; };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
 const userProfile = isGuest ? {
   name: "Demo Athlete",

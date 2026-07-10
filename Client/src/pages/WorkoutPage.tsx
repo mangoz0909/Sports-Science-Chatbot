@@ -17,8 +17,7 @@ import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
-
-
+import { loadPuterScript } from "../lib/puterLoader";
 
 type WorkoutDay = {
   day: string;
@@ -27,27 +26,6 @@ type WorkoutDay = {
   intensity: "High" | "Medium" | "Low" | "Recovery";
   duration: string;
 };
-
-const PUTER_SCRIPT_ID = "puter-js-v2";
-
-function loadPuterScript() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.puter?.ai?.chat) { resolve(); return; }
-    const existing = document.getElementById(PUTER_SCRIPT_ID) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Failed to load Puter.js.")), { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = PUTER_SCRIPT_ID;
-    script.src = "https://js.puter.com/v2/";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Puter.js."));
-    document.body.appendChild(script);
-  });
-}
 
 function intensityColor(intensity: string) {
   if (intensity === "High") return { bg: "#fee2e2", color: "#991b1b" };

@@ -18,7 +18,7 @@ import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
-
+import { loadPuterScript } from "../lib/puterLoader";
 
 type MacroItem = { label: string; value: string; unit: string };
 type MealItem = { meal: string; foods: string; timing: string };
@@ -32,27 +32,6 @@ type NutritionPlan = {
   meals: MealItem[];
   tip: string;
 };
-
-const PUTER_SCRIPT_ID = "puter-js-v2";
-
-function loadPuterScript() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.puter?.ai?.chat) { resolve(); return; }
-    const existing = document.getElementById(PUTER_SCRIPT_ID) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Failed to load Puter.js.")), { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = PUTER_SCRIPT_ID;
-    script.src = "https://js.puter.com/v2/";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Puter.js."));
-    document.body.appendChild(script);
-  });
-}
 
 export default function NutritionPage() {
   const [plan, setPlan] = React.useState<NutritionPlan | null>(null);
@@ -226,7 +205,7 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
                       mb: 1,
                     }}
                   >
-                    {i === 3 ? <WaterDropIcon sx={{ fontSize: 18 }} /> : i === 0 ? <LocalFireDepartmentIcon sx={{ fontSize: 18 }} /> : <RestaurantMenuIcon sx={{ fontSize: 18 }} />}
+                    {i === 4 ? <WaterDropIcon sx={{ fontSize: 18 }} /> : i === 0 ? <LocalFireDepartmentIcon sx={{ fontSize: 18 }} /> : <RestaurantMenuIcon sx={{ fontSize: 18 }} />}
                   </Box>
                   <Typography fontWeight={950} fontSize={15} color="#0f172a">
                     {macro.value}

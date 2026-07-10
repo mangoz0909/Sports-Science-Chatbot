@@ -54,10 +54,14 @@ class GraphState(TypedDict):
 
 def call_llm(state, prompt):
     chain = prompt | llm
+    messages = state.get("messages", [])
+    summary = state.get("summary", "")
+    if summary:
+        from langchain_core.messages import SystemMessage
+        messages = [SystemMessage(content=f"Conversation summary so far: {summary}")] + messages
     response = chain.invoke({
         "question": state["question"],
-        "messages": state.get("messages", []),
-        "summary": state.get("summary", ""),
+        "messages": messages,
     })
     return response.content.strip()
 
@@ -463,27 +467,42 @@ async def health():
     return {"status": "ok", "service": "SportLab AI Backend"}
 
 
+_MAX_MESSAGE_LENGTH = 2000
+
+
 @app.post("/mental-health/ask")
 async def mental_health_ask(request: Request, message: str = Form(...)):
+    if len(message) > _MAX_MESSAGE_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Message too long. Maximum {_MAX_MESSAGE_LENGTH} characters.")
     logger.info("MH QUESTION --> %s", message)
     client_ip = request.client.host if request.client else None
     user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or client_ip or "anonymous"
     _check_rate_limit(user_id)
-    result = mental_health_graph.invoke(
-        {"question": message},
-        config={"configurable": {"thread_id": f"mh_{user_id}"}}
-    )
+    try:
+        result = mental_health_graph.invoke(
+            {"question": message},
+            config={"configurable": {"thread_id": f"mh_{user_id}"}}
+        )
+    except Exception as e:
+        logger.error("Mental health graph error: %s", e)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request. Please try again.")
     return {"reply": result.get("answer", "")}
 
 
 @app.post("/sports/ask")
 async def sports_ask(request: Request, message: str = Form(...)):
+    if len(message) > _MAX_MESSAGE_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Message too long. Maximum {_MAX_MESSAGE_LENGTH} characters.")
     logger.info("SPORTS QUESTION --> %s", message)
     client_ip = request.client.host if request.client else None
     user_id = request.headers.get("X-User-Id") or request.cookies.get("session_id") or client_ip or "anonymous"
     _check_rate_limit(user_id)
-    result = sports_graph.invoke(
-        {"question": message},
-        config={"configurable": {"thread_id": f"sports_{user_id}"}}
-    )
+    try:
+        result = sports_graph.invoke(
+            {"question": message},
+            config={"configurable": {"thread_id": f"sports_{user_id}"}}
+        )
+    except Exception as e:
+        logger.error("Sports graph error: %s", e)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request. Please try again.")
     return {"reply": result.get("answer", "")}

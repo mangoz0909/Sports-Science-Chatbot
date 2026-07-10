@@ -23,6 +23,7 @@ import HealthPage from "./pages/HealthPage";
 import WorkoutPage from "./pages/WorkoutPage";
 import NutritionPage from "./pages/NutritionPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const App: React.FC = () => {
   return (
@@ -147,6 +148,7 @@ const App: React.FC = () => {
               }
             />
 
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Box>

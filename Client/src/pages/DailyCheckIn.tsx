@@ -433,6 +433,7 @@ export default function DailyCheckIn() {
                                 max={field.max}
                                 step={1}
                                 marks
+                                aria-label={field.label}
                                 onChange={(_, newValue) =>
                                   updateValue(key, newValue as number)
                                 }
@@ -490,7 +491,7 @@ export default function DailyCheckIn() {
                     <Box sx={{ position: "absolute", top: 0, left: 0, width: 4, bottom: 0, bgcolor: "#2563eb", borderRadius: "4px 0 0 4px" }} />
                     <Box sx={{ pl: "8px" }}>
                       <Typography fontSize={11} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb" sx={{ mb: 0.75 }}>
-                        AI Recommendation
+                        Coach Tip
                       </Typography>
                       <Typography color="#1e3a5f" fontSize={14} lineHeight={1.8}>
                         {getAIAdvice(data)}
