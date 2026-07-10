@@ -34,6 +34,7 @@ import {
   signInWithGoogle,
   sendPasswordResetEmail,
 } from "../services/authService";
+import Seo from "../components/Seo";
 
 type Mode = "login" | "signup";
 
@@ -169,6 +170,13 @@ const AuthPage: React.FC = () => {
   };
 
   return (
+    <>
+    <Seo
+      title={mode === "signup" ? "Create Account" : "Sign In"}
+      description="Sign in or create your SportLab AI account to track performance, log daily check-ins, and get personalised AI coaching."
+      path="/auth"
+      noIndex
+    />
     <Box
       sx={{
         minHeight: "100vh",
@@ -526,6 +534,7 @@ const AuthPage: React.FC = () => {
         </Grid>
       </Container>
     </Box>
+    </>
   );
 };
 

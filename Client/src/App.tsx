@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Box, CssBaseline, GlobalStyles } from "@mui/material";
+import { HelmetProvider } from "react-helmet-async";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -24,9 +25,11 @@ import WorkoutPage from "./pages/WorkoutPage";
 import NutritionPage from "./pages/NutritionPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import MentalHealthPage from "./pages/MentalHealthPage";
 
 const App: React.FC = () => {
   return (
+    <HelmetProvider>
     <>
       <CssBaseline />
 
@@ -143,7 +146,7 @@ const App: React.FC = () => {
               path="/mental-health"
               element={
                 <DemoRoute>
-                  <SportsHome />
+                  <MentalHealthPage />
                 </DemoRoute>
               }
             />
@@ -158,6 +161,7 @@ const App: React.FC = () => {
         </AuthProvider>
       </BrowserRouter>
     </>
+    </HelmetProvider>
   );
 };
 

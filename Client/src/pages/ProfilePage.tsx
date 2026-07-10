@@ -1,4 +1,5 @@
 import React from "react";
+import Seo from "../components/Seo";
 import {
   Alert,
   Avatar,
@@ -268,6 +269,12 @@ export default function ProfilePage() {
         overflowX: "hidden",
       }}
     >
+      <Seo
+        title="My Profile"
+        description="Manage your athlete profile, sport preferences, training goals, and account settings."
+        path="/profile"
+        noIndex
+      />
       <Container
         maxWidth="lg"
         disableGutters

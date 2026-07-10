@@ -19,6 +19,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
 import { loadPuterScript } from "../lib/puterLoader";
+import Seo from "../components/Seo";
 
 type MacroItem = { label: string; value: string; unit: string };
 type MealItem = { meal: string; foods: string; timing: string };
@@ -117,6 +118,11 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
   return (
     <Box>
+      <Seo
+        title="AI Nutrition Plan"
+        description="Get a daily macro and meal plan tailored to your sport, training goals, and today's check-in data."
+        path="/health/nutrition"
+      />
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Box>
           <Typography variant="h5" fontWeight={950} color="#0f172a">

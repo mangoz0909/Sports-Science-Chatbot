@@ -18,6 +18,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
 import { loadPuterScript } from "../lib/puterLoader";
+import Seo from "../components/Seo";
 
 type WorkoutDay = {
   day: string;
@@ -109,6 +110,11 @@ Respond ONLY with valid JSON array, no markdown fences, no extra text.`;
 
   return (
     <Box>
+      <Seo
+        title="AI Workout Plan"
+        description="Get a personalised 7-day training plan generated from your sport, fitness level, and today's readiness data."
+        path="/health/workout"
+      />
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Box>
           <Typography variant="h5" fontWeight={950} color="#0f172a">

@@ -1,4 +1,5 @@
 import React from "react";
+import Seo from "../components/Seo";
 import {
   Alert,
   Box,
@@ -274,6 +275,12 @@ export default function DailyCheckIn() {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+      <Seo
+        title="Daily Check-In"
+        description="Log today's sleep, fatigue, soreness, mood, and wellness to get your athlete readiness and recovery scores."
+        path="/daily-check-in"
+        noIndex
+      />
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={1.2} sx={{ mb: 3 }}>
           <Chip

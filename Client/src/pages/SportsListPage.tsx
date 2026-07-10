@@ -1,4 +1,5 @@
 import React from "react";
+import Seo from "../components/Seo";
 import {
   Alert,
   Box,
@@ -468,6 +469,11 @@ Keep it concise, practical, and student-friendly.
 export default function SportsListPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+      <Seo
+        title="Find Your Sport"
+        description="Not sure which sport suits you? Answer 4 quick questions and get a personalised sport match powered by AI."
+        path="/sports-list"
+      />
       <Container
         maxWidth="xl"
         sx={{
