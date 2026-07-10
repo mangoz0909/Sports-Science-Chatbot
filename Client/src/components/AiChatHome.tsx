@@ -57,7 +57,7 @@ declare global {
   }
 }
 
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 const DEFAULT_MODEL = "gpt-4o-mini";
 const MAX_MESSAGE_LENGTH = 2000;
 
@@ -66,7 +66,7 @@ async function callOpenAI(
   model: string
 ): Promise<string> {
   if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key not configured. Add VITE_OPENAI_API_KEY to your .env file.");
+    throw new Error("OpenAI API key not configured. Add REACT_APP_OPENAI_API_KEY to your .env file or Render environment variables.");
   }
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -81,7 +81,13 @@ async function callOpenAI(
     throw new Error(err?.error?.message || `OpenAI request failed (${response.status})`);
   }
   const data = await response.json();
-  return data.choices[0]?.message?.content || "No response received.";
+  const reply = data?.choices?.[0]?.message?.content;
+
+  if (typeof reply !== "string" || !reply.trim()) {
+    throw new Error("The ChatGPT model returned an empty response.");
+  }
+
+  return reply.trim();
 }
 
 /** Full markdown-to-JSX renderer with bold, inline code, fenced code blocks, lists, headings, hr */
