@@ -419,16 +419,30 @@ export default function AiChatHome({
             {messages.map((item, index) => (
               <div
                 key={`${item.role}-${index}`}
-                className={`message-row ${item.role === "user" ? "user-row" : ""}`}
+                className={`message-row ${item.role === "user" ? "user-row" : "bot-row"}`}
               >
                 <div className={`avatar ${item.role === "bot" ? "bot-avatar" : "user-avatar"}`}>
                   {item.role === "bot" ? "AI" : "U"}
                 </div>
-                <div>
+
+                <div
+                  className={`message-content ${
+                    item.role === "user" ? "user-message-content" : "bot-message-content"
+                  }`}
+                >
                   <div className={`message ${item.role === "user" ? "user-message" : "bot-message"}`}>
-                    {item.role === "bot" ? formatBotMessage(item.content) : item.content}
+                    {item.role === "bot" ? (
+                      formatBotMessage(item.content)
+                    ) : (
+                      <span className="user-message-text">{item.content}</span>
+                    )}
                   </div>
-                  <div className={`message-meta ${item.role === "bot" ? "bot-message" : ""}`}>
+
+                  <div
+                    className={`message-meta ${
+                      item.role === "user" ? "user-message-meta" : "bot-message-meta"
+                    }`}
+                  >
                     {formatTime(item.timestamp)}
                   </div>
                 </div>
