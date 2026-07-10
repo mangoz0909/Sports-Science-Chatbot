@@ -18,8 +18,60 @@ import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
-import { loadPuterScript } from "../lib/puterLoader";
 import Seo from "../components/Seo";
+
+
+const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
+const OPENAI_MODEL = "gpt-4o-mini";
+
+async function callOpenAI(prompt: string): Promise<string> {
+  if (!OPENAI_API_KEY) {
+    throw new Error(
+      "OpenAI API key not configured. Add REACT_APP_OPENAI_API_KEY to your Render environment variables."
+    );
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a careful sports nutrition assistant. Provide general educational guidance only, avoid diagnosis, respect allergies and dietary restrictions, and return valid JSON when requested.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.4,
+      max_tokens: 1400,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(
+      errorBody?.error?.message ||
+        `OpenAI request failed with status ${response.status}.`
+    );
+  }
+
+  const data = await response.json();
+  const reply = data?.choices?.[0]?.message?.content;
+
+  if (typeof reply !== "string" || !reply.trim()) {
+    throw new Error("The ChatGPT model returned an empty response.");
+  }
+
+  return reply.trim();
+}
 
 type MacroItem = { label: string; value: string; unit: string };
 type MealItem = { meal: string; foods: string; timing: string };
@@ -51,8 +103,27 @@ export default function NutritionPage() {
         getLatestCheckIn(),
       ]);
 
+      const extendedPrefs = prefs as any;
+
       const profileText = prefs
-        ? `Sport: ${prefs.primary_sport || "General fitness"}, Experience: ${prefs.experience_level || "Intermediate"}, Goal: ${prefs.main_goal || "General fitness"}, Training days/week: ${prefs.training_days || "5"}, Athlete type: ${prefs.athlete_type || "General"}`
+        ? [
+            `Sport: ${prefs.primary_sport || "General fitness"}`,
+            `Experience: ${prefs.experience_level || "Intermediate"}`,
+            `Goal: ${prefs.main_goal || "General fitness"}`,
+            `Training days/week: ${prefs.training_days || "5"}`,
+            `Athlete type: ${prefs.athlete_type || "General"}`,
+            `Age: ${extendedPrefs.age || "Not provided"}`,
+            `Height: ${extendedPrefs.height_cm ? `${extendedPrefs.height_cm} cm` : "Not provided"}`,
+            `Weight: ${extendedPrefs.weight_kg ? `${extendedPrefs.weight_kg} kg` : "Not provided"}`,
+            `Activity level: ${extendedPrefs.activity_level || "Not provided"}`,
+            `Workout duration: ${extendedPrefs.workout_duration || "Not provided"}`,
+            `Dietary preference: ${extendedPrefs.dietary_preference || "No specific preference"}`,
+            `Food allergies/intolerances: ${extendedPrefs.food_allergies || "None reported"}`,
+            `Foods avoided: ${extendedPrefs.foods_avoid || "None reported"}`,
+            `Meals per day: ${extendedPrefs.meals_per_day || "Not provided"}`,
+            `Cooking access: ${extendedPrefs.cooking_access || "Not provided"}`,
+            `Injuries or restrictions: ${prefs.injury_areas || "None reported"}`,
+          ].join(", ")
         : "General fitness athlete, intermediate level";
 
       const checkInText = checkIn
@@ -64,7 +135,7 @@ export default function NutritionPage() {
 ATHLETE: ${profileText}
 TODAY: ${checkInText}
 
-Generate a personalised daily nutrition plan as a JSON object with exactly these fields:
+Generate a personalised daily nutrition plan as a JSON object with exactly these fields. Never include foods that conflict with the athlete's stated allergies, intolerances, dietary preference, or foods they avoid. Do not provide medical treatment advice:
 - "summary": 1-2 sentence personalised note about this nutrition plan
 - "calories": daily calorie target as a string (e.g. "2800 kcal")
 - "protein": daily protein target (e.g. "155g")
@@ -79,15 +150,20 @@ Generate a personalised daily nutrition plan as a JSON object with exactly these
 
 Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
-      await loadPuterScript();
-      if (!window.puter?.ai?.chat) throw new Error("AI unavailable.");
+      const responseText = await callOpenAI(prompt);
 
-      const response = await window.puter.ai.chat(prompt, { model: "claude-haiku-4-5" });
-      const raw = typeof response === "string" ? response : response?.text || response?.message?.content || "";
-      const text = typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((c: any) => c.text).join("") : "";
+      const cleaned = responseText
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
 
-      const cleaned = text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-      const parsed: NutritionPlan = JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned) as NutritionPlan;
+
+      if (!Array.isArray(parsed.meals) || parsed.meals.length === 0) {
+        throw new Error("The nutrition plan format was incomplete.");
+      }
+
       setPlan(parsed);
     } catch (err: any) {
       setError(err?.message || "Failed to generate plan. Please try again.");
