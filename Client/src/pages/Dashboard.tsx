@@ -30,6 +30,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { getMyProfile } from "../services/profileService";
 import { useAuth } from "../contexts/AuthContext";
+import Seo from "../components/Seo";
 import {
   Area,
   AreaChart,
@@ -226,6 +227,12 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+      <Seo
+        title="My Dashboard"
+        description="View your athlete readiness, recovery, training load, sleep trends, and AI coach insights — all in one place."
+        path="/dashboard"
+        noIndex
+      />
       <Snackbar
         open={!!snackError}
         autoHideDuration={6000}

@@ -1,4 +1,5 @@
 import React from "react";
+import Seo from "../components/Seo";
 import {
   Alert,
   Box,
@@ -126,6 +127,12 @@ export default function OnboardingSurvey() {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }}>
+      <Seo
+        title="Set Up Your Profile"
+        description="Personalise your SportLab AI experience by telling us about your sport, goals, and training background."
+        path="/onboarding"
+        noIndex
+      />
       <Container maxWidth="md">
         <Paper
           elevation={0}

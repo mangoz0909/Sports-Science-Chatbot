@@ -1,3 +1,17 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Allow: /sports
+Allow: /sports-list
+Allow: /mental-health
+Allow: /health/workout
+Allow: /health/nutrition
+Allow: /auth
+
+# Authenticated-only pages — no indexing value
+Disallow: /dashboard
+Disallow: /daily-check-in
+Disallow: /profile
+Disallow: /onboarding
+Disallow: /reset-password
+
+Sitemap: https://sportlabai.com/sitemap.xml
