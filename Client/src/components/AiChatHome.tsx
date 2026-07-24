@@ -1,7 +1,7 @@
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./AiChatHome.css";
-import { getChatHistory, clearChatHistory, type ChatType } from "../services/chatService";
+import { getChatHistory, clearChatHistory, saveChatMessage, type ChatType } from "../services/chatService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -207,6 +207,7 @@ export default function AiChatHome({
   examplesTitle,
   examples,
   footerNote,
+  systemPrompt,
   sideContent,
   chatType,
 }: AiChatHomeProps) {
@@ -300,9 +301,11 @@ export default function AiChatHome({
     setError("");
     setLastFailedMessage(null);
 
+    if (chatType) saveChatMessage(userMessage, "user", chatType).catch(() => {});
+
     try {
       const { data, error: fnError } = await supabase.functions.invoke("ai-chat", {
-        body: { message: userMessage, chatType: chatType || "sports" },
+        body: { message: userMessage, chatType: chatType || "sports", systemPrompt },
       });
 
       if (fnError) throw fnError;
@@ -313,6 +316,7 @@ export default function AiChatHome({
       }
 
       setMessages((prev) => [...prev, { role: "bot", content: reply.trim(), timestamp: new Date() }]);
+      if (chatType) saveChatMessage(reply.trim(), "bot", chatType).catch(() => {});
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI request failed. Try again.";
       setError(msg);
@@ -320,7 +324,7 @@ export default function AiChatHome({
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, isLoggedIn, chatType]);
+  }, [isLoading, isLoggedIn, chatType, systemPrompt]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

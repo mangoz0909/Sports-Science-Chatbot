@@ -19,6 +19,7 @@ import {
 import SportsTennisIcon from "@mui/icons-material/SportsTennis";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { getUserPreferences } from "../services/preferencesService";
+import { supabase } from "../lib/supabaseClient";
 
 type SportsFinderProps = {
   compact?: boolean;
@@ -57,78 +58,8 @@ const questions = [
   },
 ] as const;
 
-type PuterChatResponse =
-  | string
-  | {
-      text?: string;
-      message?: {
-        content?: Array<{ text?: string }> | string;
-      };
-    };
-
-declare global {
-  interface Window {
-    puter?: {
-      ai?: {
-        chat?: (
-          prompt: string,
-          options?: { model?: string }
-        ) => Promise<PuterChatResponse>;
-      };
-    };
-  }
-}
-
-const PUTER_SCRIPT_ID = "puter-js-v2";
-
-function loadPuterScript() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.puter?.ai?.chat) {
-      resolve();
-      return;
-    }
-
-    const existingScript = document.getElementById(
-      PUTER_SCRIPT_ID
-    ) as HTMLScriptElement | null;
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
-      existingScript.addEventListener(
-        "error",
-        () => reject(new Error("Failed to load Puter.js.")),
-        { once: true }
-      );
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = PUTER_SCRIPT_ID;
-    script.src = "https://js.puter.com/v2/";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Puter.js."));
-    document.body.appendChild(script);
-  });
-}
-
-function extractPuterText(response: PuterChatResponse) {
-  if (typeof response === "string") return response;
-  if (response?.text) return response.text;
-
-  const content = response?.message?.content;
-
-  if (typeof content === "string") return content;
-
-  if (Array.isArray(content)) {
-    return content
-      .map((item) => item.text)
-      .filter(Boolean)
-      .join("\n");
-  }
-
-  return "No response received.";
-}
+const SPORTS_MATCH_SYSTEM_PROMPT =
+  "You are SportLab's sports matching coach. Recommend sports based on the athlete's profile and preferences like an experienced coach, not a rigid scoring algorithm.";
 
 export function SportsFinder({ compact = false }: SportsFinderProps) {
   const [answers, setAnswers] = React.useState<SurveyAnswers>(defaultAnswers);
@@ -167,12 +98,6 @@ export function SportsFinder({ compact = false }: SportsFinderProps) {
     setAiMatches("");
 
     try {
-      await loadPuterScript();
-
-      if (!window.puter?.ai?.chat) {
-        throw new Error("Puter AI is unavailable.");
-      }
-
       const prompt = `
 You are SportLab's sports matching coach.
 
@@ -205,11 +130,23 @@ Return:
 Keep it concise, practical, and student-friendly.
 `;
 
-      const response = await window.puter.ai.chat(prompt, {
-        model: "claude-haiku-4-5",
+      const { data, error: fnError } = await supabase.functions.invoke("ai-complete", {
+        body: {
+          prompt,
+          systemPrompt: SPORTS_MATCH_SYSTEM_PROMPT,
+          maxTokens: 900,
+          temperature: 0.7,
+        },
       });
 
-      setAiMatches(extractPuterText(response));
+      if (fnError) throw fnError;
+
+      const result = data?.result;
+      if (typeof result !== "string" || !result.trim()) {
+        throw new Error("The AI returned an empty response.");
+      }
+
+      setAiMatches(result.trim());
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to generate AI matches."

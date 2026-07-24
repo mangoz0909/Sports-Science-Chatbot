@@ -35,26 +35,25 @@ function jsonResponse(
   });
 }
 
-const DEFAULT_SYSTEM_PROMPTS: Record<string, string> = {
-  sports: `You are a supportive sports performance assistant.
-Give practical, safe, and personalized advice about training, recovery,
-confidence, motivation, and stress. Ask for the user's sport and goals when
-needed. Do not diagnose medical conditions.`,
-  mental_health: `You are MangoMind, a supportive AI trained in student-athlete mental
-wellness. Help with stress, anxiety, confidence, motivation, sleep, and
-recovery mindset. Offer practical, evidence-based coping strategies and be
-warm and encouraging. Do NOT diagnose mental health disorders or medical
-conditions. If the user mentions self-harm, suicide, immediate danger, abuse,
-or any emergency situation, tell them to contact emergency services, a
-trusted adult, parent, coach, counselor, or crisis hotline immediately.`,
-};
+const DEFAULT_SYSTEM_PROMPT =
+  "You are a careful sports science assistant. Provide general educational " +
+  "guidance only, avoid diagnosis, and return valid JSON when requested.";
 
-const MAX_SYSTEM_PROMPT_LENGTH = 8000;
+const MAX_PROMPT_LENGTH = 12000;
+const MAX_SYSTEM_PROMPT_LENGTH = 4000;
+const MIN_TOKENS = 100;
+const MAX_TOKENS = 2500;
+const DEFAULT_TOKENS = 1200;
+const DEFAULT_TEMPERATURE = 0.4;
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const num = typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return Math.min(max, Math.max(min, num));
+}
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
 
-  // Browser CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
@@ -138,39 +137,32 @@ Deno.serve(async (req: Request) => {
         ? body as Record<string, unknown>
         : {};
 
-    const message =
-      typeof requestBody.message === "string"
-        ? requestBody.message.trim()
+    const prompt =
+      typeof requestBody.prompt === "string"
+        ? requestBody.prompt.trim().slice(0, MAX_PROMPT_LENGTH)
         : "";
 
-    const chatType =
-      typeof requestBody.chatType === "string"
-        ? requestBody.chatType.trim()
-        : "sports";
-
-    const clientSystemPrompt =
-      typeof requestBody.systemPrompt === "string"
-        ? requestBody.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
-        : "";
-
-    if (!message) {
+    if (!prompt) {
       return jsonResponse(
-        { error: "Message is required" },
+        { error: "Prompt is required" },
         400,
         corsHeaders,
       );
     }
+
+    const systemPrompt =
+      typeof requestBody.systemPrompt === "string" && requestBody.systemPrompt.trim()
+        ? requestBody.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
+        : DEFAULT_SYSTEM_PROMPT;
+
+    const maxTokens = clampNumber(requestBody.maxTokens, MIN_TOKENS, MAX_TOKENS, DEFAULT_TOKENS);
+    const temperature = clampNumber(requestBody.temperature, 0, 1, DEFAULT_TEMPERATURE);
 
     const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!openAiApiKey) {
       throw new Error("OPENAI_API_KEY is missing.");
     }
-
-    const systemPrompt =
-      clientSystemPrompt ||
-      DEFAULT_SYSTEM_PROMPTS[chatType] ||
-      DEFAULT_SYSTEM_PROMPTS.sports;
 
     const openAiResponse = await fetch(
       "https://api.openai.com/v1/chat/completions",
@@ -189,11 +181,11 @@ Deno.serve(async (req: Request) => {
             },
             {
               role: "user",
-              content: message,
+              content: prompt,
             },
           ],
-          temperature: 0.7,
-          max_tokens: 500,
+          temperature,
+          max_tokens: maxTokens,
         }),
       },
     );
@@ -206,20 +198,20 @@ Deno.serve(async (req: Request) => {
 
     const openAiData = await openAiResponse.json();
 
-    const reply =
+    const result =
       openAiData?.choices?.[0]?.message?.content?.trim();
 
-    if (!reply) {
+    if (!result) {
       throw new Error("OpenAI returned an empty response.");
     }
 
     return jsonResponse(
-      { reply },
+      { result },
       200,
       corsHeaders,
     );
   } catch (err) {
-    console.error("ai-chat error:", err);
+    console.error("ai-complete error:", err);
 
     return jsonResponse(
       { error: err instanceof Error ? err.message : "Unexpected server error." },

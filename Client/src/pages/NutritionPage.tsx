@@ -18,56 +18,28 @@ import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
+import { supabase } from "../lib/supabaseClient";
 import Seo from "../components/Seo";
 
-
-const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-const OPENAI_MODEL = "gpt-4o-mini";
+const NUTRITION_SYSTEM_PROMPT =
+  "You are a careful sports nutrition assistant. Provide general educational guidance only, avoid diagnosis, respect allergies and dietary restrictions, and return valid JSON when requested.";
 
 async function callOpenAI(prompt: string): Promise<string> {
-  if (!OPENAI_API_KEY) {
-    throw new Error(
-      "OpenAI API key not configured. Add REACT_APP_OPENAI_API_KEY to your Render environment variables."
-    );
-  }
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a careful sports nutrition assistant. Provide general educational guidance only, avoid diagnosis, respect allergies and dietary restrictions, and return valid JSON when requested.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+  const { data, error } = await supabase.functions.invoke("ai-complete", {
+    body: {
+      prompt,
+      systemPrompt: NUTRITION_SYSTEM_PROMPT,
+      maxTokens: 1400,
       temperature: 0.4,
-      max_tokens: 1400,
-    }),
+    },
   });
 
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(
-      errorBody?.error?.message ||
-        `OpenAI request failed with status ${response.status}.`
-    );
-  }
+  if (error) throw error;
 
-  const data = await response.json();
-  const reply = data?.choices?.[0]?.message?.content;
+  const reply = data?.result;
 
   if (typeof reply !== "string" || !reply.trim()) {
-    throw new Error("The ChatGPT model returned an empty response.");
+    throw new Error("The AI model returned an empty response.");
   }
 
   return reply.trim();
