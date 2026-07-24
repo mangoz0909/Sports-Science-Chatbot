@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Button, Container, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import Seo from "../components/Seo";
 
 export default function NotFoundPage() {
   return (
@@ -13,6 +14,11 @@ export default function NotFoundPage() {
         px: 2,
       }}
     >
+      <Seo
+        title="Page Not Found"
+        description="The page you're looking for doesn't exist or may have been moved."
+        noIndex
+      />
       <Container maxWidth="sm" sx={{ textAlign: "center" }}>
         <Typography
           sx={{

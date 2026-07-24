@@ -51,6 +51,15 @@ export default function ProfilePage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
 
+  const successTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+    };
+  }, []);
+
   const [form, setForm] = React.useState<UserPreferences>({
     primary_sport: "",
     experience_level: "",
@@ -160,7 +169,8 @@ export default function ProfilePage() {
       });
 
       setSuccess("Information updated.");
-      setTimeout(() => setSuccess(null), 3500);
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = setTimeout(() => setSuccess(null), 3500);
     } catch (err: any) {
       setError(err?.message || "Failed to update information.");
     } finally {
