@@ -151,27 +151,64 @@ Deno.serve(async (req: Request) => {
      * });
      */
 
-    const reply = `Received your ${chatType} message: ${message}`;
+    const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
 
-    return jsonResponse(
+    if (!openAiApiKey) {
+      throw new Error("OPENAI_API_KEY is missing.");
+    }
+    
+    const systemPrompt =
+      chatType === "sports"
+        ? `You are a supportive sports performance assistant.
+    Give practical, safe, and personalized advice about training, recovery,
+    confidence, motivation, and stress. Ask for the user's sport and goals when
+    needed. Do not diagnose medical conditions.`
+        : `You are a helpful assistant.`;
+    
+    const openAiResponse = await fetch(
+      "https://api.openai.com/v1/chat/completions",
       {
-        reply,
-        userId: user.id,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openAiApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: message,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+        }),
       },
-      200,
-      corsHeaders,
     );
-  } catch (error) {
-    console.error("ai-chat function error:", error);
-
+    
+    if (!openAiResponse.ok) {
+      const errorText = await openAiResponse.text();
+      console.error("OpenAI error:", errorText);
+      throw new Error("Failed to generate an AI response.");
+    }
+    
+    const openAiData = await openAiResponse.json();
+    
+    const reply =
+      openAiData?.choices?.[0]?.message?.content?.trim();
+    
+    if (!reply) {
+      throw new Error("OpenAI returned an empty response.");
+    }
+    
     return jsonResponse(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Internal server error",
-      },
-      500,
+      { reply },
+      200,
       corsHeaders,
     );
   }
