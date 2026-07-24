@@ -9,19 +9,16 @@ const allowedOrigins = new Set([
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
 
-  const headers: Record<string, string> = {
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.has(origin)
+      ? origin
+      : "https://sports-science-chatbot.onrender.com",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
-
-  if (allowedOrigins.has(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-  }
-
-  return headers;
 }
 
 function jsonResponse(
@@ -38,10 +35,25 @@ function jsonResponse(
   });
 }
 
+const DEFAULT_SYSTEM_PROMPT =
+  "You are a careful sports science assistant. Provide general educational " +
+  "guidance only, avoid diagnosis, and return valid JSON when requested.";
+
+const MAX_PROMPT_LENGTH = 12000;
+const MAX_SYSTEM_PROMPT_LENGTH = 4000;
+const MIN_TOKENS = 100;
+const MAX_TOKENS = 2500;
+const DEFAULT_TOKENS = 1200;
+const DEFAULT_TEMPERATURE = 0.4;
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const num = typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return Math.min(max, Math.max(min, num));
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
 
-  // Handle browser CORS preflight before authentication.
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
@@ -58,16 +70,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const origin = req.headers.get("origin") ?? "";
-
-    if (origin && !allowedOrigins.has(origin)) {
-      return jsonResponse(
-        { error: "Origin not allowed" },
-        403,
-        corsHeaders,
-      );
-    }
-
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader?.startsWith("Bearer ")) {
@@ -80,46 +82,28 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error(
-        "Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variable.",
-      );
+      console.error("Missing SUPABASE_URL or SUPABASE_ANON_KEY");
 
       return jsonResponse(
-        { error: "Supabase server configuration is missing." },
+        { error: "Server configuration error" },
         500,
         corsHeaders,
       );
     }
 
-    if (!openAiApiKey) {
-      console.error("Missing OPENAI_API_KEY environment variable.");
-
-      return jsonResponse(
-        { error: "OpenAI server configuration is missing." },
-        500,
-        corsHeaders,
-      );
-    }
-
-    const supabase = createClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        global: {
-          headers: {
-            Authorization: authHeader,
-          },
-        },
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
         },
       },
-    );
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
 
     const {
       data: { user },
@@ -136,51 +120,43 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    let body: RequestBody;
+    let body: unknown;
 
     try {
-      body = await req.json() as RequestBody;
+      body = await req.json();
     } catch {
       return jsonResponse(
-        { error: "Request body must be valid JSON." },
+        { error: "Request body must be valid JSON" },
         400,
         corsHeaders,
       );
     }
 
-    const message =
-      typeof body.message === "string"
-        ? body.message.trim()
+    const requestBody =
+      typeof body === "object" && body !== null
+        ? body as Record<string, unknown>
+        : {};
+
+    const prompt =
+      typeof requestBody.prompt === "string"
+        ? requestBody.prompt.trim().slice(0, MAX_PROMPT_LENGTH)
         : "";
 
-    const chatType =
-      typeof body.chatType === "string" && body.chatType.trim()
-        ? body.chatType.trim()
-        : "sports";
-
-    const clientSystemPrompt =
-      typeof requestBody.systemPrompt === "string"
-        ? requestBody.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
-        : "";
-
-    if (!message) {
+    if (!prompt) {
       return jsonResponse(
-        { error: "Message is required." },
+        { error: "Prompt is required" },
         400,
         corsHeaders,
       );
     }
 
-    /*
-     * Replace this placeholder with your OpenAI request.
-     *
-     * Example:
-     * const reply = await generateReply({
-     *   message,
-     *   chatType,
-     *   userId: user.id,
-     * });
-     */
+    const systemPrompt =
+      typeof requestBody.systemPrompt === "string" && requestBody.systemPrompt.trim()
+        ? requestBody.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
+        : DEFAULT_SYSTEM_PROMPT;
+
+    const maxTokens = clampNumber(requestBody.maxTokens, MIN_TOKENS, MAX_TOKENS, DEFAULT_TOKENS);
+    const temperature = clampNumber(requestBody.temperature, 0, 1, DEFAULT_TEMPERATURE);
 
     const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
 
@@ -188,16 +164,8 @@ Deno.serve(async (req: Request) => {
       throw new Error("OPENAI_API_KEY is missing.");
     }
 
-    const systemPrompt =
-      chatType === "sports"
-        ? `You are a supportive sports performance assistant.
-    Give practical, safe, and personalized advice about training, recovery,
-    confidence, motivation, and stress. Ask for the user's sport and goals when
-    needed. Do not diagnose medical conditions.`
-        : `You are a helpful assistant.`;
-    
     const openAiResponse = await fetch(
-      "https://api.openai.com/v1/responses",
+      "https://api.openai.com/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -205,10 +173,19 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-5-mini",
-          instructions: systemPrompt,
-          input: message,
-          max_output_tokens: 600,
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature,
+          max_tokens: maxTokens,
         }),
       },
     );
@@ -218,28 +195,27 @@ Deno.serve(async (req: Request) => {
       console.error("OpenAI error:", errorText);
       throw new Error("Failed to generate an AI response.");
     }
-    
-    const openAiData = await openAiResponse.json();
-    
-    const reply =
-      openAiData?.choices?.[0]?.message?.content?.trim();
-    
-    if (!reply) {
-      console.error(
-        "OpenAI returned no output text:",
-        JSON.stringify(openAiData),
-      );
 
-      return jsonResponse(
-        { error: "OpenAI returned an empty response." },
-        502,
-        corsHeaders,
-      );
+    const openAiData = await openAiResponse.json();
+
+    const result =
+      openAiData?.choices?.[0]?.message?.content?.trim();
+
+    if (!result) {
+      throw new Error("OpenAI returned an empty response.");
     }
-    
+
     return jsonResponse(
-      { reply },
+      { result },
       200,
+      corsHeaders,
+    );
+  } catch (err) {
+    console.error("ai-complete error:", err);
+
+    return jsonResponse(
+      { error: err instanceof Error ? err.message : "Unexpected server error." },
+      500,
       corsHeaders,
     );
   }

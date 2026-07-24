@@ -19,10 +19,11 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
+import { supabase } from "../lib/supabaseClient";
 import Seo from "../components/Seo";
 
-const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-const OPENAI_MODEL = "gpt-4o-mini";
+const WORKOUT_SYSTEM_PROMPT =
+  "You are a careful sports scientist and strength and conditioning assistant. Provide general educational fitness guidance only. Respect injuries, restrictions, equipment access, experience level, recovery, and age. Do not diagnose medical conditions. Return valid JSON when requested.";
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
 
@@ -42,55 +43,18 @@ type SummaryItem = {
 type UnknownRecord = Record<string, unknown>;
 
 async function callOpenAI(prompt: string): Promise<string> {
-  if (!OPENAI_API_KEY) {
-    throw new Error(
-      "OpenAI API key not configured. Add REACT_APP_OPENAI_API_KEY to your Render environment variables."
-    );
-  }
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a careful sports scientist and strength and conditioning assistant. Provide general educational fitness guidance only. Respect injuries, restrictions, equipment access, experience level, recovery, and age. Do not diagnose medical conditions. Return valid JSON when requested.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+  const { data, error } = await supabase.functions.invoke("ai-complete", {
+    body: {
+      prompt,
+      systemPrompt: WORKOUT_SYSTEM_PROMPT,
+      maxTokens: 1800,
       temperature: 0.4,
-      max_tokens: 1800,
-    }),
+    },
   });
 
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
+  if (error) throw error;
 
-    const message =
-      errorBody &&
-      typeof errorBody === "object" &&
-      "error" in errorBody &&
-      errorBody.error &&
-      typeof errorBody.error === "object" &&
-      "message" in errorBody.error &&
-      typeof errorBody.error.message === "string"
-        ? errorBody.error.message
-        : `OpenAI request failed with status ${response.status}.`;
-
-    throw new Error(message);
-  }
-
-  const data = await response.json();
-  const reply = data?.choices?.[0]?.message?.content;
+  const reply = data?.result;
 
   if (typeof reply !== "string" || !reply.trim()) {
     throw new Error("The AI model returned an empty response.");
