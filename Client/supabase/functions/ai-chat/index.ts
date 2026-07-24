@@ -38,6 +38,41 @@ function jsonResponse(
   });
 }
 
+type RequestBody = {
+  message?: string;
+  systemPrompt?: string;
+};
+
+const DEFAULT_SYSTEM_PROMPT = `You are SportLab AI, a supportive sports performance and student-athlete
+wellbeing assistant. Give practical, safe, and personalized advice about
+training, recovery, nutrition, confidence, motivation, and stress. Ask for
+the user's sport and goals when needed. Do not diagnose medical conditions
+or mental health disorders. If the user mentions self-harm, suicide,
+immediate danger, abuse, or any emergency situation, tell them to contact
+emergency services, a trusted adult, parent, coach, counselor, or crisis
+hotline immediately.`;
+
+const MAX_SYSTEM_PROMPT_LENGTH = 8000;
+
+// The Responses API returns output text either as a top-level `output_text`
+// convenience field or nested in `output[].content[].text` — handle both.
+function extractResponsesApiText(data: unknown): string {
+  const record = data as Record<string, unknown>;
+
+  if (typeof record?.output_text === "string" && record.output_text.trim()) {
+    return record.output_text.trim();
+  }
+
+  const output = Array.isArray(record?.output) ? record.output : [];
+
+  return output
+    .flatMap((item: any) => (Array.isArray(item?.content) ? item.content : []))
+    .filter((part: any) => typeof part?.text === "string")
+    .map((part: any) => part.text)
+    .join("")
+    .trim();
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -153,14 +188,9 @@ Deno.serve(async (req: Request) => {
         ? body.message.trim()
         : "";
 
-    const chatType =
-      typeof body.chatType === "string" && body.chatType.trim()
-        ? body.chatType.trim()
-        : "sports";
-
     const clientSystemPrompt =
-      typeof requestBody.systemPrompt === "string"
-        ? requestBody.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
+      typeof body.systemPrompt === "string"
+        ? body.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
         : "";
 
     if (!message) {
@@ -171,31 +201,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    /*
-     * Replace this placeholder with your OpenAI request.
-     *
-     * Example:
-     * const reply = await generateReply({
-     *   message,
-     *   chatType,
-     *   userId: user.id,
-     * });
-     */
+    const systemPrompt = clientSystemPrompt || DEFAULT_SYSTEM_PROMPT;
 
-    const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
-
-    if (!openAiApiKey) {
-      throw new Error("OPENAI_API_KEY is missing.");
-    }
-
-    const systemPrompt =
-      chatType === "sports"
-        ? `You are a supportive sports performance assistant.
-    Give practical, safe, and personalized advice about training, recovery,
-    confidence, motivation, and stress. Ask for the user's sport and goals when
-    needed. Do not diagnose medical conditions.`
-        : `You are a helpful assistant.`;
-    
     const openAiResponse = await fetch(
       "https://api.openai.com/v1/responses",
       {
@@ -218,12 +225,10 @@ Deno.serve(async (req: Request) => {
       console.error("OpenAI error:", errorText);
       throw new Error("Failed to generate an AI response.");
     }
-    
+
     const openAiData = await openAiResponse.json();
-    
-    const reply =
-      openAiData?.choices?.[0]?.message?.content?.trim();
-    
+    const reply = extractResponsesApiText(openAiData);
+
     if (!reply) {
       console.error(
         "OpenAI returned no output text:",
@@ -236,10 +241,18 @@ Deno.serve(async (req: Request) => {
         corsHeaders,
       );
     }
-    
+
     return jsonResponse(
       { reply },
       200,
+      corsHeaders,
+    );
+  } catch (err) {
+    console.error("ai-chat error:", err);
+
+    return jsonResponse(
+      { error: err instanceof Error ? err.message : "Unexpected server error." },
+      500,
       corsHeaders,
     );
   }

@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 
-export type ChatType = "sports" | "mental_health";
+export type ChatType = "sports";
 
 export async function saveChatMessage(content: string, role: "user" | "bot", chatType: ChatType) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();

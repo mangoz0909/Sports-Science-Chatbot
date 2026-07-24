@@ -28,7 +28,6 @@ type NavItem = { label: string; to: string; match?: string };
 const navItems: NavItem[] = [
   { label: "Sports AI", to: "/sports" },
   { label: "Sports Match", to: "/sports-list" },
-  { label: "Mental Health", to: "/mental-health" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Health", to: "/health/workout", match: "/health" },
 ];
