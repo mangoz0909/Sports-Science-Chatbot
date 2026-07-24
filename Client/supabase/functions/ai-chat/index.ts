@@ -1,70 +1,81 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const allowedOrigins = [
-  Deno.env.get("ALLOWED_ORIGIN") || "",
+const allowedOrigins = new Set([
+  "https://sports-science-chatbot.onrender.com",
   "http://localhost:3000",
-].filter(Boolean);
+  "http://localhost:5173",
+]);
 
-function getCorsHeaders(req: Request) {
-  const origin = req.headers.get("Origin") || "";
-  const isAllowed = allowedOrigins.includes(origin);
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+
   return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : allowedOrigins[0] || "",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Vary": "Origin",
+    "Access-Control-Allow-Origin": allowedOrigins.has(origin)
+      ? origin
+      : "https://sports-science-chatbot.onrender.com",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
 }
 
-
-type ChatType = "sports" | "mental_health";
-
-function getSystemPrompt(chatType: ChatType) {
-  if (chatType === "mental_health") {
-    return `
-You are MangoMind, a supportive wellbeing assistant.
-Give general mental health information, stress-management strategies, emotional support, and practical coping steps.
-Do not diagnose.
-Do not prescribe medication.
-For emergencies, self-harm risk, or immediate danger, tell the user to contact local emergency services or a trusted person immediately.
-`;
-  }
-
-  return `
-You are a sports science assistant for SportLab AI.
-Give practical, concise help about sport rules, athlete performance, training load, recovery, tactics, mental performance, and beginner drills.
-For injuries or medical concerns, do not diagnose. Recommend a qualified clinician.
-`;
+function jsonResponse(
+  body: unknown,
+  status: number,
+  corsHeaders: Record<string, string>,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+  });
 }
 
-serve(async (req) => {
-  const reqCorsHeaders = getCorsHeaders(req);
+Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
 
+  // Browser CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", {
-      headers: reqCorsHeaders,
+      status: 200,
+      headers: corsHeaders,
     });
   }
 
+  if (req.method !== "POST") {
+    return jsonResponse(
+      { error: "Method not allowed" },
+      405,
+      corsHeaders,
+    );
+  }
+
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
-
-    if (!supabaseUrl || !supabaseAnonKey || !openAiApiKey) {
-      throw new Error("Missing environment variables.");
-    }
-
     const authHeader = req.headers.get("Authorization");
 
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header." }), {
-        status: 401,
-        headers: {
-          ...reqCorsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse(
+        { error: "Missing or invalid authorization header" },
+        401,
+        corsHeaders,
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Missing SUPABASE_URL or SUPABASE_ANON_KEY");
+
+      return jsonResponse(
+        { error: "Server configuration error" },
+        500,
+        corsHeaders,
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -72,6 +83,10 @@ serve(async (req) => {
         headers: {
           Authorization: authHeader,
         },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     });
 
@@ -81,122 +96,83 @@ serve(async (req) => {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized." }), {
-        status: 401,
-        headers: {
-          ...reqCorsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      console.error("Authentication error:", userError);
+
+      return jsonResponse(
+        { error: "Unauthorized" },
+        401,
+        corsHeaders,
+      );
     }
 
-    const body = await req.json();
+    let body: unknown;
 
-    const message = String(body.message || "").trim();
-    const chatType = String(body.chatType || "sports") as ChatType;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse(
+        { error: "Request body must be valid JSON" },
+        400,
+        corsHeaders,
+      );
+    }
+
+    const requestBody =
+      typeof body === "object" && body !== null
+        ? body as Record<string, unknown>
+        : {};
+
+    const message =
+      typeof requestBody.message === "string"
+        ? requestBody.message.trim()
+        : "";
+
+    const chatType =
+      typeof requestBody.chatType === "string"
+        ? requestBody.chatType.trim()
+        : "sports";
 
     if (!message) {
-      return new Response(JSON.stringify({ error: "Message is required." }), {
-        status: 400,
-        headers: {
-          ...reqCorsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      return jsonResponse(
+        { error: "Message is required" },
+        400,
+        corsHeaders,
+      );
     }
 
-    if (!["sports", "mental_health"].includes(chatType)) {
-      return new Response(JSON.stringify({ error: "Invalid chat type." }), {
-        status: 400,
-        headers: {
-          ...reqCorsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
-    }
+    /*
+     * Replace this placeholder with your OpenAI request.
+     *
+     * Example:
+     * const reply = await generateReply({
+     *   message,
+     *   chatType,
+     *   userId: user.id,
+     * });
+     */
 
-    const { data: history } = await supabase
-      .from("chat_messages")
-      .select("role, content")
-      .eq("user_id", user.id)
-      .eq("chat_type", chatType)
-      .order("created_at", { ascending: false })
-      .limit(10);
+    const reply = `Received your ${chatType} message: ${message}`;
 
-    const formattedHistory =
-      history
-        ?.reverse()
-        .map((item) => ({
-          role: item.role === "bot" ? "assistant" : item.role,
-          content: item.content,
-        })) || [];
-
-    await supabase.from("chat_messages").insert({
-      user_id: user.id,
-      chat_type: chatType,
-      role: "user",
-      content: message,
-    });
-
-    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openAiApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: getSystemPrompt(chatType),
-          },
-          ...formattedHistory,
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-        temperature: 0.7,
-      }),
-    });
-
-    if (!openAiResponse.ok) {
-      const errorText = await openAiResponse.text();
-      throw new Error(errorText);
-    }
-
-    const openAiData = await openAiResponse.json();
-
-    const reply =
-      openAiData?.choices?.[0]?.message?.content ||
-      "Sorry, I could not generate a response.";
-
-    await supabase.from("chat_messages").insert({
-      user_id: user.id,
-      chat_type: chatType,
-      role: "bot",
-      content: reply,
-    });
-
-    return new Response(JSON.stringify({ reply }), {
-      headers: {
-        ...reqCorsHeaders,
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error.",
-      }),
+    return jsonResponse(
       {
-        status: 500,
-        headers: {
-          ...reqCorsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
+        reply,
+        userId: user.id,
+      },
+      200,
+      corsHeaders,
+    );
+  } catch (error) {
+    console.error("ai-chat function error:", error);
+
+    return jsonResponse(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Internal server error",
+      },
+      500,
+      corsHeaders,
     );
   }
 });
