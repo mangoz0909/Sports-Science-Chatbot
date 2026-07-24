@@ -17,9 +17,11 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
+import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
 
 const WORKOUT_SYSTEM_PROMPT =
@@ -369,6 +371,8 @@ function cleanJsonResponse(responseText: string): string {
 }
 
 export default function WorkoutPage() {
+  const { session, loading: authLoading } = useAuth();
+  const isLoggedIn = Boolean(session);
   const [plan, setPlan] =
     React.useState<WorkoutDay[] | null>(null);
 
@@ -604,13 +608,14 @@ Important requirements:
   }
 
   React.useEffect(() => {
+    if (authLoading || !isLoggedIn) return;
     if (!hasGenerated.current) {
       hasGenerated.current = true;
       void generatePlan();
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, isLoggedIn]);
 
   return (
     <Box>
@@ -660,7 +665,7 @@ Important requirements:
               <RefreshIcon />
             )
           }
-          disabled={loading}
+          disabled={loading || !isLoggedIn}
           onClick={() => {
             void generatePlan();
           }}
@@ -677,7 +682,26 @@ Important requirements:
         </Button>
       </Stack>
 
-      {error && (
+      {!authLoading && !isLoggedIn && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3, borderRadius: 3 }}
+          action={
+            <Button
+              component={RouterLink}
+              to="/auth?mode=login"
+              size="small"
+              sx={{ fontWeight: 800, textTransform: "none" }}
+            >
+              Sign in
+            </Button>
+          }
+        >
+          Sign in to generate your personalised workout plan.
+        </Alert>
+      )}
+
+      {error && isLoggedIn && (
         <Alert
           severity="error"
           sx={{

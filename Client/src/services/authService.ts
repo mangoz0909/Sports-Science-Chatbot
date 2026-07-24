@@ -17,9 +17,7 @@ export async function signUpUser(name: string, email: string, password: string) 
 
   if (error) throw error;
 
-  const user = data.user;
-
-  if (!user) {
+  if (!data.session || !data.user) {
     throw new Error(
       "Account created — check your email to confirm your address before signing in."
     );
@@ -27,7 +25,7 @@ export async function signUpUser(name: string, email: string, password: string) 
 
   const { error: profileError } = await supabase.from("profiles").upsert(
     {
-      id: user.id,
+      id: data.user.id,
       name: cleanName,
       email: cleanEmail,
     },

@@ -10,6 +10,17 @@ export type UserPreferences = {
   priorities: string;
   sleep_range: string;
   athlete_type: string;
+  age?: string;
+  height_cm?: string;
+  weight_kg?: string;
+  activity_level?: string;
+  workout_duration?: string;
+  equipment_access?: string;
+  dietary_preference?: string;
+  food_allergies?: string;
+  foods_avoid?: string;
+  meals_per_day?: string;
+  cooking_access?: string;
 };
 
 export async function getUserPreferences() {
@@ -33,7 +44,18 @@ export async function getUserPreferences() {
       injury_areas,
       priorities,
       sleep_range,
-      athlete_type
+      athlete_type,
+      age,
+      height_cm,
+      weight_kg,
+      activity_level,
+      workout_duration,
+      equipment_access,
+      dietary_preference,
+      food_allergies,
+      foods_avoid,
+      meals_per_day,
+      cooking_access
     `
     )
     .eq("id", user.id)

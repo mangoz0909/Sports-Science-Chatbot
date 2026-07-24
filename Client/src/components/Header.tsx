@@ -23,13 +23,14 @@ import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 
-type NavItem = { label: string; to: string };
+type NavItem = { label: string; to: string; match?: string };
 
 const navItems: NavItem[] = [
   { label: "Sports AI", to: "/sports" },
   { label: "Sports Match", to: "/sports-list" },
+  { label: "Mental Health", to: "/mental-health" },
   { label: "Dashboard", to: "/dashboard" },
-  { label: "Health", to: "/health/workout" },
+  { label: "Health", to: "/health/workout", match: "/health" },
 ];
 
 const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (
@@ -144,14 +145,14 @@ const Header: React.FC = () => {
                   component={RouterLink}
                   to={item.to}
                   sx={{
-                    color: isActive(item.to) ? "#0284c7" : "#475569",
-                    fontWeight: isActive(item.to) ? 800 : 600,
+                    color: isActive(item.match ?? item.to) ? "#0284c7" : "#475569",
+                    fontWeight: isActive(item.match ?? item.to) ? 800 : 600,
                     fontSize: "0.875rem",
                     borderRadius: "10px",
                     px: 1.5,
                     py: 0.75,
                     minWidth: 0,
-                    bgcolor: isActive(item.to) ? "#e0f2fe" : "transparent",
+                    bgcolor: isActive(item.match ?? item.to) ? "#e0f2fe" : "transparent",
                     textTransform: "none",
                     "&:hover": { bgcolor: "#f1f5f9", color: "#0f172a" },
                   }}
@@ -321,15 +322,15 @@ const Header: React.FC = () => {
                   borderRadius: "10px",
                   mb: 0.5,
                   py: 1,
-                  bgcolor: isActive(item.to) ? "#e0f2fe" : "transparent",
-                  color: isActive(item.to) ? "#0284c7" : "#334155",
+                  bgcolor: isActive(item.match ?? item.to) ? "#e0f2fe" : "transparent",
+                  color: isActive(item.match ?? item.to) ? "#0284c7" : "#334155",
                   "&:hover": { bgcolor: "#f8fafc" },
                 }}
               >
                 <ListItemText
                   primary={item.label}
                   primaryTypographyProps={{
-                    fontWeight: isActive(item.to) ? 800 : 600,
+                    fontWeight: isActive(item.match ?? item.to) ? 800 : 600,
                     fontSize: 15,
                   }}
                 />

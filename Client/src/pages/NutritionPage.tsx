@@ -16,9 +16,11 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
 
 const NUTRITION_SYSTEM_PROMPT =
@@ -59,6 +61,8 @@ type NutritionPlan = {
 };
 
 export default function NutritionPage() {
+  const { session, loading: authLoading } = useAuth();
+  const isLoggedIn = Boolean(session);
   const [plan, setPlan] = React.useState<NutritionPlan | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -145,12 +149,13 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
   }
 
   React.useEffect(() => {
+    if (authLoading || !isLoggedIn) return;
     if (!hasGenerated.current) {
       hasGenerated.current = true;
       generatePlan();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, isLoggedIn]);
 
   const macros: MacroItem[] = plan
     ? [
@@ -183,7 +188,7 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
         <Button
           variant="outlined"
           startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
-          disabled={loading}
+          disabled={loading || !isLoggedIn}
           onClick={generatePlan}
           sx={{ borderRadius: 3, fontWeight: 700, textTransform: "none", borderColor: "#cbd5e1" }}
         >
@@ -191,13 +196,32 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
         </Button>
       </Stack>
 
-      {error && (
+      {!authLoading && !isLoggedIn && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3, borderRadius: 3 }}
+          action={
+            <Button
+              component={RouterLink}
+              to="/auth?mode=login"
+              size="small"
+              sx={{ fontWeight: 800, textTransform: "none" }}
+            >
+              Sign in
+            </Button>
+          }
+        >
+          Sign in to generate your personalised nutrition plan.
+        </Alert>
+      )}
+
+      {error && isLoggedIn && (
         <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
           {error}
         </Alert>
       )}
 
-      {loading && !plan && (
+      {isLoggedIn && loading && !plan && (
         <Grid container spacing={2.5}>
           <Grid item xs={12}>
             <Skeleton variant="rounded" height={64} sx={{ borderRadius: 3 }} />

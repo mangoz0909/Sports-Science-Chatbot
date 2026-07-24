@@ -94,6 +94,12 @@ function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
 
+// Theoretical bounds of `positive - negative` below, given each slider's 1-10
+// range (painLevel is 0-10). Used to normalize the weighted score to 0-100
+// instead of clamping — clamping alone saturated at 100 for most real inputs.
+const READINESS_RAW_MIN = 1 * 1.5 + 1 * 1.4 + 1 + 1 + 1 - (10 * 1.2 + 10 * 1.5 + 10 + 10 * 1.6);
+const READINESS_RAW_MAX = 10 * 1.5 + 10 * 1.4 + 10 + 10 + 10 - (1 * 1.2 + 1 * 1.5 + 1 + 0 * 1.6);
+
 function calculateReadiness(data: CheckInData) {
   const positive =
     data.sleepQuality * 1.5 +
@@ -108,7 +114,11 @@ function calculateReadiness(data: CheckInData) {
     data.stress +
     data.painLevel * 1.6;
 
-  return clamp(Math.round(positive * 7 - negative * 4));
+  const raw = positive - negative;
+  const normalized =
+    ((raw - READINESS_RAW_MIN) / (READINESS_RAW_MAX - READINESS_RAW_MIN)) * 100;
+
+  return clamp(Math.round(normalized));
 }
 
 function calculateInjuryRisk(data: CheckInData) {

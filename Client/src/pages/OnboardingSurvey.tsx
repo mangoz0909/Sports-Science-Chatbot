@@ -136,7 +136,10 @@ export default function OnboardingSurvey() {
     if (!form.primary_sport.trim()) return "Please enter your primary sport.";
     if (!form.experience_level.trim()) return "Please enter your experience level.";
     if (!form.main_goal.trim()) return "Please enter your main goal.";
-    if (!form.training_days.trim()) return "Please enter your training days.";
+
+    const trainingDaysError = validateNumber(form.training_days, "training days", 0, 7);
+    if (trainingDaysError) return trainingDaysError;
+
     if (!form.competition_level.trim()) return "Please enter your competition level.";
     if (!form.injury_areas.trim()) return "Please enter injury areas or type None.";
     if (!form.priorities.trim()) return "Please enter your fitness priorities.";
@@ -158,7 +161,10 @@ export default function OnboardingSurvey() {
     if (!form.dietary_preference.trim()) return "Please select your dietary preference.";
     if (!form.food_allergies.trim()) return "Please enter food allergies or type None.";
     if (!form.foods_avoid.trim()) return "Please enter foods you avoid or type None.";
-    if (!form.meals_per_day.trim()) return "Please enter your usual number of meals per day.";
+
+    const mealsPerDayError = validateNumber(form.meals_per_day, "meals per day", 1, 10);
+    if (mealsPerDayError) return mealsPerDayError;
+
     if (!form.cooking_access.trim()) return "Please describe your access to food preparation.";
 
     return null;
