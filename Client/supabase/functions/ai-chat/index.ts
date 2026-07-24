@@ -1,9 +1,53 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
+
+/*
+ * Expected chat_messages table columns:
+ *
+ * id          uuid / bigint
+ * user_id     uuid
+ * message     text
+ * sender      text: "user" or "bot"
+ * chat_type   text
+ * created_at  timestamptz
+ */
+
+type RequestBody = {
+  message?: unknown;
+  chatType?: unknown;
+};
+
+type ChatSender = "user" | "bot";
+
+type OpenAIContentItem = {
+  type?: string;
+  text?: string;
+};
+
+type OpenAIOutputItem = {
+  type?: string;
+  content?: OpenAIContentItem[];
+};
+
+type OpenAIResponseBody = {
+  output?: OpenAIOutputItem[];
+  error?: {
+    message?: string;
+    type?: string;
+    code?: string;
+  };
+};
+
+const MAX_MESSAGE_LENGTH = 5000;
 
 const allowedOrigins = new Set([
   "https://sports-science-chatbot.onrender.com",
   "http://localhost:3000",
   "http://localhost:5173",
+]);
+
+const allowedChatTypes = new Set([
+  "sports",
+  "mental_health",
 ]);
 
 function getCorsHeaders(req: Request): Record<string, string> {
@@ -38,10 +82,116 @@ function jsonResponse(
   });
 }
 
+function getSystemPrompt(chatType: string): string {
+  if (chatType === "sports") {
+    return `
+You are a supportive sports-performance assistant for student athletes.
+
+Provide practical, safe, and personalized guidance about:
+- training
+- recovery
+- confidence
+- motivation
+- stress
+- sleep
+- injury prevention
+- athletic performance
+
+Ask about the user's sport, experience, schedule, goals, injuries, and available
+equipment when that information is necessary.
+
+Do not diagnose injuries or medical conditions. When symptoms may require
+medical attention, clearly advise the user to speak with a doctor, athletic
+trainer, physical therapist, coach, parent, or another qualified professional.
+
+Keep answers clear, encouraging, realistic, and age-appropriate.
+`.trim();
+  }
+
+  return `
+You are a supportive mental-health assistant for students.
+
+Provide calm, respectful, practical emotional support. Help users describe
+their feelings, consider healthy coping strategies, and identify people who
+may be able to support them.
+
+Do not claim to be a therapist, doctor, counselor, or replacement for
+professional care. Do not diagnose mental-health conditions.
+
+Encourage the user to speak with a trusted adult, parent, school counselor,
+doctor, therapist, or emergency professional when appropriate.
+
+If the user appears to be in immediate danger or considering self-harm,
+encourage them to contact emergency services and a trusted person immediately.
+
+Keep responses compassionate, age-appropriate, and nonjudgmental.
+`.trim();
+}
+
+/**
+ * Extracts assistant text from a raw REST response from /v1/responses.
+ *
+ * The JavaScript SDK exposes response.output_text as a convenience property,
+ * but a raw fetch response should be read from the output/content structure.
+ */
+function extractOpenAIText(data: OpenAIResponseBody): string {
+  if (!Array.isArray(data.output)) {
+    return "";
+  }
+
+  const textParts: string[] = [];
+
+  for (const outputItem of data.output) {
+    if (!Array.isArray(outputItem.content)) {
+      continue;
+    }
+
+    for (const contentItem of outputItem.content) {
+      if (
+        contentItem.type === "output_text" &&
+        typeof contentItem.text === "string"
+      ) {
+        const text = contentItem.text.trim();
+
+        if (text) {
+          textParts.push(text);
+        }
+      }
+    }
+  }
+
+  return textParts.join("\n").trim();
+}
+
+async function saveChatMessage(
+  supabase: SupabaseClient,
+  userId: string,
+  message: string,
+  sender: ChatSender,
+  chatType: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("chat_messages")
+    .insert({
+      user_id: userId,
+      message,
+      sender,
+      chat_type: chatType,
+    });
+
+  if (error) {
+    console.error(`Failed to save ${sender} message:`, error);
+
+    throw new Error(`Unable to save ${sender} message.`);
+  }
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
 
-  // Handle browser CORS preflight before authentication.
+  /*
+   * The browser sends an OPTIONS request before the real POST request.
+   */
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
@@ -51,33 +201,44 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") {
     return jsonResponse(
-      { error: "Method not allowed" },
+      { error: "Method not allowed." },
       405,
       corsHeaders,
     );
   }
 
   try {
+    /*
+     * Reject browser requests from origins that are not approved.
+     * Requests with no Origin header, such as server-to-server requests,
+     * continue to authentication.
+     */
     const origin = req.headers.get("origin") ?? "";
 
     if (origin && !allowedOrigins.has(origin)) {
       return jsonResponse(
-        { error: "Origin not allowed" },
+        { error: "Origin not allowed." },
         403,
         corsHeaders,
       );
     }
 
+    /*
+     * Read the signed-in user's access token.
+     */
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader?.startsWith("Bearer ")) {
       return jsonResponse(
-        { error: "Missing or invalid authorization header" },
+        { error: "Missing or invalid authorization header." },
         401,
         corsHeaders,
       );
     }
 
+    /*
+     * Read server-side environment variables.
+     */
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
@@ -104,6 +265,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    /*
+     * Create a Supabase client using the user's token.
+     *
+     * Database operations made with this client follow the user's
+     * Row Level Security permissions.
+     */
     const supabase = createClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -121,6 +288,9 @@ Deno.serve(async (req: Request) => {
       },
     );
 
+    /*
+     * Verify the supplied access token and obtain the authenticated user.
+     */
     const {
       data: { user },
       error: userError,
@@ -130,12 +300,15 @@ Deno.serve(async (req: Request) => {
       console.error("Authentication error:", userError);
 
       return jsonResponse(
-        { error: "Unauthorized" },
+        { error: "Unauthorized." },
         401,
         corsHeaders,
       );
     }
 
+    /*
+     * Parse and validate the request body.
+     */
     let body: RequestBody;
 
     try {
@@ -158,11 +331,6 @@ Deno.serve(async (req: Request) => {
         ? body.chatType.trim()
         : "sports";
 
-    const clientSystemPrompt =
-      typeof requestBody.systemPrompt === "string"
-        ? requestBody.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
-        : "";
-
     if (!message) {
       return jsonResponse(
         { error: "Message is required." },
@@ -171,31 +339,41 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    /*
-     * Replace this placeholder with your OpenAI request.
-     *
-     * Example:
-     * const reply = await generateReply({
-     *   message,
-     *   chatType,
-     *   userId: user.id,
-     * });
-     */
-
-    const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
-
-    if (!openAiApiKey) {
-      throw new Error("OPENAI_API_KEY is missing.");
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      return jsonResponse(
+        {
+          error:
+            `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`,
+        },
+        400,
+        corsHeaders,
+      );
     }
 
-    const systemPrompt =
-      chatType === "sports"
-        ? `You are a supportive sports performance assistant.
-    Give practical, safe, and personalized advice about training, recovery,
-    confidence, motivation, and stress. Ask for the user's sport and goals when
-    needed. Do not diagnose medical conditions.`
-        : `You are a helpful assistant.`;
-    
+    if (!allowedChatTypes.has(chatType)) {
+      return jsonResponse(
+        { error: "Invalid chat type." },
+        400,
+        corsHeaders,
+      );
+    }
+
+    /*
+     * Save the user's message before calling OpenAI.
+     */
+    await saveChatMessage(
+      supabase,
+      user.id,
+      message,
+      "user",
+      chatType,
+    );
+
+    const systemPrompt = getSystemPrompt(chatType);
+
+    /*
+     * Generate the assistant response.
+     */
     const openAiResponse = await fetch(
       "https://api.openai.com/v1/responses",
       {
@@ -213,17 +391,28 @@ Deno.serve(async (req: Request) => {
       },
     );
 
+    const openAiData =
+      await openAiResponse.json() as OpenAIResponseBody;
+
     if (!openAiResponse.ok) {
-      const errorText = await openAiResponse.text();
-      console.error("OpenAI error:", errorText);
-      throw new Error("Failed to generate an AI response.");
+      console.error(
+        "OpenAI request failed:",
+        openAiResponse.status,
+        JSON.stringify(openAiData),
+      );
+
+      return jsonResponse(
+        {
+          error:
+            "The assistant could not generate a response. Please try again.",
+        },
+        502,
+        corsHeaders,
+      );
     }
-    
-    const openAiData = await openAiResponse.json();
-    
-    const reply =
-      openAiData?.choices?.[0]?.message?.content?.trim();
-    
+
+    const reply = extractOpenAIText(openAiData);
+
     if (!reply) {
       console.error(
         "OpenAI returned no output text:",
@@ -236,10 +425,32 @@ Deno.serve(async (req: Request) => {
         corsHeaders,
       );
     }
-    
+
+    /*
+     * Save the assistant's response.
+     */
+    await saveChatMessage(
+      supabase,
+      user.id,
+      reply,
+      "bot",
+      chatType,
+    );
+
     return jsonResponse(
       { reply },
       200,
+      corsHeaders,
+    );
+  } catch (error) {
+    console.error("ai-chat function error:", error);
+
+    return jsonResponse(
+      {
+        error:
+          "An unexpected server error occurred. Please try again.",
+      },
+      500,
       corsHeaders,
     );
   }
