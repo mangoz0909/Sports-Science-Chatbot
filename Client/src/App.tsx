@@ -25,7 +25,6 @@ import WorkoutPage from "./pages/WorkoutPage";
 import NutritionPage from "./pages/NutritionPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import MentalHealthPage from "./pages/MentalHealthPage";
 
 const App: React.FC = () => {
   return (
@@ -142,14 +141,7 @@ const App: React.FC = () => {
               <Route path="nutrition" element={<NutritionPage />} />
             </Route>
 
-            <Route
-              path="/mental-health"
-              element={
-                <DemoRoute>
-                  <MentalHealthPage />
-                </DemoRoute>
-              }
-            />
+            <Route path="/mental-health" element={<Navigate to="/sports" replace />} />
 
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<NotFoundPage />} />

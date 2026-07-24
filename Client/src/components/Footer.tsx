@@ -56,7 +56,6 @@ const Footer: React.FC = () => {
                 { label: "Home", to: "/" },
                 { label: "Sports AI", to: "/sports" },
                 { label: "Sports Match", to: "/sports-list" },
-                { label: "Mental Health", to: "/mental-health" },
                 { label: "Dashboard", to: "/dashboard" },
               ].map((link) => (
                 <Link
