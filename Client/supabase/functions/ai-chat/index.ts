@@ -1,35 +1,19 @@
-import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
-
-/*
- * Expected chat_messages table columns:
- *
- * id          uuid / bigint
- * user_id     uuid
- * message     text
- * sender      text: "user" or "bot"
- * chat_type   text
- * created_at  timestamptz
- */
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 type RequestBody = {
   message?: unknown;
   chatType?: unknown;
+  systemPrompt?: unknown;
 };
 
-type ChatSender = "user" | "bot";
-
-type OpenAIContentItem = {
-  type?: string;
-  text?: string;
-};
-
-type OpenAIOutputItem = {
-  type?: string;
-  content?: OpenAIContentItem[];
-};
+type ChatType = "sports" | "mental_health";
 
 type OpenAIResponseBody = {
-  output?: OpenAIOutputItem[];
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
   error?: {
     message?: string;
     type?: string;
@@ -38,17 +22,64 @@ type OpenAIResponseBody = {
 };
 
 const MAX_MESSAGE_LENGTH = 5000;
+const MAX_SYSTEM_PROMPT_LENGTH = 4000;
 
 const allowedOrigins = new Set([
   "https://sports-science-chatbot.onrender.com",
+  "https://sportlabai.com",
+  "https://www.sportlabai.com",
   "http://localhost:3000",
   "http://localhost:5173",
 ]);
 
-const allowedChatTypes = new Set([
+const allowedChatTypes = new Set<ChatType>([
   "sports",
   "mental_health",
 ]);
+
+const SPORTS_SYSTEM_PROMPT = `
+You are a supportive sports performance assistant.
+
+Give practical, safe, and personalized advice about:
+- sports training
+- workout planning
+- athletic performance
+- recovery
+- nutrition
+- confidence
+- motivation
+- stress
+
+Ask for the user's sport, experience level, goals, available equipment,
+and limitations when that information is needed.
+
+Do not diagnose medical conditions.
+Do not claim to replace a doctor, physical therapist, coach,
+dietitian, psychologist, or other qualified professional.
+
+If the user describes severe pain, chest pain, trouble breathing,
+loss of consciousness, a serious injury, or another possible emergency,
+tell them to stop exercising and seek immediate professional help.
+
+Keep answers clear, supportive, organized, and easy to understand.
+`.trim();
+
+const MENTAL_HEALTH_SYSTEM_PROMPT = `
+You are a supportive assistant that provides general emotional support.
+
+Listen carefully, respond calmly, and suggest practical and healthy
+coping strategies.
+
+Do not diagnose mental health conditions.
+Do not claim to replace a therapist, counselor, doctor,
+or emergency service.
+
+If the user appears to be in immediate danger or may harm themselves
+or another person, encourage them to contact local emergency services
+and a trusted adult immediately.
+
+Keep answers compassionate, practical, and easy to understand.
+`.trim();
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
@@ -82,12 +113,17 @@ function jsonResponse(
   });
 }
 
-Deno.serve(async (req: Request) => {
+function getDefaultSystemPrompt(chatType: ChatType): string {
+  if (chatType === "mental_health") {
+    return MENTAL_HEALTH_SYSTEM_PROMPT;
+  }
+
+  return SPORTS_SYSTEM_PROMPT;
+}
+
+Deno.serve(async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
 
-  /*
-   * The browser sends an OPTIONS request before the real POST request.
-   */
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
@@ -104,11 +140,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    /*
-     * Reject browser requests from origins that are not approved.
-     * Requests with no Origin header, such as server-to-server requests,
-     * continue to authentication.
-     */
     const origin = req.headers.get("origin") ?? "";
 
     if (origin && !allowedOrigins.has(origin)) {
@@ -119,9 +150,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    /*
-     * Read the signed-in user's access token.
-     */
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader?.startsWith("Bearer ")) {
@@ -132,16 +160,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    /*
-     * Read server-side environment variables.
-     */
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error(
-        "Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variable.",
+        "Missing SUPABASE_URL or SUPABASE_ANON_KEY.",
       );
 
       return jsonResponse(
@@ -152,7 +177,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!openAiApiKey) {
-      console.error("Missing OPENAI_API_KEY environment variable.");
+      console.error("Missing OPENAI_API_KEY.");
 
       return jsonResponse(
         { error: "OpenAI server configuration is missing." },
@@ -161,12 +186,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    /*
-     * Create a Supabase client using the user's token.
-     *
-     * Database operations made with this client follow the user's
-     * Row Level Security permissions.
-     */
     const supabase = createClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -184,9 +203,6 @@ Deno.serve(async (req: Request) => {
       },
     );
 
-    /*
-     * Verify the supplied access token and obtain the authenticated user.
-     */
     const {
       data: { user },
       error: userError,
@@ -202,9 +218,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    /*
-     * Parse and validate the request body.
-     */
     let body: RequestBody;
 
     try {
@@ -219,17 +232,9 @@ Deno.serve(async (req: Request) => {
 
     const message =
       typeof body.message === "string"
-        ? body.message.trim()
-        : "";
-
-    const chatType =
-      typeof body.chatType === "string" && body.chatType.trim()
-        ? body.chatType.trim()
-        : "sports";
-
-    const clientSystemPrompt =
-      typeof requestBody.systemPrompt === "string"
-        ? requestBody.systemPrompt.trim().slice(0, MAX_SYSTEM_PROMPT_LENGTH)
+        ? body.message
+          .trim()
+          .slice(0, MAX_MESSAGE_LENGTH)
         : "";
 
     if (!message) {
@@ -240,33 +245,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    /*
-     * Replace this placeholder with your OpenAI request.
-     *
-     * Example:
-     * const reply = await generateReply({
-     *   message,
-     *   chatType,
-     *   userId: user.id,
-     * });
-     */
+    const requestedChatType =
+      typeof body.chatType === "string"
+        ? body.chatType.trim()
+        : "sports";
 
-    const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
+    const chatType: ChatType =
+      allowedChatTypes.has(requestedChatType as ChatType)
+        ? requestedChatType as ChatType
+        : "sports";
 
-    if (!openAiApiKey) {
-      throw new Error("OPENAI_API_KEY is missing.");
-    }
+    const customSystemPrompt =
+      typeof body.systemPrompt === "string"
+        ? body.systemPrompt
+          .trim()
+          .slice(0, MAX_SYSTEM_PROMPT_LENGTH)
+        : "";
 
     const systemPrompt =
-      chatType === "sports"
-        ? `You are a supportive sports performance assistant.
-    Give practical, safe, and personalized advice about training, recovery,
-    confidence, motivation, and stress. Ask for the user's sport and goals when
-    needed. Do not diagnose medical conditions.`
-        : `You are a helpful assistant.`;
-    
+      customSystemPrompt || getDefaultSystemPrompt(chatType);
+
     const openAiResponse = await fetch(
-      "https://api.openai.com/v1/responses",
+      "https://api.openai.com/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -274,10 +274,19 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-5-mini",
-          instructions: systemPrompt,
-          input: message,
-          max_output_tokens: 600,
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: message,
+            },
+          ],
+          temperature: 0.6,
+          max_tokens: 600,
         }),
       },
     );
@@ -286,19 +295,28 @@ Deno.serve(async (req: Request) => {
       await openAiResponse.json() as OpenAIResponseBody;
 
     if (!openAiResponse.ok) {
-      const errorText = await openAiResponse.text();
-      console.error("OpenAI error:", errorText);
-      throw new Error("Failed to generate an AI response.");
+      console.error(
+        "OpenAI request failed:",
+        JSON.stringify(openAiData),
+      );
+
+      return jsonResponse(
+        {
+          error:
+            openAiData.error?.message ??
+            "Failed to generate an AI response.",
+        },
+        openAiResponse.status,
+        corsHeaders,
+      );
     }
-    
-    const openAiData = await openAiResponse.json();
-    
+
     const reply =
-      openAiData?.choices?.[0]?.message?.content?.trim();
-    
+      openAiData.choices?.[0]?.message?.content?.trim();
+
     if (!reply) {
       console.error(
-        "OpenAI returned no output text:",
+        "OpenAI returned an empty response:",
         JSON.stringify(openAiData),
       );
 
@@ -308,10 +326,23 @@ Deno.serve(async (req: Request) => {
         corsHeaders,
       );
     }
-    
+
     return jsonResponse(
       { reply },
       200,
+      corsHeaders,
+    );
+  } catch (error) {
+    console.error("ai-chat function error:", error);
+
+    return jsonResponse(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "An unexpected server error occurred.",
+      },
+      500,
       corsHeaders,
     );
   }
