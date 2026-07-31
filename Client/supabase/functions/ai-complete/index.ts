@@ -2,10 +2,11 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const allowedOrigins = new Set([
   "https://sports-science-chatbot.onrender.com",
+  "https://sportlabai.com",
+  "https://www.sportlabai.com",
   "http://localhost:3000",
   "http://localhost:5173",
 ]);
-
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
 
