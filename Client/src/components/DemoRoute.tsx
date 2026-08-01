@@ -9,24 +9,35 @@ function DemoBanner() {
     <Box
       sx={{
         position: "sticky",
-        top: 0,
-        zIndex: 1100,
+        // The AppBar is also sticky at top:0 with zIndex 1100. Sitting flush
+        // beneath it — and one layer below — stops the two overlapping mid-scroll.
+        top: "var(--app-header-h, 64px)",
+        zIndex: 1099,
         bgcolor: "#0f172a",
         color: "#fff",
         px: { xs: 2, md: 3 },
-        py: 1.25,
+        py: { xs: 1, md: 1.25 },
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: { xs: 1.5, md: 3 },
+        gap: { xs: 1, md: 3 },
         flexWrap: "wrap",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      <Stack direction="row" spacing={1} alignItems="center">
-        <LockOutlinedIcon sx={{ fontSize: 15, color: "#94a3b8" }} />
-        <Typography fontSize={13} fontWeight={700} color="#cbd5e1">
-          Demo mode — you're viewing placeholder data
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+        <LockOutlinedIcon sx={{ fontSize: 15, color: "#94a3b8", flexShrink: 0 }} />
+        <Typography
+          fontSize={{ xs: 12, md: 13 }}
+          fontWeight={700}
+          color="#cbd5e1"
+          sx={{ minWidth: 0 }}
+        >
+          Demo mode —{" "}
+          <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+            you're viewing{" "}
+          </Box>
+          placeholder data
         </Typography>
       </Stack>
       <Stack direction="row" spacing={1}>

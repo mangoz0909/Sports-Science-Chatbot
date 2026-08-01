@@ -34,10 +34,20 @@ const App: React.FC = () => {
 
       <GlobalStyles
         styles={{
+          ":root": {
+            // Sticky elements below the AppBar offset against this instead of
+            // hardcoding a magic number that drifts when the header changes.
+            "--app-header-h": "64px",
+          },
+          "@media (min-width:900px)": {
+            ":root": { "--app-header-h": "72px" },
+          },
           html: {
             minHeight: "100%",
             overflowX: "hidden",
             scrollBehavior: "smooth",
+            // Stop iOS inflating text in landscape without disabling zoom.
+            WebkitTextSizeAdjust: "100%",
           },
           body: {
             minHeight: "100%",
@@ -46,9 +56,15 @@ const App: React.FC = () => {
             overflowX: "hidden",
             backgroundColor: "#f8fafc",
             color: "#0f172a",
+            WebkitFontSmoothing: "antialiased",
           },
           "#root": {
             minHeight: "100vh",
+            // dvh tracks the shrinking viewport as mobile browser chrome hides;
+            // the vh line above stays as the fallback for older browsers.
+            "@supports (min-height: 100dvh)": {
+              minHeight: "100dvh",
+            },
             display: "flex",
             flexDirection: "column",
           },
@@ -60,6 +76,22 @@ const App: React.FC = () => {
           },
           a: {
             textDecoration: "none",
+          },
+          // Keyboard users get a visible ring; mouse users don't. Previously
+          // native buttons in the chat had no focus indicator at all.
+          ":focus-visible": {
+            outline: "2px solid #2563eb",
+            outlineOffset: "2px",
+            borderRadius: "6px",
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            html: { scrollBehavior: "auto" },
+            "*, *::before, *::after": {
+              animationDuration: "0.01ms !important",
+              animationIterationCount: "1 !important",
+              transitionDuration: "0.01ms !important",
+              scrollBehavior: "auto !important",
+            },
           },
         }}
       />

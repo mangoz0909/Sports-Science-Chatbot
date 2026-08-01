@@ -7,10 +7,10 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Container,
   MenuItem,
   Paper,
+  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -263,15 +263,15 @@ export default function OnboardingSurvey() {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          bgcolor: "#f8fafc",
-        }}
-      >
-        <CircularProgress />
+      <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }} aria-busy="true">
+        <Container maxWidth="md">
+          <Skeleton variant="rounded" height={230} sx={{ borderRadius: 5, mb: 3 }} />
+          <Stack spacing={3}>
+            {[0, 1, 2].map((card) => (
+              <Skeleton key={card} variant="rounded" height={250} sx={{ borderRadius: 4 }} />
+            ))}
+          </Stack>
+        </Container>
       </Box>
     );
   }

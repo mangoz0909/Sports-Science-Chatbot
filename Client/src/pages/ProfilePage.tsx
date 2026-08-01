@@ -18,6 +18,7 @@ import {
   LinearProgress,
   MenuItem,
   Paper,
+  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -289,8 +290,28 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <CircularProgress />
+      <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 4, md: 7 } }} aria-busy="true">
+        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
+          <Stack spacing={3} alignItems="center">
+            <Skeleton variant="text" width="min(560px, 90%)" height={68} />
+            <Skeleton variant="text" width="min(400px, 70%)" height={26} />
+            <Box
+              sx={{
+                width: "100%",
+                maxWidth: 1180,
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "360px 1fr" },
+                gap: 3,
+              }}
+            >
+              <Skeleton variant="rounded" height={470} sx={{ borderRadius: 5 }} />
+              <Stack spacing={3}>
+                <Skeleton variant="rounded" height={220} sx={{ borderRadius: 5 }} />
+                <Skeleton variant="rounded" height={340} sx={{ borderRadius: 5 }} />
+              </Stack>
+            </Box>
+          </Stack>
+        </Container>
       </Box>
     );
   }

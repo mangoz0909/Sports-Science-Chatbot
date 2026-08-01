@@ -176,7 +176,13 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
         description="Get a daily macro and meal plan tailored to your sport, training goals, and today's check-in data."
         path="/health/nutrition"
       />
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 3 }}
+      >
         <Box>
           <Typography variant="h5" fontWeight={950} color="#0f172a">
             Daily Nutrition Plan
@@ -190,7 +196,14 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
           startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
           disabled={loading || !isLoggedIn}
           onClick={generatePlan}
-          sx={{ borderRadius: 3, fontWeight: 700, textTransform: "none", borderColor: "#cbd5e1" }}
+          sx={{
+            flexShrink: 0,
+            alignSelf: { xs: "stretch", sm: "auto" },
+            borderRadius: 3,
+            fontWeight: 700,
+            textTransform: "none",
+            borderColor: "#cbd5e1",
+          }}
         >
           {loading ? "Generating…" : "Regenerate"}
         </Button>
@@ -257,8 +270,10 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
           </Grid>
 
           {/* Macro targets */}
+          {/* Two-up on phones: five full-width macro cards was a lot of
+              scrolling, and this now matches the skeleton so nothing shifts. */}
           {macros.map((macro, i) => (
-            <Grid item xs={12} sm={6} md={2.4} key={macro.label}>
+            <Grid item xs={6} sm={4} md={2.4} key={macro.label}>
               <Card
                 elevation={0}
                 sx={{

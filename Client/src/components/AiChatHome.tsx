@@ -227,6 +227,46 @@ export default function AiChatHome({
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const pageRef = useRef<HTMLElement | null>(null);
+
+  /*
+   * Publishes how much vertical space actually sits above the chat so the card
+   * can size itself to what's left. CSS alone can only subtract the header —
+   * but the demo banner and the status chip also push the card down, and the
+   * composer ended up below the fold on phones as a result.
+   */
+  const measureChrome = useCallback(() => {
+    const element = pageRef.current;
+    if (!element) return;
+
+    const offsetFromDocumentTop =
+      element.getBoundingClientRect().top + window.scrollY;
+
+    element.style.setProperty(
+      "--ai-chrome-offset",
+      `${Math.max(0, Math.round(offsetFromDocumentTop))}px`
+    );
+  }, []);
+
+  // Deliberately runs after every render: the banner and status chip above the
+  // chat appear once their own async work resolves, which moves the chat down
+  // without changing the size of any element a ResizeObserver is watching.
+  useEffect(() => {
+    measureChrome();
+  });
+
+  useEffect(() => {
+    const observer = new ResizeObserver(measureChrome);
+    observer.observe(document.body);
+    window.addEventListener("resize", measureChrome);
+    window.addEventListener("orientationchange", measureChrome);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measureChrome);
+      window.removeEventListener("orientationchange", measureChrome);
+    };
+  }, [measureChrome]);
 
   const isLoggedIn = Boolean(session);
   const overLimit = message.length > MAX_MESSAGE_LENGTH;
@@ -386,7 +426,7 @@ export default function AiChatHome({
   };
 
   return (
-    <main className="ai-page">
+    <main className="ai-page" ref={pageRef}>
       <section className="ai-shell">
         {/* ── Main Chat Card ── */}
         <section className="chat-card">
@@ -412,8 +452,17 @@ export default function AiChatHome({
 
           <div className="chat-box" ref={chatBoxRef}>
             {historyLoading && (
-              <div className="empty-state">
-                <p>Loading conversation history…</p>
+              <div className="history-skeleton" aria-live="polite" aria-busy="true">
+                <span className="sr-only">Loading conversation history</span>
+                {[0, 1, 2].map((row) => (
+                  <div
+                    key={row}
+                    className={`skeleton-row ${row % 2 === 1 ? "skeleton-user" : ""}`}
+                  >
+                    <div className="skeleton-avatar" />
+                    <div className="skeleton-bubble" />
+                  </div>
+                ))}
               </div>
             )}
 

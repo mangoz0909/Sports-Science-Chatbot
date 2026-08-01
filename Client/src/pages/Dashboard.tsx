@@ -6,10 +6,10 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Container,
   Grid,
   LinearProgress,
+  Skeleton,
   Snackbar,
   Stack,
   Typography,
@@ -159,6 +159,9 @@ const userProfile = isGuest ? {
 };
 
 const weeklyData = isGuest ? DEMO_WEEKLY : weeklyCheckIns.map((item) => ({
+  // Weekday labels repeat once check-ins span more than a week, which collided
+  // as React keys in the heatmap below. The date is unique; the label is not.
+  key: item.checkin_date,
   day: new Date(item.checkin_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" }),
   readiness: item.readiness_score ?? 0,
   recovery: item.recovery_score ?? 0,
@@ -168,9 +171,47 @@ const weeklyData = isGuest ? DEMO_WEEKLY : weeklyCheckIns.map((item) => ({
 }));
 
 if (loading) {
+  // Mirrors the real layout below (heading, 6 KPI cards, two chart panels) so
+  // the page doesn't reflow when data lands. The old centred spinner replaced
+  // the entire page and every element jumped into place afterwards.
   return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f8fafc" }}>
-      <CircularProgress />
+    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }} aria-busy="true" aria-live="polite">
+      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+        <Stack spacing={1.2} sx={{ mb: 3 }}>
+          <Skeleton variant="rounded" width={230} height={32} sx={{ borderRadius: 999 }} />
+          <Skeleton variant="text" width="min(460px, 80%)" height={56} />
+          <Skeleton variant="text" width="min(620px, 95%)" height={24} />
+        </Stack>
+
+        <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Grid item xs={12} sm={6} md={4} lg={2} key={index}>
+              <Skeleton variant="rounded" height={140} sx={{ borderRadius: 4 }} />
+            </Grid>
+          ))}
+        </Grid>
+
+        <Grid container spacing={2.5}>
+          <Grid item xs={12} lg={8}>
+            <Skeleton
+              variant="rounded"
+              sx={{ borderRadius: 4, height: { xs: 300, md: 460 } }}
+            />
+          </Grid>
+          <Grid item xs={12} lg={4}>
+            <Skeleton
+              variant="rounded"
+              sx={{ borderRadius: 4, height: { xs: 300, md: 460 } }}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Skeleton variant="rounded" height={350} sx={{ borderRadius: 4 }} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Skeleton variant="rounded" height={350} sx={{ borderRadius: 4 }} />
+          </Grid>
+        </Grid>
+      </Container>
     </Box>
   );
 }
@@ -421,27 +462,29 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   Readiness, recovery, fatigue, and training load over the week.
                 </Typography>
 
-                {weeklyData.length === 0 ? (
-                  <Box sx={{ height: "82%", display: "grid", placeItems: "center" }}>
-                    <Box textAlign="center">
-                      <Typography fontWeight={700} color="#94a3b8">No data yet</Typography>
-                      <Typography fontSize={13} color="#cbd5e1" sx={{ mt: 0.5 }}>Complete daily check-ins to see your weekly trends.</Typography>
+                <Box sx={{ height: { xs: 210, md: 340 } }}>
+                  {weeklyData.length === 0 ? (
+                    <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
+                      <Box textAlign="center">
+                        <Typography fontWeight={700} color="#94a3b8">No data yet</Typography>
+                        <Typography fontSize={13} color="#cbd5e1" sx={{ mt: 0.5 }}>Complete daily check-ins to see your weekly trends.</Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                ) : (
-                  <ResponsiveContainer width="100%" height="82%">
-                    <LineChart data={weeklyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="day" stroke="#64748b" />
-                      <YAxis stroke="#64748b" domain={[0, 110]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="readiness" stroke={colors.green} strokeWidth={3} dot={false} />
-                      <Line type="monotone" dataKey="recovery" stroke={colors.purple} strokeWidth={3} dot={false} />
-                      <Line type="monotone" dataKey="load" stroke={colors.blue} strokeWidth={3} dot={false} />
-                      <Line type="monotone" dataKey="fatigue" stroke={colors.amber} strokeWidth={3} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} />
+                        <YAxis stroke="#64748b" domain={[0, 110]} tick={{ fontSize: 12 }} width={44} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="readiness" stroke={colors.green} strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="recovery" stroke={colors.purple} strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="load" stroke={colors.blue} strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="fatigue" stroke={colors.amber} strokeWidth={3} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -495,8 +538,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Card elevation={0} sx={{ height: 350, borderRadius: 4, border: "1px solid #e2e8f0" }}>
-              <CardContent sx={{ height: "100%", p: 3 }}>
+            <Card elevation={0} sx={{ height: "100%", borderRadius: 4, border: "1px solid #e2e8f0" }}>
+              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" fontWeight={950}>
                   My Sleep Trend
                 </Typography>
@@ -504,35 +547,37 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   Sleep duration across the week.
                 </Typography>
 
-                {weeklyData.length === 0 ? (
-                  <Box sx={{ height: "78%", display: "grid", placeItems: "center" }}>
-                    <Typography fontWeight={700} color="#94a3b8">No sleep data yet</Typography>
-                  </Box>
-                ) : (
-                  <ResponsiveContainer width="100%" height="78%">
-                    <AreaChart data={weeklyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="day" stroke="#64748b" />
-                      <YAxis stroke="#64748b" domain={[4, 10]} />
-                      <Tooltip />
-                      <Area
-                        type="monotone"
-                        dataKey="sleep"
-                        stroke={colors.purple}
-                        strokeWidth={3}
-                        fill={colors.purple}
-                        fillOpacity={0.2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
+                <Box sx={{ height: { xs: 200, md: 230 } }}>
+                  {weeklyData.length === 0 ? (
+                    <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
+                      <Typography fontWeight={700} color="#94a3b8">No sleep data yet</Typography>
+                    </Box>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} />
+                        <YAxis stroke="#64748b" domain={[4, 10]} tick={{ fontSize: 12 }} width={44} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="sleep"
+                          stroke={colors.purple}
+                          strokeWidth={3}
+                          fill={colors.purple}
+                          fillOpacity={0.2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </Box>
               </CardContent>
             </Card>
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Card elevation={0} sx={{ height: 350, borderRadius: 4, border: "1px solid #e2e8f0" }}>
-              <CardContent sx={{ height: "100%", p: 3 }}>
+            <Card elevation={0} sx={{ height: "100%", borderRadius: 4, border: "1px solid #e2e8f0" }}>
+              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" fontWeight={950}>
                   My Training Load
                 </Typography>
@@ -540,21 +585,23 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   Daily training load for this week.
                 </Typography>
 
-                {weeklyData.length === 0 ? (
-                  <Box sx={{ height: "78%", display: "grid", placeItems: "center" }}>
-                    <Typography fontWeight={700} color="#94a3b8">No training data yet</Typography>
-                  </Box>
-                ) : (
-                  <ResponsiveContainer width="100%" height="78%">
-                    <BarChart data={weeklyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="day" stroke="#64748b" />
-                      <YAxis stroke="#64748b" />
-                      <Tooltip />
-                      <Bar dataKey="load" fill={colors.blue} radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+                <Box sx={{ height: { xs: 200, md: 230 } }}>
+                  {weeklyData.length === 0 ? (
+                    <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
+                      <Typography fontWeight={700} color="#94a3b8">No training data yet</Typography>
+                    </Box>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} />
+                        <YAxis stroke="#64748b" tick={{ fontSize: 12 }} width={44} />
+                        <Tooltip />
+                        <Bar dataKey="load" fill={colors.blue} radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -646,7 +693,14 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                 ) : (
                   <Grid container spacing={1}>
                     {weeklyData.map((item) => (
-                      <Grid item xs={6} sm={4} md={3} lg={2} key={item.day}>
+                      <Grid
+                        item
+                        xs={6}
+                        sm={4}
+                        md={3}
+                        lg={2}
+                        key={"key" in item ? item.key : item.day}
+                      >
                         <Box
                           sx={{
                             height: 72,
