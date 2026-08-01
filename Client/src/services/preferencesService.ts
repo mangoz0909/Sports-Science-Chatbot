@@ -66,25 +66,32 @@ export async function getUserPreferences() {
   return data;
 }
 
-export async function saveUserPreferences(preferences: UserPreferences) {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-  
-    if (userError) throw userError;
-    if (!user) throw new Error("You must be logged in.");
-  
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({
+export async function saveUserPreferences(preferences: Partial<UserPreferences>) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) throw new Error("You must be logged in.");
+
+  // Upsert rather than update: a user who signed up with email confirmation
+  // never got a profiles row created, so `.update()` matched zero rows and
+  // `.single()` failed the whole survey with an opaque PGRST116.
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
         ...preferences,
-      })
-      .eq("id", user.id)
-      .select()
-      .single();
-  
-    if (error) throw error;
-  
-    return data;
-  }
+        id: user.id,
+        email: user.email,
+      },
+      { onConflict: "id" }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}

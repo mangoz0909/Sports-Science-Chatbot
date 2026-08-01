@@ -16,6 +16,7 @@ import {
   DialogContentText,
   DialogTitle,
   LinearProgress,
+  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -33,6 +34,12 @@ import {
   UserPreferences,
 } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
+import {
+  EXPERIENCE_LEVELS,
+  NUMERIC_RANGES,
+  isKnownOption,
+  toFormString,
+} from "../data/profileOptions";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -107,16 +114,20 @@ export default function ProfilePage() {
         setCheckIn(latestCheckIn);
 
         if (prefs) {
+          const stored = prefs as Record<string, unknown>;
+
+          // Normalised for the same reason as the survey: a numeric column
+          // comes back as a number and would break `.trim()` on save.
           setForm({
-            primary_sport: prefs.primary_sport || "",
-            experience_level: prefs.experience_level || "",
-            main_goal: prefs.main_goal || "",
-            training_days: prefs.training_days || "",
-            competition_level: prefs.competition_level || "",
-            injury_areas: prefs.injury_areas || "",
-            priorities: prefs.priorities || "",
-            sleep_range: prefs.sleep_range || "",
-            athlete_type: prefs.athlete_type || "",
+            primary_sport: toFormString(stored.primary_sport),
+            experience_level: toFormString(stored.experience_level),
+            main_goal: toFormString(stored.main_goal),
+            training_days: toFormString(stored.training_days),
+            competition_level: toFormString(stored.competition_level),
+            injury_areas: toFormString(stored.injury_areas),
+            priorities: toFormString(stored.priorities),
+            sleep_range: toFormString(stored.sleep_range),
+            athlete_type: toFormString(stored.athlete_type),
           });
         }
       } catch (err: any) {
@@ -150,6 +161,20 @@ export default function ProfilePage() {
     setSuccess(null);
 
     try {
+      // Keep this column within the range the survey enforces, so a value saved
+      // here can never block a later retake.
+      const trainingDays = form.training_days.trim();
+
+      if (trainingDays) {
+        const parsed = Number(trainingDays);
+        const { min, max } = NUMERIC_RANGES.training_days;
+
+        if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+          setError(`Training days per week must be a number between ${min} and ${max}.`);
+          return;
+        }
+      }
+
       await supabase.auth.updateUser({
         data: {
           full_name: name.trim(),
@@ -523,7 +548,9 @@ export default function ProfilePage() {
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => navigate("/onboarding")}
+                      onClick={() =>
+                        navigate("/onboarding", { state: { returnTo: "/profile" } })
+                      }
                       sx={{
                         borderRadius: 3,
                         fontWeight: 900,
@@ -541,20 +568,42 @@ export default function ProfilePage() {
                   </Typography>
 
                   <Box sx={inputGridSx}>
+                    {/* Select, not free text: the survey reads this column into
+                        a dropdown, and any value outside the list rendered blank
+                        there. An unrecognised legacy value is offered once so it
+                        stays visible until the athlete picks a real option. */}
                     <TextField
                       fullWidth
+                      select
                       label="Experience Level"
-                      placeholder="Example: Beginner, intermediate, advanced"
                       value={form.experience_level}
                       onChange={(e) => updateField("experience_level", e.target.value)}
-                    />
+                    >
+                      {form.experience_level &&
+                        !isKnownOption(form.experience_level, EXPERIENCE_LEVELS) && (
+                          <MenuItem value={form.experience_level}>
+                            {form.experience_level} (unrecognised — please reselect)
+                          </MenuItem>
+                        )}
+                      {EXPERIENCE_LEVELS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
 
                     <TextField
                       fullWidth
+                      type="number"
                       label="Training Days Per Week"
                       placeholder="Example: 5"
                       value={form.training_days}
                       onChange={(e) => updateField("training_days", e.target.value)}
+                      inputProps={{
+                        min: NUMERIC_RANGES.training_days.min,
+                        max: NUMERIC_RANGES.training_days.max,
+                      }}
+                      helperText={`Whole days per week (${NUMERIC_RANGES.training_days.min}–${NUMERIC_RANGES.training_days.max})`}
                     />
 
                     <TextField

@@ -4,61 +4,23 @@ import { Link as RouterLink } from "react-router-dom";
 import AiChatHome from "../components/AiChatHome";
 import Seo from "../components/Seo";
 import { getUserPreferences } from "../services/preferencesService";
-import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
+import { getLatestCheckIn } from "../services/checkinService";
 
 export default function UnifiedAIHome() {
-  const [profileContext, setProfileContext] = React.useState("");
   const [dataStatus, setDataStatus] = React.useState<"loading" | "full" | "profile-only" | "none">("loading");
 
+  // The assistant now reads the profile and check-in history itself, through
+  // the get_profile / get_checkins tools in the ai-chat function. These queries
+  // only drive the status chip below — pasting a snapshot into the prompt meant
+  // the model saw data frozen at page load, with no dates on the trend numbers.
   React.useEffect(() => {
-    async function loadProfile() {
+    async function loadDataStatus() {
       try {
-        const [prefs, latest, last7] = await Promise.all([
+        const [prefs, latest] = await Promise.all([
           getUserPreferences(),
           getLatestCheckIn(),
-          getLast7CheckIns(),
         ]);
 
-        const athleteSection = prefs ? `
-ATHLETE PROFILE
-Primary Sport: ${prefs.primary_sport || "Not provided"}
-Experience Level: ${prefs.experience_level || "Not provided"}
-Main Goal: ${prefs.main_goal || "Not provided"}
-Training Days Per Week: ${prefs.training_days || "Not provided"}
-Competition Level: ${prefs.competition_level || "Not provided"}
-Injuries / Concerns: ${prefs.injury_areas || "Not provided"}
-Training Priorities: ${prefs.priorities || "Not provided"}
-Average Sleep: ${prefs.sleep_range || "Not provided"}
-Athlete Type: ${prefs.athlete_type || "Not provided"}
-` : "";
-
-        const readiness = latest?.readiness_score ?? null;
-        const readinessZone = readiness === null ? null
-          : readiness >= 75 ? "HIGH — athlete is in a strong readiness zone. Encourage full training and performance work."
-          : readiness >= 45 ? "MEDIUM — athlete has moderate readiness. Recommend moderate-intensity training with recovery focus."
-          : "LOW — athlete is in a low readiness zone. Strongly recommend light/recovery session only. Proactively address sleep, hydration, and fatigue.";
-
-        const checkInSection = latest ? `
-TODAY'S CHECK-IN DATA
-Readiness: ${latest.readiness_score ?? "N/A"}%
-Recovery: ${latest.recovery_score ?? "N/A"}%
-Fatigue: ${latest.fatigue != null ? latest.fatigue * 10 : "N/A"}%
-Sleep Last Night: ${latest.sleep_hours ?? "N/A"}h (Quality: ${latest.sleep_quality ?? "N/A"}/10)
-Hydration: ${latest.hydration ?? "N/A"}L
-Injury Risk: ${latest.injury_risk ?? "N/A"}%
-Training Intensity: ${latest.training_intensity ?? "N/A"}/10
-${readinessZone ? `\nCURRENT READINESS STATE: ${readinessZone}` : ""}
-` : "";
-
-        const trendSection = last7.length > 0 ? `
-7-DAY READINESS TREND (oldest → newest)
-Readiness: ${last7.map((d: any) => d.readiness_score ?? 0).join(", ")}
-Recovery: ${last7.map((d: any) => d.recovery_score ?? 0).join(", ")}
-Sleep (hrs): ${last7.map((d: any) => d.sleep_hours ?? 0).join(", ")}
-Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(", ")}
-` : "";
-
-        setProfileContext([athleteSection, checkInSection, trendSection].filter(Boolean).join("\n"));
         setDataStatus(prefs && latest ? "full" : prefs ? "profile-only" : "none");
       } catch (err) {
         console.error("Failed to load athlete profile:", err);
@@ -66,7 +28,7 @@ Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(
       }
     }
 
-    loadProfile();
+    loadDataStatus();
   }, []);
 
   const statusChip = dataStatus === "loading" ? null : dataStatus === "full" ? (
@@ -114,55 +76,35 @@ Fatigue: ${last7.map((d: any) => (d.fatigue != null ? d.fatigue * 10 : 0)).join(
       inputPlaceholder="Ask SportLab AI anything…"
       toolsTitle="Quick Actions"
       systemPrompt={`
-You are SportLab AI and MangoMind AI combined.
+You are SportLab AI, a sports performance and student-athlete wellbeing assistant.
 
-${profileContext}
-
-IMPORTANT:
-Use the athlete profile above to personalize every recommendation.
-
-Examples:
-- If the user plays tennis, relate advice to tennis.
-- If the user trains 5 days/week, account for training load.
-- If the user reports injuries, modify recommendations accordingly.
-- If the user has a stated goal, align all advice with that goal.
-- If profile information conflicts with the user's current message, trust the user's current message.
-
-You help with:
-- Sports performance
-- Training plans
-- Recovery
-- Nutrition
-- Injury prevention
-- Mental wellbeing
-- Stress management
-- Confidence building
-- Focus and performance psychology
-
-Sports guidance:
-- Use evidence-based sports science.
-- Explain reasoning clearly.
-- Adapt advice to the athlete profile.
-
-Mental wellbeing guidance:
-- Provide supportive emotional guidance.
-- Offer practical coping strategies.
-- Help with performance anxiety, confidence, stress, and motivation.
-
-Safety:
+SAFETY — THESE RULES COME FIRST:
 - Do NOT diagnose medical conditions.
 - Do NOT diagnose mental health disorders.
+- Do NOT replace a doctor, physiotherapist, coach, dietitian, or counselor.
+- If the user mentions self-harm, suicide, immediate danger, abuse, or any
+  emergency, tell them to contact emergency services, a trusted adult, parent,
+  coach, counselor, or crisis hotline immediately.
+- If the user describes severe pain, chest pain, trouble breathing, or a serious
+  injury, tell them to stop training and seek professional help.
 
-If the user mentions:
-- self-harm
-- suicide
-- immediate danger
-- abuse
-- emergency situations
+USING THE ATHLETE'S DATA:
+- Call get_profile for their sport, experience, goals, injuries, and dietary needs.
+- Call get_checkins for readiness, recovery, sleep, fatigue, and training load
+  over any date range — use it before commenting on trends or recent form.
+- Personalize every recommendation to what those tools return.
+- If the tools return no data, say so and suggest completing the onboarding
+  survey or logging a daily check-in.
+- If their current message conflicts with their saved data, trust the message.
 
-Tell them to contact emergency services, a trusted adult, parent, coach, counselor, or crisis hotline immediately.
+YOU HELP WITH:
+Sports performance, training plans, recovery, nutrition, injury prevention,
+mental wellbeing, stress management, confidence, and performance psychology.
 
-Always be supportive, practical, personalized, and student-friendly.
+HOW TO ANSWER:
+- Use evidence-based sports science and explain your reasoning.
+- Offer practical coping strategies for stress, anxiety, and motivation.
+- Always be supportive, practical, personalized, and student-friendly.
 `}
       quickActions={[
         {

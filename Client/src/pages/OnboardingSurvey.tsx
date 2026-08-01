@@ -15,12 +15,20 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   getUserPreferences,
   saveUserPreferences,
   UserPreferences,
 } from "../services/preferencesService";
+import {
+  ACTIVITY_LEVELS,
+  COOKING_ACCESS_OPTIONS,
+  DIETARY_PREFERENCES,
+  EXPERIENCE_LEVELS,
+  NUMERIC_RANGES,
+  toFormString,
+} from "../data/profileOptions";
 
 type ExtendedUserPreferences = UserPreferences & {
   age: string;
@@ -61,6 +69,12 @@ const initialForm: ExtendedUserPreferences = {
 
 export default function OnboardingSurvey() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // "Retake Survey" sends the user here from /profile; send them back there on
+  // finish rather than dumping them on the dashboard they didn't come from.
+  const returnTo =
+    (location.state as { returnTo?: string } | null)?.returnTo ?? "/dashboard";
 
   const [form, setForm] = React.useState<ExtendedUserPreferences>(initialForm);
   const [loading, setLoading] = React.useState(true);
@@ -72,31 +86,32 @@ export default function OnboardingSurvey() {
       .then((prefs) => {
         if (!prefs) return;
 
-        const extendedPrefs = prefs as Partial<ExtendedUserPreferences>;
+        const stored = prefs as Record<string, unknown>;
 
+        // Every value is normalised to a string. The survey submits text, but
+        // if a column is numeric Postgres coerces on write and returns a number
+        // on read — which used to reach `.trim()` on a retake and throw.
         setForm({
-          ...initialForm,
-          ...extendedPrefs,
-          primary_sport: extendedPrefs.primary_sport || "",
-          experience_level: extendedPrefs.experience_level || "",
-          main_goal: extendedPrefs.main_goal || "",
-          training_days: extendedPrefs.training_days || "",
-          competition_level: extendedPrefs.competition_level || "",
-          injury_areas: extendedPrefs.injury_areas || "",
-          priorities: extendedPrefs.priorities || "",
-          sleep_range: extendedPrefs.sleep_range || "",
-          athlete_type: extendedPrefs.athlete_type || "",
-          age: extendedPrefs.age || "",
-          height_cm: extendedPrefs.height_cm || "",
-          weight_kg: extendedPrefs.weight_kg || "",
-          activity_level: extendedPrefs.activity_level || "",
-          workout_duration: extendedPrefs.workout_duration || "",
-          equipment_access: extendedPrefs.equipment_access || "",
-          dietary_preference: extendedPrefs.dietary_preference || "",
-          food_allergies: extendedPrefs.food_allergies || "",
-          foods_avoid: extendedPrefs.foods_avoid || "",
-          meals_per_day: extendedPrefs.meals_per_day || "",
-          cooking_access: extendedPrefs.cooking_access || "",
+          primary_sport: toFormString(stored.primary_sport),
+          experience_level: toFormString(stored.experience_level),
+          main_goal: toFormString(stored.main_goal),
+          training_days: toFormString(stored.training_days),
+          competition_level: toFormString(stored.competition_level),
+          injury_areas: toFormString(stored.injury_areas),
+          priorities: toFormString(stored.priorities),
+          sleep_range: toFormString(stored.sleep_range),
+          athlete_type: toFormString(stored.athlete_type),
+          age: toFormString(stored.age),
+          height_cm: toFormString(stored.height_cm),
+          weight_kg: toFormString(stored.weight_kg),
+          activity_level: toFormString(stored.activity_level),
+          workout_duration: toFormString(stored.workout_duration),
+          equipment_access: toFormString(stored.equipment_access),
+          dietary_preference: toFormString(stored.dietary_preference),
+          food_allergies: toFormString(stored.food_allergies),
+          foods_avoid: toFormString(stored.foods_avoid),
+          meals_per_day: toFormString(stored.meals_per_day),
+          cooking_access: toFormString(stored.cooking_access),
         });
       })
       .catch(() => {
@@ -116,15 +131,18 @@ export default function OnboardingSurvey() {
   }
 
   function validateNumber(
-    value: string,
+    value: unknown,
     label: string,
     minimum: number,
     maximum: number
   ) {
-    const parsed = Number(value);
+    const text = toFormString(value).trim();
+    const parsed = Number(text);
 
-    if (!value.trim()) return `Please enter your ${label}.`;
-    if (!Number.isFinite(parsed)) return `${label} must be a number.`;
+    if (!text) return `Please enter your ${label}.`;
+    if (!Number.isFinite(parsed)) {
+      return `${label} must be a number — enter digits only (for example 5, not "5-6").`;
+    }
     if (parsed < minimum || parsed > maximum) {
       return `Please enter a realistic ${label} between ${minimum} and ${maximum}.`;
     }
@@ -137,7 +155,12 @@ export default function OnboardingSurvey() {
     if (!form.experience_level.trim()) return "Please enter your experience level.";
     if (!form.main_goal.trim()) return "Please enter your main goal.";
 
-    const trainingDaysError = validateNumber(form.training_days, "training days", 0, 7);
+    const trainingDaysError = validateNumber(
+      form.training_days,
+      "training days",
+      NUMERIC_RANGES.training_days.min,
+      NUMERIC_RANGES.training_days.max
+    );
     if (trainingDaysError) return trainingDaysError;
 
     if (!form.competition_level.trim()) return "Please enter your competition level.";
@@ -146,13 +169,28 @@ export default function OnboardingSurvey() {
     if (!form.sleep_range.trim()) return "Please enter your average sleep.";
     if (!form.athlete_type.trim()) return "Please enter your athlete type.";
 
-    const ageError = validateNumber(form.age, "age", 10, 100);
+    const ageError = validateNumber(
+      form.age,
+      "age",
+      NUMERIC_RANGES.age.min,
+      NUMERIC_RANGES.age.max
+    );
     if (ageError) return ageError;
 
-    const heightError = validateNumber(form.height_cm, "height in centimeters", 100, 250);
+    const heightError = validateNumber(
+      form.height_cm,
+      "height in centimeters",
+      NUMERIC_RANGES.height_cm.min,
+      NUMERIC_RANGES.height_cm.max
+    );
     if (heightError) return heightError;
 
-    const weightError = validateNumber(form.weight_kg, "weight in kilograms", 30, 300);
+    const weightError = validateNumber(
+      form.weight_kg,
+      "weight in kilograms",
+      NUMERIC_RANGES.weight_kg.min,
+      NUMERIC_RANGES.weight_kg.max
+    );
     if (weightError) return weightError;
 
     if (!form.activity_level.trim()) return "Please choose your activity level.";
@@ -162,7 +200,12 @@ export default function OnboardingSurvey() {
     if (!form.food_allergies.trim()) return "Please enter food allergies or type None.";
     if (!form.foods_avoid.trim()) return "Please enter foods you avoid or type None.";
 
-    const mealsPerDayError = validateNumber(form.meals_per_day, "meals per day", 1, 10);
+    const mealsPerDayError = validateNumber(
+      form.meals_per_day,
+      "meals per day",
+      NUMERIC_RANGES.meals_per_day.min,
+      NUMERIC_RANGES.meals_per_day.max
+    );
     if (mealsPerDayError) return mealsPerDayError;
 
     if (!form.cooking_access.trim()) return "Please describe your access to food preparation.";
@@ -173,16 +216,17 @@ export default function OnboardingSurvey() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
     setSubmitting(true);
 
+    // validate() used to run outside this try. Anything it threw escaped as an
+    // unhandled rejection, so the Save button just appeared dead.
     try {
+      const validationError = validate();
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+
       const preferencesToSave: ExtendedUserPreferences = {
         primary_sport: form.primary_sport.trim(),
         experience_level: form.experience_level.trim(),
@@ -207,7 +251,7 @@ export default function OnboardingSurvey() {
       };
 
       await saveUserPreferences(preferencesToSave);
-      navigate("/dashboard");
+      navigate(returnTo);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to save preferences.";
@@ -344,13 +388,11 @@ export default function OnboardingSurvey() {
                         updateField("activity_level", event.target.value)
                       }
                     >
-                      <MenuItem value="Mostly sedentary">Mostly sedentary</MenuItem>
-                      <MenuItem value="Lightly active">Lightly active</MenuItem>
-                      <MenuItem value="Moderately active">Moderately active</MenuItem>
-                      <MenuItem value="Very active">Very active</MenuItem>
-                      <MenuItem value="Highly active or training twice daily">
-                        Highly active or training twice daily
-                      </MenuItem>
+                      {ACTIVITY_LEVELS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   </Stack>
                 </CardContent>
@@ -382,10 +424,11 @@ export default function OnboardingSurvey() {
                         updateField("experience_level", event.target.value)
                       }
                     >
-                      <MenuItem value="Beginner">Beginner</MenuItem>
-                      <MenuItem value="Intermediate">Intermediate</MenuItem>
-                      <MenuItem value="Advanced">Advanced</MenuItem>
-                      <MenuItem value="Elite">Elite</MenuItem>
+                      {EXPERIENCE_LEVELS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
                     </TextField>
 
                     <TextField
@@ -532,15 +575,11 @@ export default function OnboardingSurvey() {
                         updateField("dietary_preference", event.target.value)
                       }
                     >
-                      <MenuItem value="No specific preference">
-                        No specific preference
-                      </MenuItem>
-                      <MenuItem value="Vegetarian">Vegetarian</MenuItem>
-                      <MenuItem value="Vegan">Vegan</MenuItem>
-                      <MenuItem value="Pescatarian">Pescatarian</MenuItem>
-                      <MenuItem value="Halal">Halal</MenuItem>
-                      <MenuItem value="Kosher">Kosher</MenuItem>
-                      <MenuItem value="Other">Other</MenuItem>
+                      {DIETARY_PREFERENCES.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
                     </TextField>
 
                     <TextField
@@ -588,18 +627,11 @@ export default function OnboardingSurvey() {
                         updateField("cooking_access", event.target.value)
                       }
                     >
-                      <MenuItem value="School dining hall only">
-                        School dining hall only
-                      </MenuItem>
-                      <MenuItem value="Dining hall and microwave">
-                        Dining hall and microwave
-                      </MenuItem>
-                      <MenuItem value="Limited kitchen access">
-                        Limited kitchen access
-                      </MenuItem>
-                      <MenuItem value="Full kitchen access">
-                        Full kitchen access
-                      </MenuItem>
+                      {COOKING_ACCESS_OPTIONS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   </Stack>
                 </CardContent>
@@ -635,7 +667,7 @@ export default function OnboardingSurvey() {
                 <Button
                   type="button"
                   variant="outlined"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate(returnTo)}
                   sx={{
                     borderRadius: 3,
                     fontWeight: 900,
