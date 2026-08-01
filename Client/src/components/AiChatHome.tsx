@@ -359,6 +359,19 @@ export default function AiChatHome({
 
       if (fnError) throw fnError;
 
+      // Every tool-capable build of ai-chat reports which tools it ran, even
+      // when that list is empty. Its absence means an older function is still
+      // deployed, which the user only sees as the assistant claiming it has no
+      // access to their data — worth saying out loud rather than leaving to guesswork.
+      if (data && !Array.isArray(data.toolsUsed)) {
+        console.warn(
+          "[SportLab] The deployed ai-chat function is out of date: it did not " +
+            "report tool usage, so the assistant cannot read your profile or " +
+            "check-ins and will say it has no access to your data. " +
+            "Redeploy it with: supabase functions deploy ai-chat"
+        );
+      }
+
       const reply = data?.reply;
       if (typeof reply !== "string" || !reply.trim()) {
         throw new Error("The AI returned an empty response.");
