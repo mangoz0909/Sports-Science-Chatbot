@@ -1,19 +1,31 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const allowedOrigins = new Set([
+// Origins that may call this function. Set ALLOWED_ORIGINS in the function's
+// environment (comma-separated) when the app moves to a new domain — the
+// defaults below are only a fallback so an unset variable can't break prod.
+const DEFAULT_ALLOWED_ORIGINS = [
   "https://sports-science-chatbot.onrender.com",
   "https://sportlabai.com",
   "https://www.sportlabai.com",
   "http://localhost:3000",
   "http://localhost:5173",
+];
+
+const allowedOrigins = new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...(Deno.env.get("ALLOWED_ORIGINS") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 ]);
+
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
 
   return {
     "Access-Control-Allow-Origin": allowedOrigins.has(origin)
       ? origin
-      : "https://sports-science-chatbot.onrender.com",
+      : DEFAULT_ALLOWED_ORIGINS[0],
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",

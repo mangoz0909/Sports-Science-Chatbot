@@ -2,8 +2,14 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 type RequestBody = {
   message?: unknown;
+  history?: unknown;
   chatType?: unknown;
   systemPrompt?: unknown;
+};
+
+type HistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
 };
 
 type ChatType = "sports" | "mental_health";
@@ -24,13 +30,61 @@ type OpenAIResponseBody = {
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_SYSTEM_PROMPT_LENGTH = 4000;
 
-const allowedOrigins = new Set([
+// Preceding turns sent back so the assistant can follow the conversation.
+// Capped on both count and total size to bound token spend per request.
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_HISTORY_CHARS = 12000;
+
+// Origins that may call this function. Set ALLOWED_ORIGINS in the function's
+// environment (comma-separated) when the app moves to a new domain — the
+// defaults below are only a fallback so an unset variable can't break prod.
+const DEFAULT_ALLOWED_ORIGINS = [
   "https://sports-science-chatbot.onrender.com",
   "https://sportlabai.com",
   "https://www.sportlabai.com",
   "http://localhost:3000",
   "http://localhost:5173",
+];
+
+const allowedOrigins = new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...(Deno.env.get("ALLOWED_ORIGINS") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 ]);
+
+function normalizeHistory(value: unknown): HistoryMessage[] {
+  if (!Array.isArray(value)) return [];
+
+  const cleaned: HistoryMessage[] = [];
+
+  for (const item of value) {
+    if (typeof item !== "object" || item === null) continue;
+
+    const record = item as Record<string, unknown>;
+    const role = record.role;
+    const content = record.content;
+
+    if (role !== "user" && role !== "assistant") continue;
+    if (typeof content !== "string" || !content.trim()) continue;
+
+    cleaned.push({ role, content: content.trim() });
+  }
+
+  // Keep the most recent turns, then trim from the front until the whole
+  // window fits the character budget.
+  const recent = cleaned.slice(-MAX_HISTORY_MESSAGES);
+
+  let total = recent.reduce((sum, item) => sum + item.content.length, 0);
+
+  while (recent.length > 0 && total > MAX_HISTORY_CHARS) {
+    total -= recent[0].content.length;
+    recent.shift();
+  }
+
+  return recent;
+}
 
 const allowedChatTypes = new Set<ChatType>([
   "sports",
@@ -245,6 +299,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    const history = normalizeHistory(body.history);
+
     const requestedChatType =
       typeof body.chatType === "string"
         ? body.chatType.trim()
@@ -280,13 +336,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
               role: "system",
               content: systemPrompt,
             },
+            ...history,
             {
               role: "user",
               content: message,
             },
           ],
           temperature: 0.6,
-          max_tokens: 600,
+          max_tokens: 1200,
         }),
       },
     );

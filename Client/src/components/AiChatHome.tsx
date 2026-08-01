@@ -60,6 +60,10 @@ declare global {
 
 const MAX_MESSAGE_LENGTH = 2000;
 
+// Preceding messages sent with each request so the assistant can follow the
+// thread. The edge function enforces its own (lower or equal) ceiling.
+const HISTORY_MESSAGE_LIMIT = 20;
+
 /** Full markdown-to-JSX renderer with bold, inline code, fenced code blocks, lists, headings, hr */
 function formatBotMessage(content: string): ReactNode {
   const lines = content.split("\n");
@@ -285,27 +289,32 @@ export default function AiChatHome({
     recognitionRef.current.start();
   };
 
-  const submitMessage = useCallback(async (text: string) => {
-    const userMessage = text.trim();
-    if (!userMessage || isLoading || userMessage.length > MAX_MESSAGE_LENGTH) return;
+  /**
+   * Asks the AI to reply to `conversation`, whose last entry must be the user
+   * message being answered. Kept separate from `submitMessage` so a retry can
+   * re-run the request against the existing conversation instead of appending
+   * the user's message a second time.
+   */
+  const requestReply = useCallback(async (conversation: ChatMessage[]) => {
+    const pending = conversation[conversation.length - 1];
+    if (!pending || pending.role !== "user") return;
 
-    if (!isLoggedIn) {
-      setError("Sign in to start chatting with the AI.");
-      return;
-    }
+    const userMessage = pending.content;
 
-    const now = new Date();
-    setMessages((prev) => [...prev, { role: "user", content: userMessage, timestamp: now }]);
-    setMessage("");
     setIsLoading(true);
     setError("");
     setLastFailedMessage(null);
 
-    if (chatType) saveChatMessage(userMessage, "user", chatType).catch(() => {});
-
     try {
+      const history = conversation
+        .slice(-(HISTORY_MESSAGE_LIMIT + 1), -1)
+        .map((item) => ({
+          role: item.role === "bot" ? "assistant" : "user",
+          content: item.content,
+        }));
+
       const { data, error: fnError } = await supabase.functions.invoke("ai-chat", {
-        body: { message: userMessage, chatType: chatType || "sports", systemPrompt },
+        body: { message: userMessage, history, chatType: chatType || "sports", systemPrompt },
       });
 
       if (fnError) throw fnError;
@@ -316,7 +325,14 @@ export default function AiChatHome({
       }
 
       setMessages((prev) => [...prev, { role: "bot", content: reply.trim(), timestamp: new Date() }]);
-      if (chatType) saveChatMessage(reply.trim(), "bot", chatType).catch(() => {});
+
+      // Persist the exchange only once it succeeded, and in order — a failed
+      // turn used to leave an orphan user message with no reply in the history.
+      if (chatType) {
+        saveChatMessage(userMessage, "user", chatType)
+          .then(() => saveChatMessage(reply.trim(), "bot", chatType))
+          .catch(() => {});
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI request failed. Try again.";
       setError(msg);
@@ -324,7 +340,33 @@ export default function AiChatHome({
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, isLoggedIn, chatType, systemPrompt]);
+  }, [chatType, systemPrompt]);
+
+  const submitMessage = useCallback((text: string) => {
+    const userMessage = text.trim();
+    if (!userMessage || isLoading || userMessage.length > MAX_MESSAGE_LENGTH) return;
+
+    if (!isLoggedIn) {
+      setError("Sign in to start chatting with the AI.");
+      return;
+    }
+
+    const next: ChatMessage[] = [
+      ...messages,
+      { role: "user", content: userMessage, timestamp: new Date() },
+    ];
+
+    setMessages(next);
+    setMessage("");
+    void requestReply(next);
+  }, [messages, isLoading, isLoggedIn, requestReply]);
+
+  const retryLastMessage = useCallback(() => {
+    if (isLoading) return;
+    // `messages` still ends with the user message that failed, so replaying the
+    // conversation as-is retries it without duplicating anything.
+    void requestReply(messages);
+  }, [messages, isLoading, requestReply]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -433,10 +475,8 @@ export default function AiChatHome({
                 <button
                   type="button"
                   className="retry-btn"
-                  onClick={() => {
-                    setError("");
-                    submitMessage(lastFailedMessage);
-                  }}
+                  onClick={retryLastMessage}
+                  disabled={isLoading}
                 >
                   ↻ Retry
                 </button>
