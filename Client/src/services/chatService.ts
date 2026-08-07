@@ -2,22 +2,64 @@ import { supabase } from "../lib/supabaseClient";
 
 export type ChatType = "sports";
 
-export async function saveChatMessage(content: string, role: "user" | "bot", chatType: ChatType) {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+export type ChatRole = "user" | "bot";
+
+type StoredChatRole = "user" | "assistant";
+
+type StoredChatMessage = {
+  id: string;
+  user_id: string;
+  chat_type: ChatType;
+  role: StoredChatRole | "bot";
+  content: string;
+  created_at: string;
+};
+
+/**
+ * Save a chat message.
+ *
+ * The frontend uses "bot", while the database stores the standard
+ * OpenAI-style role "assistant".
+ */
+export async function saveChatMessage(
+  content: string,
+  role: ChatRole,
+  chatType: ChatType,
+) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
   if (userError) throw userError;
-  if (!user) return;
+  if (!user) throw new Error("User not logged in.");
+
+  const databaseRole: StoredChatRole =
+    role === "bot" ? "assistant" : "user";
 
   const { error } = await supabase
     .from("chat_messages")
-    .insert({ user_id: user.id, chat_type: chatType, role, content });
+    .insert({
+      user_id: user.id,
+      chat_type: chatType,
+      role: databaseRole,
+      content,
+    });
 
-  if (error) console.warn("Failed to save chat message:", error.message);
+  if (error) {
+    console.error("Failed to save chat message:", error);
+    throw error;
+  }
 }
 
 export async function clearChatHistory(chatType: ChatType) {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
   if (userError) throw userError;
-  if (!user) return;
+  if (!user) throw new Error("User not logged in.");
 
   const { error } = await supabase
     .from("chat_messages")
@@ -25,7 +67,10 @@ export async function clearChatHistory(chatType: ChatType) {
     .eq("user_id", user.id)
     .eq("chat_type", chatType);
 
-  if (error) console.warn("Failed to clear chat history:", error.message);
+  if (error) {
+    console.error("Failed to clear chat history:", error);
+    throw error;
+  }
 }
 
 export async function getChatHistory(chatType: ChatType) {
@@ -45,7 +90,19 @@ export async function getChatHistory(chatType: ChatType) {
     .order("created_at", { ascending: true })
     .limit(100);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Failed to load chat history:", error);
+    throw error;
+  }
 
-  return data;
+  /*
+   * Convert database "assistant" messages back to the frontend's
+   * expected "bot" role.
+   *
+   * "bot" is also accepted here so any older rows still work.
+   */
+  return ((data ?? []) as StoredChatMessage[]).map((row) => ({
+    ...row,
+    role: row.role === "assistant" ? "bot" : row.role,
+  }));
 }
