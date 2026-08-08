@@ -321,7 +321,23 @@ function getDefaultSystemPrompt(chatType: ChatType): string {
 
   return SPORTS_SYSTEM_PROMPT;
 }
+async function getAthleteProfile(
+  supabase: any,
+  userId: string,
+): Promise<Record<string, unknown> | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_COLUMNS)
+    .eq("id", userId)
+    .maybeSingle();
 
+  if (error) {
+    console.error("Failed to load athlete profile:", error);
+    return null;
+  }
+
+  return data;
+}
 Deno.serve(async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -470,14 +486,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // date. It needs today's date to turn "last week" into a real range.
     const today = new Date().toISOString().slice(0, 10);
 
+    const athleteProfile = await getAthleteProfile(
+      supabase,
+      user.id,
+    );
+    
+    const profileContext = athleteProfile
+      ? `
+    ATHLETE PROFILE / SURVEY DATA:
+    ${JSON.stringify(athleteProfile, null, 2)}
+    
+    Use this saved profile whenever it is relevant.
+    Do not ask the user for information already listed here.
+    If the current message conflicts with the saved profile, trust the current message.
+    `
+      : `
+    ATHLETE PROFILE / SURVEY DATA:
+    No saved athlete profile was found.
+    `;
+    
     const systemPrompt = [
       customSystemPrompt || getDefaultSystemPrompt(chatType),
       "",
       `Today's date is ${today}.`,
-      "You can read this athlete's own saved records with the get_profile and " +
-      "get_checkins tools. Use them instead of guessing or asking for details " +
-      "they have already saved. If a tool reports no data, say so plainly and " +
-      "suggest completing the onboarding survey or a daily check-in.",
+      profileContext,
+      "",
+      "Use get_checkins when you need dated check-in information such as sleep, fatigue, recovery, soreness, mood, pain, readiness, or training load.",
     ].join("\n");
 
     // deno-lint-ignore no-explicit-any

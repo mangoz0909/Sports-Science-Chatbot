@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import Seo from "../components/Seo";
 import {
   Alert,
@@ -24,7 +24,181 @@ import { supabase } from "../lib/supabaseClient";
 type SportsFinderProps = {
   compact?: boolean;
 };
+function formatAiMatchResponse(content: string): ReactNode {
+  const lines = content.split("\n");
 
+  return (
+    <Stack spacing={1.2}>
+      {lines.map((raw, index) => {
+        const line = raw.trim();
+
+        if (!line) return null;
+
+        // Markdown headings
+        if (line.startsWith("### ")) {
+          return (
+            <Typography
+              key={index}
+              fontWeight={900}
+              fontSize={16}
+              color="#0f172a"
+              sx={{ mt: 1.5 }}
+            >
+              {formatInlineText(line.slice(4))}
+            </Typography>
+          );
+        }
+
+        if (line.startsWith("## ")) {
+          return (
+            <Typography
+              key={index}
+              fontWeight={950}
+              fontSize={18}
+              color="#0f172a"
+              sx={{ mt: 1.5 }}
+            >
+              {formatInlineText(line.slice(3))}
+            </Typography>
+          );
+        }
+
+        if (line.startsWith("# ")) {
+          return (
+            <Typography
+              key={index}
+              fontWeight={950}
+              fontSize={20}
+              color="#0f172a"
+              sx={{ mt: 1 }}
+            >
+              {formatInlineText(line.slice(2))}
+            </Typography>
+          );
+        }
+
+        // Numbered recommendations
+        const numbered = line.match(/^(\d+)\.\s+(.*)$/);
+
+        if (numbered) {
+          return (
+            <Stack
+              key={index}
+              direction="row"
+              spacing={1.3}
+              alignItems="flex-start"
+              sx={{
+                bgcolor: "#ffffff",
+                border: "1px solid #dbeafe",
+                borderRadius: 2.5,
+                px: 1.5,
+                py: 1.3,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  bgcolor: "#dbeafe",
+                  color: "#1d4ed8",
+                  display: "grid",
+                  placeItems: "center",
+                  fontWeight: 950,
+                  fontSize: 13,
+                  flexShrink: 0,
+                }}
+              >
+                {numbered[1]}
+              </Box>
+
+              <Typography
+                component="div"
+                color="#334155"
+                fontWeight={700}
+                lineHeight={1.7}
+              >
+                {formatInlineText(numbered[2])}
+              </Typography>
+            </Stack>
+          );
+        }
+
+        // Bullet points
+        if (/^[-*•]\s+/.test(line)) {
+          const text = line.replace(/^[-*•]\s+/, "");
+
+          return (
+            <Stack
+              key={index}
+              direction="row"
+              spacing={1}
+              alignItems="flex-start"
+              sx={{ pl: 0.5 }}
+            >
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  bgcolor: "#3b82f6",
+                  mt: "9px",
+                  flexShrink: 0,
+                }}
+              />
+
+              <Typography
+                component="div"
+                color="#475569"
+                lineHeight={1.75}
+              >
+                {formatInlineText(text)}
+              </Typography>
+            </Stack>
+          );
+        }
+
+        return (
+          <Typography
+            key={index}
+            component="div"
+            color="#475569"
+            lineHeight={1.75}
+          >
+            {formatInlineText(line)}
+          </Typography>
+        );
+      })}
+    </Stack>
+  );
+}
+
+function formatInlineText(text: string): ReactNode {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <Box
+              key={index}
+              component="span"
+              sx={{
+                fontWeight: 900,
+                color: "#0f172a",
+              }}
+            >
+              {part.slice(2, -2)}
+            </Box>
+          );
+        }
+
+        return part;
+      })}
+    </>
+  );
+}
 type SurveyKey = "teamwork" | "intensity" | "contact" | "coordination";
 type SurveyAnswers = Record<SurveyKey, number>;
 
@@ -377,24 +551,55 @@ Keep it concise, practical, and student-friendly.
               {error && <Alert severity="error">{error}</Alert>}
 
               {aiMatches && (
-                <Box
-                  sx={{
-                    p: { xs: 2, md: 2.5 },
-                    borderRadius: 3,
-                    bgcolor: "#eff6ff",
-                    border: "1px solid #bfdbfe",
-                    whiteSpace: "pre-line",
-                  }}
-                >
-                  <Typography fontWeight={950} color="#1d4ed8" sx={{ mb: 1 }}>
-                    AI Sport Recommendations
-                  </Typography>
+  <Box
+    sx={{
+      p: { xs: 2, md: 2.5 },
+      borderRadius: 4,
+      bgcolor: "#f8fbff",
+      border: "1px solid #bfdbfe",
+    }}
+  >
+    <Stack
+      direction="row"
+      spacing={1.2}
+      alignItems="center"
+      sx={{ mb: 2 }}
+    >
+      <Box
+        sx={{
+          width: 38,
+          height: 38,
+          borderRadius: 2.5,
+          display: "grid",
+          placeItems: "center",
+          bgcolor: "#dbeafe",
+          fontSize: 19,
+        }}
+      >
+        ✨
+      </Box>
 
-                  <Typography color="#475569" lineHeight={1.75}>
-                    {aiMatches}
-                  </Typography>
-                </Box>
-              )}
+      <Box>
+        <Typography
+          fontWeight={950}
+          color="#1e3a8a"
+          fontSize={17}
+        >
+          AI Sports Recommendations
+        </Typography>
+
+        <Typography
+          color="#64748b"
+          fontSize={12.5}
+        >
+          Personalized from your profile and answers
+        </Typography>
+      </Box>
+    </Stack>
+
+    {formatAiMatchResponse(aiMatches)}
+  </Box>
+)}
             </Stack>
           </CardContent>
         </Card>
