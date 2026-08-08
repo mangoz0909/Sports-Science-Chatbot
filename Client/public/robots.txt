@@ -14,4 +14,4 @@ Disallow: /profile
 Disallow: /onboarding
 Disallow: /reset-password
 
-Sitemap: https://sportlabai.com/sitemap.xml
+Sitemap: https://sportslabai.onrender.com/sitemap.xml

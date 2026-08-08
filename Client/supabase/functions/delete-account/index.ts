@@ -1,8 +1,11 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ALLOWED_ORIGIN overrides nothing — it is added to the list. The production
+// origin is kept as a default so an unset variable can't break account deletion.
 const allowedOrigins = [
   Deno.env.get("ALLOWED_ORIGIN") || "",
+  "https://sportslabai.onrender.com",
   "http://localhost:3000",
 ].filter(Boolean);
 

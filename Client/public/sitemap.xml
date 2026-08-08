@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://sportlabai.com/</loc>
+    <loc>https://sportslabai.onrender.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://sportlabai.com/sports</loc>
+    <loc>https://sportslabai.onrender.com/sports</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://sportlabai.com/mental-health</loc>
+    <loc>https://sportslabai.onrender.com/mental-health</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://sportlabai.com/sports-list</loc>
+    <loc>https://sportslabai.onrender.com/sports-list</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://sportlabai.com/health/workout</loc>
+    <loc>https://sportslabai.onrender.com/health/workout</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://sportlabai.com/health/nutrition</loc>
+    <loc>https://sportslabai.onrender.com/health/nutrition</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://sportlabai.com/auth</loc>
+    <loc>https://sportslabai.onrender.com/auth</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>

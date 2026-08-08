@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 
-const SITE_URL = "https://sportlabai.com";
+const SITE_URL = "https://sportslabai.onrender.com";
 const SITE_NAME = "SportLab AI";
 const DEFAULT_IMAGE = `${SITE_URL}/sportslab_logo.png`;
 const DEFAULT_DESCRIPTION =

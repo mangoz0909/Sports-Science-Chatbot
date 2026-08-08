@@ -50,9 +50,7 @@ const MAX_HISTORY_CHARS = 12000;
 // environment (comma-separated) when the app moves to a new domain — the
 // defaults below are only a fallback so an unset variable can't break prod.
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://sports-science-chatbot.onrender.com",
-  "https://sportlabai.com",
-  "https://www.sportlabai.com",
+  "https://sportslabai.onrender.com",
   "http://localhost:3000",
   "http://localhost:5173",
 ];
