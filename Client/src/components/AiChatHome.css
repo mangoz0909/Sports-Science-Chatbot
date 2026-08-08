@@ -581,7 +581,9 @@
 
 /* ─── Input Area ─── */
 .chat-input {
-  padding: 14px 18px 18px;
+  /* Horizontal padding matches .chat-box so the composer lines up with the
+     message column instead of sitting 4px wider on each side. */
+  padding: 14px 22px 18px;
   border-top: 1px solid rgba(16, 24, 40, 0.07);
   background: rgba(255, 255, 255, 0.97);
   position: sticky;
@@ -648,10 +650,15 @@
   background: #ffffff;
 }
 
+/* Padding lives here rather than on .input-wrapper so the focus ring stays
+   tight to the pill. Without it the textarea and the send button sit flush
+   against the border — the phone breakpoint below already had this, desktop
+   did not. The extra left inset balances the 40px buttons on the right. */
 .input-container{
   display:flex;
   align-items:center;
   gap:8px;
+  padding:8px 8px 4px 16px;
 }
 
 .input-container textarea{
@@ -748,12 +755,15 @@
   color: #94a3b8;
 }
 
+/* Sits inside the pill, so it needs the same inset as .input-container —
+   at 4px it collided with the 20px corner radius. */
 .input-hint {
   display: flex;
   justify-content: flex-end;
-  padding: 4px 4px 0;
+  padding: 0 16px 9px;
   font-size: 11px;
-  color: #94a3b8;
+  /* #94a3b8 on the #f8fafc pill is ~2.6:1 — below the 4.5:1 AA floor. */
+  color: #667085;
 }
 
 @keyframes pulse {

@@ -531,7 +531,7 @@ export default function AiChatHome({
           </div>
 
           {error && (
-            <div className="chat-error">
+            <div className="chat-error" role="alert">
               <span>{error}</span>
               {lastFailedMessage && (
                 <button
@@ -573,14 +573,18 @@ export default function AiChatHome({
                   disabled={isLoading}
                   rows={1}
                   maxLength={MAX_MESSAGE_LENGTH + 100}
+                  aria-label={inputPlaceholder}
+                  aria-describedby="chat-input-hint"
+                  aria-invalid={overLimit}
                 />
                 <button
                   type="button"
                   className={`icon-btn ${isRecording ? "recording" : ""}`}
                   onClick={handleMicClick}
                   aria-label="Use voice input"
+                  aria-pressed={isRecording}
                 >
-                  🎤
+                  <span aria-hidden="true">🎤</span>
                 </button>
                 <button
                   type="submit"
@@ -591,7 +595,7 @@ export default function AiChatHome({
                   ↑
                 </button>
               </div>
-              <div className="input-hint">
+              <div className="input-hint" id="chat-input-hint" aria-live="polite">
                 {overLimit
                   ? `Message too long (${message.length}/${MAX_MESSAGE_LENGTH})`
                   : "Enter to send · Shift+Enter for new line"}
