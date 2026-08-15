@@ -10,14 +10,13 @@ import {
   Grid,
   Skeleton,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
-
-import { cleanJsonResponse } from "./workoutResponse";
 
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
@@ -385,7 +384,7 @@ export default function WorkoutPage() {
 
   const [summary, setSummary] =
     React.useState("");
-
+  const [userInstructions, setUserInstructions] = React.useState("");
   const hasGenerated = React.useRef(false);
 
   async function generatePlan() {
@@ -519,6 +518,9 @@ ${checkInText}
 RECENT 7-DAY HISTORY:
 ${weeklyTrendText}
 
+USER'S CURRENT REQUEST OR EXTRA INFORMATION:
+${userInstructions.trim() || "No additional instructions provided."}
+
 Generate a personalised 7-day weekly workout plan as a JSON array.
 
 The first element must have this structure:
@@ -556,6 +558,11 @@ Coaching requirements:
 - Do not prescribe exercises that conflict with stated injuries or restrictions.
 - Keep the plan practical for the stated workout duration and equipment.
 - Do not provide medical treatment advice.
+- Treat the user's current request as important context.
+- If today's message conflicts with older profile information, prioritise today's message.
+- Respect all injuries and medical restrictions.
+- Respect equipment availability.
+- Never ignore allergies or injuries even if the user requests something unsafe.
       `.trim();
 
       const responseText = await callOpenAI(prompt);
@@ -656,63 +663,75 @@ Coaching requirements:
         path="/health/workout"
       />
 
-      <Stack
-        direction={{
-          xs: "column",
-          sm: "row",
-        }}
-        justifyContent="space-between"
-        alignItems={{
-          xs: "flex-start",
-          sm: "center",
-        }}
-        spacing={2}
-        sx={{ mb: 3 }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            fontWeight={950}
-            color="#0f172a"
-          >
-            Weekly Training Plan
-          </Typography>
+<Stack spacing={2} sx={{ mb: 3 }}>
+  <Box>
+    <Typography
+      variant="h5"
+      fontWeight={950}
+      color="#0f172a"
+    >
+      Weekly Training Plan
+    </Typography>
 
-          <Typography
-            color="#64748b"
-            fontSize={14}
-          >
-            Personalised based on your profile
-            and today's check-in data.
-          </Typography>
-        </Box>
+    <Typography
+      color="#64748b"
+      fontSize={14}
+    >
+      Personalised using your athlete profile, today's check-in, and recent training trends.
+    </Typography>
+  </Box>
 
-        <Button
-          variant="outlined"
-          startIcon={
-            loading ? (
-              <CircularProgress size={16} />
-            ) : (
-              <RefreshIcon />
-            )
-          }
-          disabled={loading || !isLoggedIn}
-          onClick={() => {
-            void generatePlan();
-          }}
-          sx={{
+  {isLoggedIn && (
+    <Stack
+      direction={{ xs: "column", md: "row" }}
+      spacing={1.5}
+      alignItems="stretch"
+    >
+      <TextField
+        fullWidth
+        value={userInstructions}
+        onChange={(e) => setUserInstructions(e.target.value)}
+        placeholder="Tell the AI what changed... e.g. I only have 30 minutes today, my legs are sore, or I have a match tomorrow."
+        multiline
+        minRows={2}
+        disabled={loading}
+        sx={{
+          "& .MuiOutlinedInput-root": {
             borderRadius: 3,
-            fontWeight: 700,
-            textTransform: "none",
-            borderColor: "#cbd5e1",
-          }}
-        >
-          {loading
-            ? "Generating…"
-            : "Regenerate"}
-        </Button>
-      </Stack>
+            bgcolor: "#fff",
+          },
+        }}
+      />
 
+      <Button
+        variant="contained"
+        startIcon={
+          loading ? (
+            <CircularProgress size={16} color="inherit" />
+          ) : (
+            <RefreshIcon />
+          )
+        }
+        disabled={loading}
+        onClick={() => {
+          void generatePlan();
+        }}
+        sx={{
+          minWidth: { md: 190 },
+          borderRadius: 3,
+          fontWeight: 800,
+          textTransform: "none",
+          bgcolor: "#0f172a",
+          "&:hover": {
+            bgcolor: "#1e293b",
+          },
+        }}
+      >
+        {loading ? "Generating…" : "Generate New Plan"}
+      </Button>
+    </Stack>
+  )}
+</Stack>
       {!authLoading && !isLoggedIn && (
         <Alert
           severity="info"
