@@ -766,6 +766,136 @@
   color: #667085;
 }
 
+.icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.icon-btn:disabled:hover {
+  background: #e2e8f0;
+  transform: none;
+}
+
+/* ─── Image Attachments ─── */
+
+/* Staged image, shown above the textarea until the message is sent. */
+.attachment-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 0 16px;
+}
+
+.attachment-pending {
+  font-size: 12px;
+  color: #667085;
+}
+
+.attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.attachment-thumb {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.attachment-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  color: #344054;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-size {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: #667085;
+}
+
+.attachment-remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: #eef2f6;
+  color: #475467;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.attachment-remove:hover {
+  background: #dde3ea;
+  color: #101828;
+}
+
+/* Sent image, inside the user's bubble. */
+.message-image-btn {
+  display: block;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: zoom-in;
+  line-height: 0;
+}
+
+.message-image {
+  display: block;
+  max-width: min(260px, 100%);
+  max-height: 260px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(16, 24, 40, 0.82);
+}
+
+.image-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.image-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #101828;
+  font-size: 15px;
+  cursor: pointer;
+}
+
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.32); }
   100% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }

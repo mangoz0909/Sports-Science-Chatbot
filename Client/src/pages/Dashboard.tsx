@@ -27,7 +27,11 @@ import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
+import {
+  getLatestCheckIn,
+  getLast7CheckIns,
+  localDateString,
+} from "../services/checkinService";
 import { getMyProfile } from "../services/profileService";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -103,10 +107,15 @@ export default function Dashboard() {
 
   const isGuest = !session;
 
+  // The session object gets a new identity on every silent token refresh
+  // (roughly hourly). Keying the data load on the user id instead stops the
+  // dashboard from re-running three queries and flashing its loading state.
+  const userId = session?.user?.id ?? null;
+
   React.useEffect(() => {
     let mounted = true;
     async function loadDashboard() {
-      if (!session) {
+      if (!userId) {
         setLoading(false);
         return;
       }
@@ -130,7 +139,7 @@ export default function Dashboard() {
     loadDashboard();
     return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [userId]);
 
 const userProfile = isGuest ? {
   name: "Demo Athlete",
@@ -218,7 +227,7 @@ if (loading) {
 
 const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateString();
   const checkedInToday = !isGuest && latestCheckIn?.checkin_date === today;
 
   const kpis = [

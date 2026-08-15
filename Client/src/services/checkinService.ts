@@ -18,6 +18,21 @@ export type CheckInInput = {
   injury_risk: number;
 };
 
+/**
+ * Today's date in the athlete's own timezone, as YYYY-MM-DD.
+ *
+ * `toISOString()` returns the UTC date: east of UTC an early-morning check-in
+ * was filed under yesterday, which both defeated the "already checked in"
+ * guard and let the upsert overwrite the previous day's row.
+ */
+export function localDateString(date: Date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export async function createDailyCheckIn(checkInData: CheckInInput) {
   const {
     data: { user },
@@ -27,7 +42,7 @@ export async function createDailyCheckIn(checkInData: CheckInInput) {
   if (userError) throw userError;
   if (!user) throw new Error("You must be logged in to save a check-in.");
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateString();
 
   const { data, error } = await supabase
     .from("daily_checkins")

@@ -15,6 +15,10 @@ function getCorsHeaders(req: Request) {
   return {
     "Access-Control-Allow-Origin": isAllowed ? origin : allowedOrigins[0] || "",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    // POST is CORS-safelisted so the preflight passed without this, but that
+    // is incidental — spell the method out rather than relying on it.
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
 }

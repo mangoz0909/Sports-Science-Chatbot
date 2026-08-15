@@ -23,7 +23,11 @@ import RestaurantIcon from "@mui/icons-material/Restaurant";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 
-import { createDailyCheckIn, getLatestCheckIn } from "../services/checkinService";
+import {
+  createDailyCheckIn,
+  getLatestCheckIn,
+  localDateString,
+} from "../services/checkinService";
 
 type CheckInData = {
   sleepHours: number;
@@ -190,7 +194,7 @@ export default function DailyCheckIn() {
     let mounted = true;
     getLatestCheckIn().then((latest) => {
       if (!mounted || !latest) return;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateString();
       if (latest.checkin_date === today) {
         setAlreadyCheckedIn(true);
         setData({

@@ -107,7 +107,7 @@ export default function NutritionPage() {
         : "General fitness athlete, intermediate level";
 
       const checkInText = checkIn
-        ? `Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Hydration: ${checkIn.hydration ?? "N/A"}L, Training intensity today: ${checkIn.training_intensity ?? "N/A"}/10`
+        ? `Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Hydration: ${checkIn.hydration ?? "N/A"}/10 (self-rated, not litres), Training intensity today: ${checkIn.training_intensity ?? "N/A"}/10`
         : "No check-in data available";
         const weeklyTrendText =
         last7CheckIns && last7CheckIns.length > 0
@@ -117,8 +117,8 @@ export default function NutritionPage() {
                   item.checkin_date || item.created_at || "Unknown date",
                   `Readiness ${item.readiness_score ?? "N/A"}%`,
                   `Recovery ${item.recovery_score ?? "N/A"}%`,
-                  `Hydration ${item.hydration ?? "N/A"}`,
-                  `Nutrition ${item.nutrition ?? "N/A"}`,
+                  `Hydration ${item.hydration ?? "N/A"}/10`,
+                  `Nutrition ${item.nutrition ?? "N/A"}/10`,
                   `Sleep ${item.sleep_hours ?? "N/A"}h`,
                   `Fatigue ${
                     item.fatigue != null

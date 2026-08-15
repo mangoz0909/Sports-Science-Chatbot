@@ -17,6 +17,8 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
+import { cleanJsonResponse } from "./workoutResponse";
+
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import {
@@ -52,7 +54,10 @@ async function callOpenAI(prompt: string): Promise<string> {
     body: {
       prompt,
       systemPrompt: WORKOUT_SYSTEM_PROMPT,
-      maxTokens: 1800,
+      // A full 7-day plan plus the summary object was already close to the
+      // ceiling; the 7-day history in the prompt pushes output longer still,
+      // and a truncated response is unparseable JSON. 2500 is the server cap.
+      maxTokens: 2500,
       temperature: 0.4,
     },
   });
@@ -365,13 +370,6 @@ function extractSummary(value: unknown): string {
   return "";
 }
 
-function cleanJsonResponse(responseText: string): string {
-  return responseText
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/i, "")
-    .trim();
-}
 
 export default function WorkoutPage() {
   const { session, loading: authLoading } = useAuth();
@@ -540,7 +538,14 @@ The remaining seven elements must each have exactly this structure:
   "duration": "45 min"
 }
 
-Requirements:
+Format requirements (the response is parsed by a program, not read by a human):
+- Respond only with a valid JSON array containing exactly 8 elements: the summary object, then Monday through Sunday in order.
+- Do not use markdown fences. Do not include any text outside the JSON array.
+- The "exercises" field MUST be one plain text string. Do not return it as an array or an object.
+- "intensity" must be exactly one of: High, Medium, Low, Recovery.
+- Keep each "exercises" string under 220 characters so the plan fits in the response.
+
+Coaching requirements:
 - Respect the athlete's injuries, age, experience, equipment access, recovery, and readiness.
 - Use the 7-day history to identify fatigue, recovery, sleep, and workload trends.
 - Do not base the entire plan on a single unusually good or bad day.
