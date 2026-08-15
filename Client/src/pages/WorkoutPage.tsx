@@ -387,8 +387,9 @@ export default function WorkoutPage() {
   const [summary, setSummary] =
     React.useState("");
   const [userInstructions, setUserInstructions] = React.useState("");
-  const hasGenerated = React.useRef(false);
-
+  const storageKey = session?.user?.id
+  ? `workout-plan-${session.user.id}`
+  : null;
   async function generatePlan() {
     setLoading(true);
     setError(null);
@@ -625,10 +626,21 @@ Coaching requirements:
         );
       }
 
-      if (summaryText) {
-        setSummary(summaryText);
-      }
+      const finalSummary = summaryText || "";
 
+setSummary(finalSummary);
+setPlan(days);
+
+if (storageKey) {
+  localStorage.setItem(
+    storageKey,
+    JSON.stringify({
+      plan: days,
+      summary: finalSummary,
+      savedAt: new Date().toISOString(),
+    })
+  );
+}
       setPlan(days);
     } catch (err: unknown) {
       console.error(
@@ -648,11 +660,32 @@ Coaching requirements:
   }
 
   React.useEffect(() => {
-    if (authLoading || !isLoggedIn) return;
-    if (!hasGenerated.current) {
-      hasGenerated.current = true;
-      void generatePlan();
+    if (authLoading || !isLoggedIn || !storageKey) {
+      return;
     }
+  
+    const saved = localStorage.getItem(storageKey);
+  
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+  
+        if (Array.isArray(parsed.plan)) {
+          setPlan(parsed.plan);
+          setSummary(parsed.summary || "");
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to load saved workout plan:", error);
+        localStorage.removeItem(storageKey);
+      }
+    }
+  
+    // Only automatically generate when the user has never had a plan before.
+    void generatePlan();
+  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn, storageKey]);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isLoggedIn]);
