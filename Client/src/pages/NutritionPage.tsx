@@ -25,7 +25,19 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
-
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Grid,
+  Skeleton,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 const NUTRITION_SYSTEM_PROMPT =
   "You are a careful sports nutrition assistant. Provide general educational guidance only, avoid diagnosis, respect allergies and dietary restrictions, and return valid JSON when requested.";
 
@@ -70,6 +82,8 @@ export default function NutritionPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const hasGenerated = React.useRef(false);
+  const [userInstructions, setUserInstructions] = React.useState("");
+  
 
   async function generatePlan() {
     setLoading(true);
@@ -144,6 +158,9 @@ ${checkInText}
 RECENT 7-DAY HISTORY:
 ${weeklyTrendText}
 
+USER'S CURRENT REQUEST OR EXTRA INFORMATION:
+${userInstructions.trim() || "No additional instructions provided."}
+
 Generate a personalised daily nutrition plan as a JSON object with exactly these fields. Never include foods that conflict with the athlete's stated allergies, intolerances, dietary preference, or foods they avoid. Do not provide medical treatment advice:
 - "summary": 1-2 sentence personalised note about this nutrition plan
 - "calories": daily calorie target as a string (e.g. "2800 kcal")
@@ -161,7 +178,8 @@ Generate a personalised daily nutrition plan as a JSON object with exactly these
 - Account for repeated poor hydration instead of looking only at today's hydration.
 - Consider sustained fatigue or poor recovery when recommending energy intake and meal timing.
 - Do not overreact to one unusual check-in when the overall weekly trend is different.
-
+- Treat the user's current request or extra information as important context when creating the plan.
+- If the user's current message conflicts with older saved preferences, prioritize the user's current message.
 Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
       const responseText = await callOpenAI(prompt);
@@ -214,38 +232,73 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
         description="Get a daily macro and meal plan tailored to your sport, training goals, and today's check-in data."
         path="/health/nutrition"
       />
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        spacing={2}
-        sx={{ mb: 3 }}
-      >
-        <Box>
-          <Typography variant="h5" fontWeight={950} color="#0f172a">
-            Daily Nutrition Plan
-          </Typography>
-          <Typography color="#64748b" fontSize={14}>
-            Personalised based on your sport, goals, and today's check-in data.
-          </Typography>
-        </Box>
-        <Button
-          variant="outlined"
-          startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
-          disabled={loading || !isLoggedIn}
-          onClick={generatePlan}
-          sx={{
-            flexShrink: 0,
-            alignSelf: { xs: "stretch", sm: "auto" },
+      <Stack spacing={2} sx={{ mb: 3 }}>
+  <Stack
+    direction={{ xs: "column", sm: "row" }}
+    justifyContent="space-between"
+    alignItems={{ xs: "flex-start", sm: "center" }}
+    spacing={2}
+  >
+    <Box>
+      <Typography variant="h5" fontWeight={950} color="#0f172a">
+        Daily Nutrition Plan
+      </Typography>
+
+      <Typography color="#64748b" fontSize={14}>
+        Personalised using your profile, today's check-in, and recent trends.
+      </Typography>
+    </Box>
+  </Stack>
+
+  {isLoggedIn && (
+    <Stack
+      direction={{ xs: "column", md: "row" }}
+      spacing={1.5}
+      alignItems="stretch"
+    >
+      <TextField
+        fullWidth
+        value={userInstructions}
+        onChange={(e) => setUserInstructions(e.target.value)}
+        placeholder="Add anything the AI should consider — e.g. I have a match tomorrow, I want vegetarian meals, or I trained hard today..."
+        multiline
+        minRows={2}
+        disabled={loading}
+        sx={{
+          "& .MuiOutlinedInput-root": {
             borderRadius: 3,
-            fontWeight: 700,
-            textTransform: "none",
-            borderColor: "#cbd5e1",
-          }}
-        >
-          {loading ? "Generating…" : "Regenerate"}
-        </Button>
-      </Stack>
+            bgcolor: "#fff",
+          },
+        }}
+      />
+
+      <Button
+        variant="contained"
+        startIcon={
+          loading ? (
+            <CircularProgress size={16} color="inherit" />
+          ) : (
+            <RefreshIcon />
+          )
+        }
+        disabled={loading}
+        onClick={generatePlan}
+        sx={{
+          minWidth: { md: 170 },
+          borderRadius: 3,
+          fontWeight: 800,
+          textTransform: "none",
+          bgcolor: "#0f172a",
+          "&:hover": {
+            bgcolor: "#1e293b",
+          },
+        }}
+      >
+        {loading ? "Generating…" : "Regenerate"}
+      </Button>
+    </Stack>
+  )}
+</Stack>
 
       {!authLoading && !isLoggedIn && (
         <Alert
