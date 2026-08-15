@@ -53,7 +53,7 @@ export default function PerformanceStrip() {
                       {item.icon}
                     </Box>
                     <Box>
-                      <Typography variant="h6" fontWeight={950}>{item.title}</Typography>
+                      <Typography variant="h6" component="h3" fontWeight={950}>{item.title}</Typography>
                       <Typography color="#cbd5e1" lineHeight={1.7} sx={{ mt: 0.5 }}>{item.desc}</Typography>
                     </Box>
                   </Stack>

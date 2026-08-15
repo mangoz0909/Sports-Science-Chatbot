@@ -28,7 +28,7 @@ export default function CapabilitiesSection() {
         <MotionBox variants={fadeUp} initial="hidden" whileInView="visible" viewport={viewport} transition={transition}>
           <Stack spacing={1.2} sx={{ mb: 4 }}>
             <Typography color="#0284c7" fontWeight={950} letterSpacing={1.4}>WHAT IT HELPS WITH</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 950, letterSpacing: -0.9, fontSize: { xs: "2rem", md: "3rem" } }}>
+            <Typography variant="h3" component="h2" sx={{ fontWeight: 950, letterSpacing: -0.9, fontSize: { xs: "2rem", md: "3rem" } }}>
               Clean tools for sports performance thinking.
             </Typography>
             <Typography color="#64748b" sx={{ maxWidth: 760, lineHeight: 1.8 }}>
@@ -57,7 +57,7 @@ export default function CapabilitiesSection() {
                     <Box sx={{ width: 54, height: 54, borderRadius: 3, display: "grid", placeItems: "center", bgcolor: "#f1f5f9", color: "#0f172a", mb: 2, "& svg": { fontSize: 30 } }}>
                       {item.icon}
                     </Box>
-                    <Typography variant="h6" fontWeight={950} sx={{ mb: 1 }}>{item.title}</Typography>
+                    <Typography variant="h6" component="h3" fontWeight={950} sx={{ mb: 1 }}>{item.title}</Typography>
                     <Typography color="#64748b" lineHeight={1.7}>{item.desc}</Typography>
                   </CardContent>
                 </MotionCard>

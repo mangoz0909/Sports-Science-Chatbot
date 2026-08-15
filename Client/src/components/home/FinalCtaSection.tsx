@@ -46,7 +46,7 @@ export default function FinalCtaSection() {
               <SportsSoccerIcon sx={{ fontSize: 54, color: "#38bdf8", display: "block" }} />
             </MotionBox>
 
-            <Typography variant="h3" sx={{ fontWeight: 950, letterSpacing: -0.8, fontSize: { xs: "2rem", md: "3rem" }, mb: 1.5 }}>
+            <Typography variant="h3" component="h2" sx={{ fontWeight: 950, letterSpacing: -0.8, fontSize: { xs: "2rem", md: "3rem" }, mb: 1.5 }}>
               Build a sharper sports science experience.
             </Typography>
             <Typography sx={{ color: "#cbd5e1", maxWidth: 720, mx: "auto", lineHeight: 1.8, mb: 3.5 }}>

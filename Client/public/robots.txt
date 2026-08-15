@@ -2,7 +2,6 @@ User-agent: *
 Allow: /
 Allow: /sports
 Allow: /sports-list
-Allow: /mental-health
 Allow: /health/workout
 Allow: /health/nutrition
 Allow: /auth

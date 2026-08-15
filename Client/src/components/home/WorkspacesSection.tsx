@@ -112,6 +112,7 @@ export default function WorkspacesSection() {
 
             <Typography
               variant="h3"
+              component="h2"
               sx={{
                 fontWeight: 950,
                 letterSpacing: -0.9,
@@ -216,6 +217,7 @@ export default function WorkspacesSection() {
 
                     <Typography
                       variant="h5"
+                      component="h3"
                       fontWeight={950}
                       sx={{ mb: 1 }}
                     >

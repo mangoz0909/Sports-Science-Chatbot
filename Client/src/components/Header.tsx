@@ -143,6 +143,7 @@ const Header: React.FC = () => {
                   key={item.to}
                   component={RouterLink}
                   to={item.to}
+                  aria-current={isActive(item.match ?? item.to) ? "page" : undefined}
                   sx={{
                     color: isActive(item.match ?? item.to) ? "#0284c7" : "#475569",
                     fontWeight: isActive(item.match ?? item.to) ? 800 : 600,
@@ -302,6 +303,7 @@ const Header: React.FC = () => {
 
             <IconButton
               onClick={closeDrawer}
+              aria-label="Close navigation menu"
               sx={{ width: 32, height: 32, bgcolor: "#f1f5f9", borderRadius: "8px" }}
             >
               <CloseIcon sx={{ fontSize: 16 }} />
@@ -317,6 +319,7 @@ const Header: React.FC = () => {
                 component={RouterLink}
                 to={item.to}
                 onClick={closeDrawer}
+                aria-current={isActive(item.match ?? item.to) ? "page" : undefined}
                 sx={{
                   borderRadius: "10px",
                   mb: 0.5,
@@ -341,6 +344,7 @@ const Header: React.FC = () => {
                 component={RouterLink}
                 to="/profile"
                 onClick={closeDrawer}
+                aria-current={isActive("/profile") ? "page" : undefined}
                 sx={{
                   borderRadius: "10px",
                   mb: 0.5,

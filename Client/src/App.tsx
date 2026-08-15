@@ -100,9 +100,42 @@ const App: React.FC = () => {
         <AuthProvider>
         <ErrorBoundary>
         <ScrollToTop />
+
+        {/*
+          Keyboard and screen-reader users otherwise tab through the whole
+          header on every page before reaching the content. Visually hidden
+          until focused, then pinned above the sticky AppBar.
+        */}
+        <Box
+          component="a"
+          href="#main-content"
+          sx={{
+            position: "absolute",
+            left: 8,
+            top: -80,
+            zIndex: 2000,
+            px: 2,
+            py: 1.25,
+            borderRadius: "10px",
+            bgcolor: "#0f172a",
+            color: "#fff",
+            fontWeight: 800,
+            fontSize: 14,
+            transition: "top 120ms ease-in",
+            "&:focus": { top: 8 },
+          }}
+        >
+          Skip to main content
+        </Box>
+
         <Header />
 
-        <Box component="main" sx={{ flex: 1, width: "100%" }}>
+        <Box
+          component="main"
+          id="main-content"
+          tabIndex={-1}
+          sx={{ flex: 1, width: "100%", outline: "none" }}
+        >
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<AuthPage />} />

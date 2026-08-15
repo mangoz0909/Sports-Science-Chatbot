@@ -268,7 +268,9 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
     },
     {
       label: "Hydration",
-      value: `${userProfile.hydration}/${userProfile.hydrationGoal}L`,
+      // Hydration is the 1-10 self-rating from the daily check-in, not a volume.
+      // This used to render "7/10L", inventing a litre goal the app never asked for.
+      value: `${userProfile.hydration}/${userProfile.hydrationGoal}`,
       icon: <WaterDropIcon />,
       color: colors.cyan,
       progress: Math.round((userProfile.hydration / userProfile.hydrationGoal) * 100),

@@ -435,6 +435,7 @@ const AuthPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Full Name"
+                    autoComplete="name"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                   />
@@ -444,6 +445,7 @@ const AuthPage: React.FC = () => {
                   fullWidth
                   label="Email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                 />
@@ -452,6 +454,7 @@ const AuthPage: React.FC = () => {
                   fullWidth
                   label="Password"
                   type={showPw ? "text" : "password"}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   InputProps={{

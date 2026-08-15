@@ -241,7 +241,7 @@ export default function HeroSection() {
                 <Stack spacing={2.5}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
                     <Box>
-                      <Typography variant="h5" fontWeight={950}>Athlete Snapshot</Typography>
+                      <Typography variant="h5" component="h2" fontWeight={950}>Athlete Snapshot</Typography>
                       <Typography color="#64748b">Today's performance readiness</Typography>
                     </Box>
                     <MotionBox
@@ -273,7 +273,7 @@ export default function HeroSection() {
                         >
                           <Box sx={{ width: 118, height: 118, borderRadius: "50%", bgcolor: "#0f172a", display: "grid", placeItems: "center", textAlign: "center" }}>
                             <Box>
-                              <Typography variant="h3" fontWeight={950}>84</Typography>
+                              <Typography variant="h3" component="p" fontWeight={950}>84</Typography>
                               <Typography fontSize={12} color="#94a3b8" fontWeight={900}>READY</Typography>
                             </Box>
                           </Box>

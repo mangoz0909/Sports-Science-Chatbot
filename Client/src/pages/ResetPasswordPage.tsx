@@ -14,22 +14,48 @@ export default function ResetPasswordPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
   const [sessionReady, setSessionReady] = React.useState(false);
+  // An expired, already-used, or malformed link fires neither PASSWORD_RECOVERY
+  // nor returns a session, which used to leave the user on the "Verifying…"
+  // spinner indefinitely with no error and no way forward.
+  const [linkInvalid, setLinkInvalid] = React.useState(false);
+  const redirectTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
+    let settled = false;
+
+    const markReady = () => {
+      settled = true;
+      setSessionReady(true);
+    };
+
     // Supabase fires PASSWORD_RECOVERY when the user arrives via the reset link
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        setSessionReady(true);
+        markReady();
       }
     });
 
     // Also handle the case where getSession already has the recovery session
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setSessionReady(true);
+      if (data.session) markReady();
     });
 
-    return () => subscription.unsubscribe();
+    const giveUp = setTimeout(() => {
+      if (!settled) setLinkInvalid(true);
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(giveUp);
+    };
   }, []);
+
+  React.useEffect(
+    () => () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    },
+    []
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +75,10 @@ export default function ResetPasswordPage() {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       setSuccess(true);
-      setTimeout(() => navigate("/dashboard", { replace: true }), 2000);
+      redirectTimerRef.current = setTimeout(
+        () => navigate("/dashboard", { replace: true }),
+        2000
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update password.";
       setError(msg);
@@ -60,10 +89,37 @@ export default function ResetPasswordPage() {
 
   if (!sessionReady) {
     return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f8fafc" }}>
-        <Box textAlign="center">
-          <CircularProgress />
-          <Typography sx={{ mt: 2 }} color="#64748b">Verifying your reset link…</Typography>
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
+        <Box textAlign="center" role="status" aria-live="polite">
+          {linkInvalid ? (
+            <Container maxWidth="xs" disableGutters>
+              <Alert severity="error" sx={{ mb: 2, borderRadius: 2, textAlign: "left" }}>
+                This password reset link is invalid or has expired. Reset links
+                can only be used once, and stop working after a short time.
+              </Alert>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => navigate("/auth?mode=login")}
+                sx={{
+                  borderRadius: 3,
+                  fontWeight: 800,
+                  textTransform: "none",
+                  bgcolor: "#0f172a",
+                  boxShadow: "none",
+                  py: 1.25,
+                  "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
+                }}
+              >
+                Request a new link
+              </Button>
+            </Container>
+          ) : (
+            <>
+              <CircularProgress />
+              <Typography sx={{ mt: 2 }} color="#64748b">Verifying your reset link…</Typography>
+            </>
+          )}
         </Box>
       </Box>
     );
@@ -95,6 +151,7 @@ export default function ResetPasswordPage() {
                 fullWidth
                 label="New password"
                 type={showPw ? "text" : "password"}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{ mb: 2 }}
@@ -112,6 +169,7 @@ export default function ResetPasswordPage() {
                 fullWidth
                 label="Confirm password"
                 type={showPw ? "text" : "password"}
+                autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 sx={{ mb: 3 }}

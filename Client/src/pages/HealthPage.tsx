@@ -41,6 +41,7 @@ export default function HealthPage() {
           <Tabs
             value={tabValue}
             onChange={handleTabChange}
+            aria-label="Health plan sections"
             sx={{
               "& .MuiTab-root": {
                 fontWeight: 800,
@@ -57,17 +58,31 @@ export default function HealthPage() {
               icon={<FitnessCenterIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
               label="Workout Plan"
+              id="health-tab-workout"
+              aria-controls="health-panel"
             />
             <Tab
               icon={<RestaurantMenuIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
               label="Nutrition Plan"
+              id="health-tab-nutrition"
+              aria-controls="health-panel"
             />
           </Tabs>
         </Container>
       </Box>
 
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container
+        maxWidth="xl"
+        sx={{ py: { xs: 3, md: 5 } }}
+        // The routed page IS the panel — one panel swapped by the router
+        // rather than two mounted ones, so a single id both tabs point at.
+        id="health-panel"
+        role="tabpanel"
+        aria-labelledby={
+          tabValue === 0 ? "health-tab-workout" : "health-tab-nutrition"
+        }
+      >
         <Outlet />
       </Container>
     </Box>

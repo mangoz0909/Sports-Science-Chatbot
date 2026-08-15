@@ -458,6 +458,11 @@ Keep it concise, practical, and student-friendly.
 
                       <Slider
                         value={answers[question.key]}
+                        // Without this every slider announced as an unnamed
+                        // "5 out of 10"; the visible label is a sibling, not
+                        // a <label>, so it never reached the control.
+                        aria-label={question.label}
+                        valueLabelDisplay="auto"
                         min={1}
                         max={10}
                         step={1}
