@@ -26,7 +26,7 @@ import {
   getLatestCheckIn,
   getLast7CheckIns,
 } from "../services/checkinService";
-import { readCachedPlan, writeCachedPlan } from "../lib/planCache";
+import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -569,7 +569,7 @@ Coaching requirements:
 - If today's message conflicts with older profile information, prioritise today's message.
 - Respect all injuries and medical restrictions.
 - Respect equipment availability.
-- Never ignore allergies or injuries even if the user requests something unsafe.
+- Never ignore injuries or physical restrictions even if the user requests a conflicting exercise.
       `.trim();
 
       const responseText = await callOpenAI(prompt);
@@ -635,10 +635,11 @@ Coaching requirements:
       setSummary(resolvedSummary);
       setPlan(days);
 
-      // Hold the plan for the rest of the day so navigating away and back
-      // shows this same plan instead of paying for a near-identical one.
+      // Hold the plan for the rest of the day, on every device, so navigating
+      // away and back shows this same plan instead of paying for a
+      // near-identical one. saveTodaysPlan reports its own failures.
       if (userId) {
-        writeCachedPlan<CachedWorkoutPlan>("workout", userId, {
+        void saveTodaysPlan<CachedWorkoutPlan>("workout", userId, {
           days,
           summary: resolvedSummary,
         });
@@ -666,18 +667,30 @@ Coaching requirements:
 
     loadedForUser.current = userId;
 
-    // Today's plan, if one was already generated, survives an unmount. Only
-    // the first visit of each local day — or an explicit regenerate — calls
-    // the model.
-    const cached = readCachedPlan<CachedWorkoutPlan>("workout", userId);
+    async function loadOrGenerate(athleteId: string) {
+      setLoading(true);
 
-    if (cached) {
-      setPlan(cached.days);
-      setSummary(cached.summary);
-      return;
+      // A plan generated earlier today, on this or any other device, is the
+      // one the athlete keeps until they ask for a new one. Only the first
+      // visit of each local day reaches the model.
+      const saved = await loadTodaysPlan<CachedWorkoutPlan>(
+        "workout",
+        athleteId
+      );
+
+      if (saved) {
+        setPlan(saved.days);
+        setSummary(saved.summary);
+        setLoading(false);
+        return;
+      }
+
+      // generatePlan raises the loading flag itself, so the skeleton stays up
+      // without a blank frame in between.
+      await generatePlan();
     }
 
-    void generatePlan();
+    void loadOrGenerate(userId);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isLoggedIn, userId]);

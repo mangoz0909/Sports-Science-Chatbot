@@ -23,7 +23,7 @@ import {
   getLatestCheckIn,
   getLast7CheckIns,
 } from "../services/checkinService";
-import { readCachedPlan, writeCachedPlan } from "../lib/planCache";
+import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -173,7 +173,9 @@ Generate a personalised daily nutrition plan as a JSON object with exactly these
 - Consider sustained fatigue or poor recovery when recommending energy intake and meal timing.
 - Do not overreact to one unusual check-in when the overall weekly trend is different.
 - Treat the user's current request or extra information as important context when creating the plan.
-- If the user's current message conflicts with older saved preferences, prioritize the user's current message.
+- If the user's current message conflicts with older saved preferences, prioritise the user's current message.
+- Never ignore saved allergies or intolerances even if the user asks for conflicting foods.
+
 Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
       const responseText = await callOpenAI(prompt);
@@ -192,10 +194,11 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
       setPlan(parsed);
 
-      // Hold the plan for the rest of the day so navigating away and back
-      // shows this same plan instead of paying for a near-identical one.
+      // Hold the plan for the rest of the day, on every device, so navigating
+      // away and back shows this same plan instead of paying for a
+      // near-identical one. saveTodaysPlan reports its own failures.
       if (userId) {
-        writeCachedPlan<NutritionPlan>("nutrition", userId, parsed);
+        void saveTodaysPlan<NutritionPlan>("nutrition", userId, parsed);
       }
     } catch (err: any) {
       setError(err?.message || "Failed to generate plan. Please try again.");
@@ -210,17 +213,26 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
     loadedForUser.current = userId;
 
-    // Today's plan, if one was already generated, survives an unmount. Only
-    // the first visit of each local day — or an explicit regenerate — calls
-    // the model.
-    const cached = readCachedPlan<NutritionPlan>("nutrition", userId);
+    async function loadOrGenerate(athleteId: string) {
+      setLoading(true);
 
-    if (cached) {
-      setPlan(cached);
-      return;
+      // A plan generated earlier today, on this or any other device, is the
+      // one the athlete keeps until they ask for a new one. Only the first
+      // visit of each local day reaches the model.
+      const saved = await loadTodaysPlan<NutritionPlan>("nutrition", athleteId);
+
+      if (saved) {
+        setPlan(saved);
+        setLoading(false);
+        return;
+      }
+
+      // generatePlan raises the loading flag itself, so the skeleton stays up
+      // without a blank frame in between.
+      await generatePlan();
     }
 
-    generatePlan();
+    void loadOrGenerate(userId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isLoggedIn, userId]);
 
