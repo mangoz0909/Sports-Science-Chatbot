@@ -31,6 +31,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import {
   loginUser,
   signUpUser,
+  EmailConfirmationRequiredError,
   signInWithGoogle,
   sendPasswordResetEmail,
 } from "../services/authService";
@@ -163,6 +164,14 @@ const AuthPage: React.FC = () => {
 
       navigate(mode === "signup" ? "/onboarding" : "/dashboard");
     } catch (err: any) {
+      // Email confirmation is a successful signup with no session yet, so it
+      // gets the green message and stays put instead of being reported as a
+      // failure the user would try to "fix" by signing up again.
+      if (err instanceof EmailConfirmationRequiredError) {
+        setSuccessMsg(err.message);
+        return;
+      }
+
       setError(err?.message || "Something went wrong. Try again.");
     } finally {
       setSubmitting(false);

@@ -1,5 +1,18 @@
 import { supabase } from "../lib/supabaseClient";
 
+/**
+ * Thrown when the account was created successfully but the project requires
+ * the address to be confirmed before a session exists. It is a successful
+ * signup, not a failure — callers should show it as such rather than as an
+ * error, which is all a bare `Error` let them do.
+ */
+export class EmailConfirmationRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmailConfirmationRequiredError";
+  }
+}
+
 export async function signUpUser(name: string, email: string, password: string) {
   const cleanName = name.trim();
   const cleanEmail = email.trim().toLowerCase();
@@ -18,7 +31,7 @@ export async function signUpUser(name: string, email: string, password: string) 
   if (error) throw error;
 
   if (!data.session || !data.user) {
-    throw new Error(
+    throw new EmailConfirmationRequiredError(
       "Account created — check your email to confirm your address before signing in."
     );
   }

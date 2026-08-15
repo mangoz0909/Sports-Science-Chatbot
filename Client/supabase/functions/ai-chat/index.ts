@@ -5,6 +5,8 @@ type RequestBody = {
   history?: unknown;
   chatType?: unknown;
   systemPrompt?: unknown;
+  /** Optional single inline image, as a `data:image/...;base64,` URL. */
+  image?: unknown;
 };
 
 type HistoryMessage = {
@@ -45,6 +47,67 @@ const MAX_SYSTEM_PROMPT_LENGTH = 4000;
 // Capped on both count and total size to bound token spend per request.
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_CHARS = 12000;
+
+// ── Inline images ────────────────────────────────────────────────────────────
+// One image per message, sent inline as a base64 data URL. The client already
+// downscales to 1024px JPEG (see src/lib/imageAttachment.ts); this ceiling is
+// the independent server-side guard, since the client can be bypassed.
+const MAX_IMAGE_DATA_URL_LENGTH = 1_500_000;
+
+const IMAGE_DATA_URL_PATTERN =
+  /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/*
+ * "low" downsamples to 512x512 and bills a flat, much smaller number of input
+ * tokens than "high", which tiles the image and can cost an order of magnitude
+ * more per photo on gpt-4o-mini. Low is accurate enough for what this app gets
+ * asked about — meals, gym equipment, posture, a plan written on paper. Flip
+ * this to "high" only if reading fine print (nutrition labels) becomes a real
+ * use case, and expect the per-image cost to jump accordingly.
+ */
+const IMAGE_DETAIL: "low" | "high" = "low";
+
+const IMAGE_GUIDANCE = `
+The user attached an image to this message. Describe only what you can
+actually see, and say so plainly when the image is unclear or does not show
+what would be needed to answer.
+
+Do not attempt to diagnose an injury, skin condition, or any other medical
+issue from a photograph, and do not estimate body fat, weight, or physique
+from a picture of a person. For anything that looks like an injury or a
+medical concern, describe what you observe in general terms and direct the
+user to a qualified professional.
+
+Do not comment on a person's appearance or body beyond what is strictly
+necessary to answer a training or technique question they explicitly asked.
+`.trim();
+
+/**
+ * Validates an inline image and returns the data URL, or an error message to
+ * send back to the client. Returns `{}` when no image was supplied.
+ */
+function parseImage(
+  value: unknown,
+): { dataUrl?: string; error?: string } {
+  if (value === undefined || value === null || value === "") return {};
+
+  if (typeof value !== "string") {
+    return { error: "Image must be a base64 data URL string." };
+  }
+
+  if (value.length > MAX_IMAGE_DATA_URL_LENGTH) {
+    return { error: "Image is too large. Please send a smaller image." };
+  }
+
+  if (!IMAGE_DATA_URL_PATTERN.test(value)) {
+    return {
+      error:
+        "Image must be a base64 data URL of type image/jpeg, image/png, or image/webp.",
+    };
+  }
+
+  return { dataUrl: value };
+}
 
 // Origins that may call this function. Set ALLOWED_ORIGINS in the function's
 // environment (comma-separated) when the app moves to a new domain — the
@@ -184,12 +247,16 @@ async function runTool(
       .eq("user_id", userId)
       .gte("checkin_date", from)
       .lte("checkin_date", to)
-      .order("checkin_date", { ascending: true })
+      // Descending + limit so an over-wide range drops the OLDEST rows. With
+      // ascending order the cap threw away the most recent check-ins, which
+      // are the ones the athlete is actually asking about. Reversed below so
+      // the model still reads them oldest-first.
+      .order("checkin_date", { ascending: false })
       .limit(MAX_CHECKIN_ROWS);
 
     if (error) return { error: error.message };
 
-    const rows = data ?? [];
+    const rows = (data ?? []).slice().reverse();
 
     return {
       count: rows.length,
@@ -454,7 +521,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
           .slice(0, MAX_MESSAGE_LENGTH)
         : "";
 
-    if (!message) {
+    const { dataUrl: imageDataUrl, error: imageError } = parseImage(body.image);
+
+    if (imageError) {
+      return jsonResponse({ error: imageError }, 400, corsHeaders);
+    }
+
+    // An image on its own is a complete request — the caption is optional.
+    const messageText = message ||
+      (imageDataUrl ? "What can you tell me about this image?" : "");
+
+    if (!messageText) {
       return jsonResponse(
         { error: "Message is required." },
         400,
@@ -512,13 +589,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
       profileContext,
       "",
       "Use get_checkins when you need dated check-in information such as sleep, fatigue, recovery, soreness, mood, pain, readiness, or training load.",
+      // Only spent when there is actually an image to reason about.
+      ...(imageDataUrl ? ["", IMAGE_GUIDANCE] : []),
     ].join("\n");
+
+    /*
+     * History stays text-only by design (normalizeHistory drops anything that
+     * is not a string), so an image is charged for the turn it was sent on and
+     * never re-uploaded on later turns. It is still resent on each tool round
+     * of *this* turn, because the model needs to see it to use the tool result
+     * — one more reason MAX_TOOL_ROUNDS is kept small.
+     */
+    const userContent = imageDataUrl
+      ? [
+        { type: "text", text: messageText },
+        {
+          type: "image_url",
+          image_url: { url: imageDataUrl, detail: IMAGE_DETAIL },
+        },
+      ]
+      : messageText;
 
     // deno-lint-ignore no-explicit-any
     const conversation: any[] = [
       { role: "system", content: systemPrompt },
       ...history,
-      { role: "user", content: message },
+      { role: "user", content: userContent },
     ];
 
     let reply = "";

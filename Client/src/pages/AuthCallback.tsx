@@ -17,15 +17,34 @@ export default function AuthCallback() {
       }
     }, 10000);
 
-    async function finishLogin() {
-      try {
+    /**
+     * supabase-js parses the OAuth tokens out of the URL hash asynchronously,
+     * so a single getSession() on mount can return null for a perfectly valid
+     * login and bounce the user back to /auth?error=session_missing. Wait for
+     * the client to settle before treating "no session" as a real failure.
+     */
+    async function waitForSession() {
+      for (let attempt = 0; attempt < 20; attempt++) {
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession();
 
-        if (cancelled) return;
         if (sessionError) throw sessionError;
+        if (session?.user) return session;
+        if (cancelled) return null;
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      return null;
+    }
+
+    async function finishLogin() {
+      try {
+        const session = await waitForSession();
+
+        if (cancelled) return;
 
         if (!session?.user) {
           navigate("/auth?mode=login&error=session_missing", { replace: true });
