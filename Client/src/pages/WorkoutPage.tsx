@@ -18,8 +18,6 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
-import { cleanJsonResponse } from "./workoutResponse";
-
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import {
@@ -387,9 +385,11 @@ export default function WorkoutPage() {
   const [summary, setSummary] =
     React.useState("");
   const [userInstructions, setUserInstructions] = React.useState("");
+
   const storageKey = session?.user?.id
-  ? `workout-plan-${session.user.id}`
-  : null;
+    ? `workout-plan-${session.user.id}`
+    : null;
+
   async function generatePlan() {
     setLoading(true);
     setError(null);
@@ -565,7 +565,7 @@ Coaching requirements:
 - If today's message conflicts with older profile information, prioritise today's message.
 - Respect all injuries and medical restrictions.
 - Respect equipment availability.
-- Never ignore allergies or injuries even if the user requests something unsafe.
+- Never ignore injuries or physical restrictions even if the user requests a conflicting exercise.
       `.trim();
 
       const responseText = await callOpenAI(prompt);
@@ -628,20 +628,19 @@ Coaching requirements:
 
       const finalSummary = summaryText || "";
 
-setSummary(finalSummary);
-setPlan(days);
-
-if (storageKey) {
-  localStorage.setItem(
-    storageKey,
-    JSON.stringify({
-      plan: days,
-      summary: finalSummary,
-      savedAt: new Date().toISOString(),
-    })
-  );
-}
+      setSummary(finalSummary);
       setPlan(days);
+
+      if (storageKey) {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            plan: days,
+            summary: finalSummary,
+            savedAt: new Date().toISOString(),
+          })
+        );
+      }
     } catch (err: unknown) {
       console.error(
         "Workout plan generation failed:",
@@ -663,14 +662,14 @@ if (storageKey) {
     if (authLoading || !isLoggedIn || !storageKey) {
       return;
     }
-  
+
     const saved = localStorage.getItem(storageKey);
-  
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-  
-        if (Array.isArray(parsed.plan)) {
+
+        if (Array.isArray(parsed?.plan)) {
           setPlan(parsed.plan);
           setSummary(parsed.summary || "");
           return;
@@ -680,15 +679,12 @@ if (storageKey) {
         localStorage.removeItem(storageKey);
       }
     }
-  
-    // Only automatically generate when the user has never had a plan before.
+
+    // Only generate automatically if this user has never generated a plan before.
     void generatePlan();
-  
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn, storageKey]);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isLoggedIn, storageKey]);
 
   return (
     <Box>

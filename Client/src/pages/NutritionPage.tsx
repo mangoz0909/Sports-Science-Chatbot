@@ -9,7 +9,6 @@ import {
   Grid,
   Skeleton,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -70,9 +69,11 @@ export default function NutritionPage() {
   const [plan, setPlan] = React.useState<NutritionPlan | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const hasGenerated = React.useRef(false);
   const [userInstructions, setUserInstructions] = React.useState("");
-  
+
+  const storageKey = session?.user?.id
+    ? `nutrition-plan-${session.user.id}`
+    : null;
 
   async function generatePlan() {
     setLoading(true);
@@ -110,7 +111,7 @@ export default function NutritionPage() {
         : "General fitness athlete, intermediate level";
 
       const checkInText = checkIn
-        ? `Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Hydration: ${checkIn.hydration ?? "N/A"}/10 (self-rated, not litres), Training intensity today: ${checkIn.training_intensity ?? "N/A"}/10`
+        ? `Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Hydration: ${checkIn.hydration ?? "N/A"}L, Training intensity today: ${checkIn.training_intensity ?? "N/A"}/10`
         : "No check-in data available";
         const weeklyTrendText =
         last7CheckIns && last7CheckIns.length > 0
@@ -120,8 +121,8 @@ export default function NutritionPage() {
                   item.checkin_date || item.created_at || "Unknown date",
                   `Readiness ${item.readiness_score ?? "N/A"}%`,
                   `Recovery ${item.recovery_score ?? "N/A"}%`,
-                  `Hydration ${item.hydration ?? "N/A"}/10`,
-                  `Nutrition ${item.nutrition ?? "N/A"}/10`,
+                  `Hydration ${item.hydration ?? "N/A"}`,
+                  `Nutrition ${item.nutrition ?? "N/A"}`,
                   `Sleep ${item.sleep_hours ?? "N/A"}h`,
                   `Fatigue ${
                     item.fatigue != null
@@ -168,7 +169,9 @@ Generate a personalised daily nutrition plan as a JSON object with exactly these
 - Consider sustained fatigue or poor recovery when recommending energy intake and meal timing.
 - Do not overreact to one unusual check-in when the overall weekly trend is different.
 - Treat the user's current request or extra information as important context when creating the plan.
-- If the user's current message conflicts with older saved preferences, prioritize the user's current message.
+- If the user's current message conflicts with older saved preferences, prioritise the user's current message.
+- Never ignore saved allergies or intolerances even if the user asks for conflicting foods.
+
 Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 
       const responseText = await callOpenAI(prompt);
@@ -186,6 +189,16 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
       }
 
       setPlan(parsed);
+
+      if (storageKey) {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            plan: parsed,
+            savedAt: new Date().toISOString(),
+          })
+        );
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to generate plan. Please try again.");
     } finally {
@@ -194,13 +207,31 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
   }
 
   React.useEffect(() => {
-    if (authLoading || !isLoggedIn) return;
-    if (!hasGenerated.current) {
-      hasGenerated.current = true;
-      generatePlan();
+    if (authLoading || !isLoggedIn || !storageKey) {
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+
+    const saved = localStorage.getItem(storageKey);
+
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+
+        if (parsed?.plan) {
+          setPlan(parsed.plan);
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to load saved nutrition plan:", error);
+        localStorage.removeItem(storageKey);
+      }
+    }
+
+    // Only generate automatically if this user has never generated a plan before.
+    void generatePlan();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn, storageKey]);
 
   const macros: MacroItem[] = plan
     ? [
@@ -221,73 +252,38 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
         description="Get a daily macro and meal plan tailored to your sport, training goals, and today's check-in data."
         path="/health/nutrition"
       />
-      <Stack spacing={2} sx={{ mb: 3 }}>
-  <Stack
-    direction={{ xs: "column", sm: "row" }}
-    justifyContent="space-between"
-    alignItems={{ xs: "flex-start", sm: "center" }}
-    spacing={2}
-  >
-    <Box>
-      <Typography variant="h5" fontWeight={950} color="#0f172a">
-        Daily Nutrition Plan
-      </Typography>
-
-      <Typography color="#64748b" fontSize={14}>
-        Personalised using your profile, today's check-in, and recent trends.
-      </Typography>
-    </Box>
-  </Stack>
-
-  {isLoggedIn && (
-    <Stack
-      direction={{ xs: "column", md: "row" }}
-      spacing={1.5}
-      alignItems="stretch"
-    >
-      <TextField
-        fullWidth
-        value={userInstructions}
-        onChange={(e) => setUserInstructions(e.target.value)}
-        placeholder="Add anything the AI should consider — e.g. I have a match tomorrow, I want vegetarian meals, or I trained hard today..."
-        multiline
-        minRows={2}
-        disabled={loading}
-        sx={{
-          "& .MuiOutlinedInput-root": {
-            borderRadius: 3,
-            bgcolor: "#fff",
-          },
-        }}
-      />
-
-      <Button
-        variant="contained"
-        startIcon={
-          loading ? (
-            <CircularProgress size={16} color="inherit" />
-          ) : (
-            <RefreshIcon />
-          )
-        }
-        disabled={loading}
-        onClick={generatePlan}
-        sx={{
-          minWidth: { md: 170 },
-          borderRadius: 3,
-          fontWeight: 800,
-          textTransform: "none",
-          bgcolor: "#0f172a",
-          "&:hover": {
-            bgcolor: "#1e293b",
-          },
-        }}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 3 }}
       >
-        {loading ? "Generating…" : "Regenerate"}
-      </Button>
-    </Stack>
-  )}
-</Stack>
+        <Box>
+          <Typography variant="h5" fontWeight={950} color="#0f172a">
+            Daily Nutrition Plan
+          </Typography>
+          <Typography color="#64748b" fontSize={14}>
+            Personalised based on your sport, goals, and today's check-in data.
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+          disabled={loading || !isLoggedIn}
+          onClick={generatePlan}
+          sx={{
+            flexShrink: 0,
+            alignSelf: { xs: "stretch", sm: "auto" },
+            borderRadius: 3,
+            fontWeight: 700,
+            textTransform: "none",
+            borderColor: "#cbd5e1",
+          }}
+        >
+          {loading ? "Generating…" : "Regenerate"}
+        </Button>
+      </Stack>
 
       {!authLoading && !isLoggedIn && (
         <Alert
