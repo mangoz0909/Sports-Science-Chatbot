@@ -18,7 +18,10 @@ import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
-import { getLatestCheckIn } from "../services/checkinService";
+import {
+  getLatestCheckIn,
+  getLast7CheckIns,
+} from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -74,9 +77,10 @@ export default function NutritionPage() {
     setPlan(null);
 
     try {
-      const [prefs, checkIn] = await Promise.all([
+      const [prefs, checkIn, last7CheckIns] = await Promise.all([
         getUserPreferences(),
         getLatestCheckIn(),
+        getLast7CheckIns(),
       ]);
 
       const extendedPrefs = prefs as any;
@@ -105,11 +109,40 @@ export default function NutritionPage() {
       const checkInText = checkIn
         ? `Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Hydration: ${checkIn.hydration ?? "N/A"}L, Training intensity today: ${checkIn.training_intensity ?? "N/A"}/10`
         : "No check-in data available";
+        const weeklyTrendText =
+        last7CheckIns && last7CheckIns.length > 0
+          ? last7CheckIns
+              .map((item) => {
+                return [
+                  item.checkin_date || item.created_at || "Unknown date",
+                  `Readiness ${item.readiness_score ?? "N/A"}%`,
+                  `Recovery ${item.recovery_score ?? "N/A"}%`,
+                  `Hydration ${item.hydration ?? "N/A"}`,
+                  `Nutrition ${item.nutrition ?? "N/A"}`,
+                  `Sleep ${item.sleep_hours ?? "N/A"}h`,
+                  `Fatigue ${
+                    item.fatigue != null
+                      ? Math.round(item.fatigue * 10)
+                      : "N/A"
+                  }%`,
+                  `Training intensity ${
+                    item.training_intensity ?? "N/A"
+                  }/10`,
+                ].join(", ");
+              })
+              .join("\n")
+          : "No recent 7-day check-in history available.";
 
       const prompt = `You are a professional sports nutritionist.
 
-ATHLETE: ${profileText}
-TODAY: ${checkInText}
+ATHLETE PROFILE:
+${profileText}
+
+TODAY'S CONDITION:
+${checkInText}
+
+RECENT 7-DAY HISTORY:
+${weeklyTrendText}
 
 Generate a personalised daily nutrition plan as a JSON object with exactly these fields. Never include foods that conflict with the athlete's stated allergies, intolerances, dietary preference, or foods they avoid. Do not provide medical treatment advice:
 - "summary": 1-2 sentence personalised note about this nutrition plan
@@ -123,6 +156,11 @@ Generate a personalised daily nutrition plan as a JSON object with exactly these
   - "foods": specific food examples (e.g. "Oats with banana, eggs, and milk")
   - "timing": when to eat (e.g. "7:00–8:00 AM")
 - "tip": one practical nutrition tip for this athlete
+- Consider the athlete's recent 7-day training load, recovery, sleep, fatigue, and hydration trends.
+- Increase recovery-focused nutrition when training load has been consistently high.
+- Account for repeated poor hydration instead of looking only at today's hydration.
+- Consider sustained fatigue or poor recovery when recommending energy intake and meal timing.
+- Do not overreact to one unusual check-in when the overall weekly trend is different.
 
 Respond ONLY with valid JSON, no markdown fences, no extra text.`;
 

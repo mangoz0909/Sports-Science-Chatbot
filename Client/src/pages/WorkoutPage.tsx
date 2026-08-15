@@ -19,7 +19,10 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
-import { getLatestCheckIn } from "../services/checkinService";
+import {
+  getLatestCheckIn,
+  getLast7CheckIns,
+} from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -394,9 +397,10 @@ export default function WorkoutPage() {
     setSummary("");
 
     try {
-      const [prefs, checkIn] = await Promise.all([
+      const [prefs, checkIn, last7CheckIns] = await Promise.all([
         getUserPreferences(),
         getLatestCheckIn(),
+        getLast7CheckIns(),
       ]);
 
       const extendedPrefs = prefs as
@@ -481,14 +485,41 @@ export default function WorkoutPage() {
           }/10`
         : "No check-in data available";
 
+        const weeklyTrendText =
+  last7CheckIns && last7CheckIns.length > 0
+    ? last7CheckIns
+        .map((item) => {
+          return [
+            item.checkin_date || item.created_at || "Unknown date",
+            `Readiness ${item.readiness_score ?? "N/A"}%`,
+            `Recovery ${item.recovery_score ?? "N/A"}%`,
+            `Fatigue ${
+              item.fatigue != null
+                ? Math.round(item.fatigue * 10)
+                : "N/A"
+            }%`,
+            `Sleep ${item.sleep_hours ?? "N/A"}h`,
+            `Training intensity ${
+              item.training_intensity ?? "N/A"
+            }/10`,
+            `Soreness ${item.soreness ?? "N/A"}`,
+            `Stress ${item.stress ?? "N/A"}`,
+            `Injury risk ${item.injury_risk ?? "N/A"}%`,
+          ].join(", ");
+        })
+        .join("\n")
+    : "No recent 7-day check-in history available.";
       const prompt = `
 You are a professional sports scientist and strength and conditioning coach.
 
-ATHLETE:
+ATHLETE PROFILE:
 ${profileText}
 
-TODAY:
+TODAY'S CONDITION:
 ${checkInText}
+
+RECENT 7-DAY HISTORY:
+${weeklyTrendText}
 
 Generate a personalised 7-day weekly workout plan as a JSON array.
 
@@ -509,22 +540,17 @@ The remaining seven elements must each have exactly this structure:
   "duration": "45 min"
 }
 
-Important requirements:
-
-- The exercises field MUST be one plain text string.
-- Do not return exercises as an array.
-- Do not return exercises as an object.
-- Include Monday through Sunday.
-- Use exactly one intensity value: High, Medium, Low, or Recovery.
-- Respect injuries, age, experience, equipment access, recovery, and readiness.
-- Include enough recovery across the week.
-- Do not prescribe exercises that conflict with injuries or restrictions.
-- If readiness or recovery is low, reduce intensity.
-- Keep each plan practical for the stated duration and equipment.
+Requirements:
+- Respect the athlete's injuries, age, experience, equipment access, recovery, and readiness.
+- Use the 7-day history to identify fatigue, recovery, sleep, and workload trends.
+- Do not base the entire plan on a single unusually good or bad day.
+- If fatigue has been consistently high, reduce weekly intensity.
+- If recovery/readiness have been consistently low, increase recovery sessions.
+- If recent training load has been consistently high, avoid unnecessary high-intensity sessions.
+- If sleep has been consistently poor, reduce training stress where appropriate.
+- Do not prescribe exercises that conflict with stated injuries or restrictions.
+- Keep the plan practical for the stated workout duration and equipment.
 - Do not provide medical treatment advice.
-- Respond only with a valid JSON array.
-- Do not use markdown fences.
-- Do not include any text outside the JSON array.
       `.trim();
 
       const responseText = await callOpenAI(prompt);
