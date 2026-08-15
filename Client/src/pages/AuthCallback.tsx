@@ -90,7 +90,7 @@ export default function AuthCallback() {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        minHeight: "calc(100dvh - var(--app-header-h, 64px))",
         display: "grid",
         placeItems: "center",
         bgcolor: "#f8fafc",

@@ -1,7 +1,7 @@
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./AiChatHome.css";
-import { getChatHistory, clearChatHistory, saveChatMessage, type ChatType } from "../services/chatService";
+import { getChatHistory, clearChatHistory, saveChatExchange, type ChatType } from "../services/chatService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -471,9 +471,7 @@ export default function AiChatHome({
       // Persist the exchange only once it succeeded, and in order — a failed
       // turn used to leave an orphan user message with no reply in the history.
       if (chatType) {
-        saveChatMessage(userMessage, "user", chatType)
-          .then(() => saveChatMessage(reply.trim(), "bot", chatType))
-          .catch(() => {});
+        saveChatExchange(userMessage, reply.trim(), chatType).catch(() => {});
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI request failed. Try again.";

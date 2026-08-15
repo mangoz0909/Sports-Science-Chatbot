@@ -615,7 +615,7 @@ Keep it concise, practical, and student-friendly.
 
 export default function SportsListPage() {
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ bgcolor: "#f8fafc" }}>
       <Seo
         title="Find Your Sport"
         description="Not sure which sport suits you? Answer 4 quick questions and get a personalised sport match powered by AI."

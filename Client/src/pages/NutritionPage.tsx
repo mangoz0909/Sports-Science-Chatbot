@@ -23,6 +23,7 @@ import {
   getLatestCheckIn,
   getLast7CheckIns,
 } from "../services/checkinService";
+import { readCachedPlan, writeCachedPlan } from "../lib/planCache";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -67,10 +68,14 @@ type NutritionPlan = {
 export default function NutritionPage() {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
+  const userId = session?.user?.id ?? null;
   const [plan, setPlan] = React.useState<NutritionPlan | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const hasGenerated = React.useRef(false);
+  // Which athlete this mount has already loaded a plan for. Tracking the id
+  // rather than a bare boolean means signing in as someone else on a shared
+  // browser still loads their plan.
+  const loadedForUser = React.useRef<string | null>(null);
   const [userInstructions, setUserInstructions] = React.useState("");
   
 
@@ -186,6 +191,12 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
       }
 
       setPlan(parsed);
+
+      // Hold the plan for the rest of the day so navigating away and back
+      // shows this same plan instead of paying for a near-identical one.
+      if (userId) {
+        writeCachedPlan<NutritionPlan>("nutrition", userId, parsed);
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to generate plan. Please try again.");
     } finally {
@@ -194,13 +205,24 @@ Respond ONLY with valid JSON, no markdown fences, no extra text.`;
   }
 
   React.useEffect(() => {
-    if (authLoading || !isLoggedIn) return;
-    if (!hasGenerated.current) {
-      hasGenerated.current = true;
-      generatePlan();
+    if (authLoading || !isLoggedIn || !userId) return;
+    if (loadedForUser.current === userId) return;
+
+    loadedForUser.current = userId;
+
+    // Today's plan, if one was already generated, survives an unmount. Only
+    // the first visit of each local day — or an explicit regenerate — calls
+    // the model.
+    const cached = readCachedPlan<NutritionPlan>("nutrition", userId);
+
+    if (cached) {
+      setPlan(cached);
+      return;
     }
+
+    generatePlan();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isLoggedIn, userId]);
 
   const macros: MacroItem[] = plan
     ? [

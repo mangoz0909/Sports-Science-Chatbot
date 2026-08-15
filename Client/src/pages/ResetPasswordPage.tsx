@@ -89,7 +89,7 @@ export default function ResetPasswordPage() {
 
   if (!sessionReady) {
     return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
+      <Box sx={{ minHeight: "calc(100dvh - var(--app-header-h, 64px))", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
         <Box textAlign="center" role="status" aria-live="polite">
           {linkInvalid ? (
             <Container maxWidth="xs" disableGutters>
@@ -126,7 +126,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
+    <Box sx={{ minHeight: "calc(100dvh - var(--app-header-h, 64px))", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
       <Container maxWidth="xs">
         <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>
           <Typography variant="h5" fontWeight={950} color="#0f172a" sx={{ mb: 0.5 }}>

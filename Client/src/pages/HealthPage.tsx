@@ -15,7 +15,7 @@ export default function HealthPage() {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ bgcolor: "#f8fafc" }}>
       <Box sx={{ bgcolor: "#fff", borderBottom: "1px solid #e2e8f0" }}>
         <Container maxWidth="xl" sx={{ pt: { xs: 3, md: 5 }, pb: 0 }}>
           <Chip

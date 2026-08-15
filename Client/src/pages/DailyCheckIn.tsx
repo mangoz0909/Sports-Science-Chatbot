@@ -288,7 +288,7 @@ export default function DailyCheckIn() {
   ];
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ bgcolor: "#f8fafc" }}>
       <Seo
         title="Daily Check-In"
         description="Log today's sleep, fatigue, soreness, mood, and wellness to get your athlete readiness and recovery scores."

@@ -26,6 +26,7 @@ import {
   getLatestCheckIn,
   getLast7CheckIns,
 } from "../services/checkinService";
+import { readCachedPlan, writeCachedPlan } from "../lib/planCache";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -41,11 +42,6 @@ type WorkoutDay = {
   exercises: string;
   intensity: WorkoutIntensity;
   duration: string;
-};
-
-type SummaryItem = {
-  type: "summary";
-  text: string;
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -372,9 +368,15 @@ function extractSummary(value: unknown): string {
 }
 
 
+type CachedWorkoutPlan = {
+  days: WorkoutDay[];
+  summary: string;
+};
+
 export default function WorkoutPage() {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
+  const userId = session?.user?.id ?? null;
   const [plan, setPlan] =
     React.useState<WorkoutDay[] | null>(null);
 
@@ -387,7 +389,10 @@ export default function WorkoutPage() {
   const [summary, setSummary] =
     React.useState("");
   const [userInstructions, setUserInstructions] = React.useState("");
-  const hasGenerated = React.useRef(false);
+  // Which athlete this mount has already loaded a plan for. Tracking the id
+  // rather than a bare boolean means signing in as someone else on a shared
+  // browser still loads their plan.
+  const loadedForUser = React.useRef<string | null>(null);
 
   async function generatePlan() {
     setLoading(true);
@@ -625,11 +630,19 @@ Coaching requirements:
         );
       }
 
-      if (summaryText) {
-        setSummary(summaryText);
-      }
+      const resolvedSummary = summaryText ?? "";
 
+      setSummary(resolvedSummary);
       setPlan(days);
+
+      // Hold the plan for the rest of the day so navigating away and back
+      // shows this same plan instead of paying for a near-identical one.
+      if (userId) {
+        writeCachedPlan<CachedWorkoutPlan>("workout", userId, {
+          days,
+          summary: resolvedSummary,
+        });
+      }
     } catch (err: unknown) {
       console.error(
         "Workout plan generation failed:",
@@ -648,14 +661,26 @@ Coaching requirements:
   }
 
   React.useEffect(() => {
-    if (authLoading || !isLoggedIn) return;
-    if (!hasGenerated.current) {
-      hasGenerated.current = true;
-      void generatePlan();
+    if (authLoading || !isLoggedIn || !userId) return;
+    if (loadedForUser.current === userId) return;
+
+    loadedForUser.current = userId;
+
+    // Today's plan, if one was already generated, survives an unmount. Only
+    // the first visit of each local day — or an explicit regenerate — calls
+    // the model.
+    const cached = readCachedPlan<CachedWorkoutPlan>("workout", userId);
+
+    if (cached) {
+      setPlan(cached.days);
+      setSummary(cached.summary);
+      return;
     }
 
+    void generatePlan();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isLoggedIn, userId]);
 
   return (
     <Box>

@@ -133,7 +133,7 @@ const Header: React.FC = () => {
               spacing={0.5}
               alignItems="center"
               sx={{
-                display: { xs: "none", lg: "flex" },
+                display: { xs: "none", md: "flex" },
                 flex: 1,
                 justifyContent: "center",
               }}
@@ -166,7 +166,7 @@ const Header: React.FC = () => {
               direction="row"
               spacing={1}
               alignItems="center"
-              sx={{ display: { xs: "none", lg: "flex" }, flexShrink: 0 }}
+              sx={{ display: { xs: "none", md: "flex" }, flexShrink: 0 }}
             >
               {isLoggedIn ? (
                 <>
@@ -264,7 +264,7 @@ const Header: React.FC = () => {
             <IconButton
               onClick={() => setDrawerOpen(true)}
               sx={{
-                display: { xs: "inline-flex", lg: "none" },
+                display: { xs: "inline-flex", md: "none" },
                 width: 48,
                 height: 48,
                 borderRadius: "16px",
@@ -304,7 +304,7 @@ const Header: React.FC = () => {
             <IconButton
               onClick={closeDrawer}
               aria-label="Close navigation menu"
-              sx={{ width: 32, height: 32, bgcolor: "#f1f5f9", borderRadius: "8px" }}
+              sx={{ width: 44, height: 44, bgcolor: "#f1f5f9", borderRadius: "10px" }}
             >
               <CloseIcon sx={{ fontSize: 16 }} />
             </IconButton>

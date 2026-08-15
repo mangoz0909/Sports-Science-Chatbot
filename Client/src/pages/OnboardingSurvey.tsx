@@ -263,7 +263,7 @@ export default function OnboardingSurvey() {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }} aria-busy="true">
+      <Box sx={{ bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }} aria-busy="true">
         <Container maxWidth="md">
           <Skeleton variant="rounded" height={230} sx={{ borderRadius: 5, mb: 3 }} />
           <Stack spacing={3}>
@@ -277,7 +277,7 @@ export default function OnboardingSurvey() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }}>
+    <Box sx={{ bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }}>
       <Seo
         title="Set Up Your Profile"
         description="Personalise your SportLab AI experience by telling us about your sport, goals, and training background."

@@ -52,6 +52,53 @@ export async function saveChatMessage(
   }
 }
 
+/**
+ * Save a completed question-and-answer turn.
+ *
+ * Both rows go in one insert with explicit, ordered timestamps. Saving them as
+ * two back-to-back inserts let the database stamp them microseconds apart, and
+ * history is ordered by `created_at` — so a turn could come back reply-first
+ * on reload. An explicit 1ms gap makes the order unambiguous.
+ */
+export async function saveChatExchange(
+  userContent: string,
+  botContent: string,
+  chatType: ChatType,
+) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) throw new Error("User not logged in.");
+
+  const askedAt = new Date();
+  const answeredAt = new Date(askedAt.getTime() + 1);
+
+  const { error } = await supabase.from("chat_messages").insert([
+    {
+      user_id: user.id,
+      chat_type: chatType,
+      role: "user" as StoredChatRole,
+      content: userContent,
+      created_at: askedAt.toISOString(),
+    },
+    {
+      user_id: user.id,
+      chat_type: chatType,
+      role: "assistant" as StoredChatRole,
+      content: botContent,
+      created_at: answeredAt.toISOString(),
+    },
+  ]);
+
+  if (error) {
+    console.error("Failed to save chat exchange:", error);
+    throw error;
+  }
+}
+
 export async function clearChatHistory(chatType: ChatType) {
   const {
     data: { user },

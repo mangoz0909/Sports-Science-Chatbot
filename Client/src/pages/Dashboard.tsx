@@ -184,7 +184,7 @@ if (loading) {
   // the page doesn't reflow when data lands. The old centred spinner replaced
   // the entire page and every element jumped into place afterwards.
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }} aria-busy="true" aria-live="polite">
+    <Box sx={{ bgcolor: "#f8fafc" }} aria-busy="true" aria-live="polite">
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={1.2} sx={{ mb: 3 }}>
           <Skeleton variant="rounded" width={230} height={32} sx={{ borderRadius: 999 }} />
@@ -278,7 +278,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
   ];
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ bgcolor: "#f8fafc" }}>
       <Seo
         title="My Dashboard"
         description="View your athlete readiness, recovery, training load, sleep trends, and AI coach insights — all in one place."

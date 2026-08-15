@@ -188,7 +188,7 @@ const AuthPage: React.FC = () => {
     />
     <Box
       sx={{
-        minHeight: "100vh",
+        minHeight: "calc(100dvh - var(--app-header-h, 64px))",
         bgcolor: "#f8fafc",
         py: { xs: 4, md: 7 },
         display: "grid",
