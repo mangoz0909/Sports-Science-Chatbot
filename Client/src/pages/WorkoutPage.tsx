@@ -18,6 +18,8 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
+import { cleanJsonResponse } from "./workoutResponse";
+
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import {

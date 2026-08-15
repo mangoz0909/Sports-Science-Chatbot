@@ -9,6 +9,7 @@ import {
   Grid,
   Skeleton,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -25,19 +26,7 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Grid,
-  Skeleton,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+
 const NUTRITION_SYSTEM_PROMPT =
   "You are a careful sports nutrition assistant. Provide general educational guidance only, avoid diagnosis, respect allergies and dietary restrictions, and return valid JSON when requested.";
 
