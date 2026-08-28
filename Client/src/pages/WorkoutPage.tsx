@@ -18,15 +18,12 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
-import { cleanJsonResponse } from "./workoutResponse";
-
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import {
   getLatestCheckIn,
   getLast7CheckIns,
 } from "../services/checkinService";
-import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -42,6 +39,11 @@ type WorkoutDay = {
   exercises: string;
   intensity: WorkoutIntensity;
   duration: string;
+};
+
+type SummaryItem = {
+  type: "summary";
+  text: string;
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -367,16 +369,18 @@ function extractSummary(value: unknown): string {
   return "";
 }
 
+function cleanJsonResponse(responseText: string): string {
+  return responseText
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+}
 
-type CachedWorkoutPlan = {
-  days: WorkoutDay[];
-  summary: string;
-};
 
 export default function WorkoutPage() {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
-  const userId = session?.user?.id ?? null;
   const [plan, setPlan] =
     React.useState<WorkoutDay[] | null>(null);
 
@@ -389,10 +393,10 @@ export default function WorkoutPage() {
   const [summary, setSummary] =
     React.useState("");
   const [userInstructions, setUserInstructions] = React.useState("");
-  // Which athlete this mount has already loaded a plan for. Tracking the id
-  // rather than a bare boolean means signing in as someone else on a shared
-  // browser still loads their plan.
-  const loadedForUser = React.useRef<string | null>(null);
+
+  const storageKey = session?.user?.id
+    ? `workout-plan-${session.user.id}`
+    : null;
 
   async function generatePlan() {
     setLoading(true);
@@ -630,19 +634,20 @@ Coaching requirements:
         );
       }
 
-      const resolvedSummary = summaryText ?? "";
+      const finalSummary = summaryText || "";
 
-      setSummary(resolvedSummary);
+      setSummary(finalSummary);
       setPlan(days);
 
-      // Hold the plan for the rest of the day, on every device, so navigating
-      // away and back shows this same plan instead of paying for a
-      // near-identical one. saveTodaysPlan reports its own failures.
-      if (userId) {
-        void saveTodaysPlan<CachedWorkoutPlan>("workout", userId, {
-          days,
-          summary: resolvedSummary,
-        });
+      if (storageKey) {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            plan: days,
+            summary: finalSummary,
+            savedAt: new Date().toISOString(),
+          })
+        );
       }
     } catch (err: unknown) {
       console.error(
@@ -662,38 +667,32 @@ Coaching requirements:
   }
 
   React.useEffect(() => {
-    if (authLoading || !isLoggedIn || !userId) return;
-    if (loadedForUser.current === userId) return;
-
-    loadedForUser.current = userId;
-
-    async function loadOrGenerate(athleteId: string) {
-      setLoading(true);
-
-      // A plan generated earlier today, on this or any other device, is the
-      // one the athlete keeps until they ask for a new one. Only the first
-      // visit of each local day reaches the model.
-      const saved = await loadTodaysPlan<CachedWorkoutPlan>(
-        "workout",
-        athleteId
-      );
-
-      if (saved) {
-        setPlan(saved.days);
-        setSummary(saved.summary);
-        setLoading(false);
-        return;
-      }
-
-      // generatePlan raises the loading flag itself, so the skeleton stays up
-      // without a blank frame in between.
-      await generatePlan();
+    if (authLoading || !isLoggedIn || !storageKey) {
+      return;
     }
 
-    void loadOrGenerate(userId);
+    const saved = localStorage.getItem(storageKey);
+
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+
+        if (Array.isArray(parsed?.plan)) {
+          setPlan(parsed.plan);
+          setSummary(parsed.summary || "");
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to load saved workout plan:", error);
+        localStorage.removeItem(storageKey);
+      }
+    }
+
+    // Only generate automatically if this user has never generated a plan before.
+    void generatePlan();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn, userId]);
+  }, [authLoading, isLoggedIn, storageKey]);
 
   return (
     <Box>
