@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 
 const SITE_URL = "https://sportslabai.onrender.com";
@@ -36,6 +37,15 @@ export default function Seo({
   imageAlt = DEFAULT_IMAGE_ALT,
   jsonLd,
 }: SeoProps) {
+  // Prerendered pages (scripts/prerender.js) ship these tags baked into the
+  // HTML so scrapers that never run JavaScript can read them. Helmet does not
+  // know it owns those, so once it has injected its own the baked copies are
+  // redundant — and two canonicals is worse than none, since Google may
+  // discard both. Drop them on mount, leaving exactly one set either way.
+  useEffect(() => {
+    document.head.querySelectorAll("[data-prerendered]").forEach((el) => el.remove());
+  }, []);
+
   const fullTitle = title.includes(SITE_NAME) ? title : `${title} · ${SITE_NAME}`;
   const canonical = `${SITE_URL}${path}`;
   const imageUrl = image
@@ -45,7 +55,7 @@ export default function Seo({
     : DEFAULT_IMAGE;
 
   return (
-    <Helmet prioritizeSeoTags>
+    <Helmet>
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <meta name="robots" content={noIndex ? NOINDEX_ROBOTS : INDEX_ROBOTS} />

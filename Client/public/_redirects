@@ -1,1 +1,10 @@
+# Serve the prerendered HTML for each public route (scripts/prerender.js writes
+# these). Listing them explicitly means the SPA catch-all below can never
+# shadow a prerendered file, whatever the host's directory-index behaviour.
+/sports             /sports/index.html             200
+/sports-list        /sports-list/index.html        200
+/health/workout     /health/workout/index.html     200
+/health/nutrition   /health/nutrition/index.html   200
+
+# Everything else is client-routed.
 /*    /index.html   200
