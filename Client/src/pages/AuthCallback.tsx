@@ -3,6 +3,7 @@ import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material"
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { syncGoogleProfile } from "../services/profileService";
+import Seo from "../components/Seo";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -97,6 +98,7 @@ export default function AuthCallback() {
         px: 2,
       }}
     >
+      <Seo title="Signing You In" description="Completing your SportLab AI sign in." noIndex />
       <Box textAlign="center">
         {error ? (
           <>

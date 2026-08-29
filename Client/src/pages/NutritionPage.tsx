@@ -27,7 +27,7 @@ import {
 } from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
-import Seo from "../components/Seo";
+import Seo, { breadcrumbs } from "../components/Seo";
 
 const NUTRITION_SYSTEM_PROMPT =
   "You are a careful sports nutrition assistant. Provide general educational guidance only, avoid diagnosis, respect allergies and dietary restrictions, and return valid JSON when requested.";
@@ -465,6 +465,11 @@ Do not include any extra text.
         title="AI Nutrition Plan"
         description="Get a daily macro and meal plan tailored to your sport, training goals, and today's check-in data."
         path="/health/nutrition"
+        jsonLd={breadcrumbs([
+          { name: "Home", path: "/" },
+          { name: "Health & Performance", path: "/health" },
+          { name: "Nutrition Plan", path: "/health/nutrition" },
+        ])}
       />
 
       <Stack

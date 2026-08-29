@@ -10,6 +10,10 @@ export default function HealthPage() {
 
   const tabValue = pathname.startsWith("/health/nutrition") ? 1 : 0;
 
+  // Each tab is its own indexable URL, so the page heading has to name that
+  // route rather than the shared section.
+  const heading = tabValue === 1 ? "Your Nutrition Plan" : "Your Workout Plan";
+
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     navigate(newValue === 0 ? "/health/workout" : "/health/nutrition");
   };
@@ -24,6 +28,7 @@ export default function HealthPage() {
           />
           <Typography
             variant="h3"
+            component="h1"
             sx={{
               fontWeight: 950,
               letterSpacing: -0.8,
@@ -32,7 +37,7 @@ export default function HealthPage() {
               mb: 0.5,
             }}
           >
-            Your Health Plans
+            {heading}
           </Typography>
           <Typography color="#64748b" sx={{ mb: 2 }}>
             AI-generated workout and nutrition plans personalised to your profile and daily check-in data.

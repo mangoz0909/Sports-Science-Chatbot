@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import Seo from "../components/Seo";
+import Seo, { breadcrumbs } from "../components/Seo";
 import {
   Alert,
   Box,
@@ -620,6 +620,10 @@ export default function SportsListPage() {
         title="Find Your Sport"
         description="Not sure which sport suits you? Answer 4 quick questions and get a personalised sport match powered by AI."
         path="/sports-list"
+        jsonLd={breadcrumbs([
+          { name: "Home", path: "/" },
+          { name: "Find Your Sport", path: "/sports-list" },
+        ])}
       />
       <Container
         maxWidth="xl"
@@ -641,6 +645,7 @@ export default function SportsListPage() {
 
           <Typography
             variant="h3"
+            component="h1"
             sx={{
               fontWeight: 950,
               letterSpacing: -0.9,

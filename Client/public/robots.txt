@@ -1,16 +1,20 @@
 User-agent: *
 Allow: /
-Allow: /sports
-Allow: /sports-list
-Allow: /health/workout
-Allow: /health/nutrition
+
+# /auth is intentionally crawlable-but-noindex: blocking it here would stop
+# Google reading the noindex tag it needs to honour.
 Allow: /auth
 
-# Authenticated-only pages — no indexing value
+# Authenticated-only pages — no indexing value, and crawling them only
+# renders a login redirect.
+Disallow: /auth/callback
 Disallow: /dashboard
 Disallow: /daily-check-in
 Disallow: /profile
 Disallow: /onboarding
 Disallow: /reset-password
+
+# Build assets carry no search value.
+Disallow: /static/
 
 Sitemap: https://sportslabai.onrender.com/sitemap.xml

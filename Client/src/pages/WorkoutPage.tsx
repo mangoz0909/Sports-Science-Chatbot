@@ -24,7 +24,7 @@ import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
-import Seo from "../components/Seo";
+import Seo, { breadcrumbs } from "../components/Seo";
 
 const WORKOUT_SYSTEM_PROMPT =
   "You are a careful sports scientist and strength and conditioning assistant. Provide general educational fitness guidance only. Respect injuries, restrictions, equipment access, experience level, recovery, and age. Do not diagnose medical conditions. Return valid JSON when requested.";
@@ -369,6 +369,11 @@ Requirements:
         title="Today's AI Workout"
         description="Get one detailed workout for today based on your athlete profile, readiness, recovery, and recent training trends."
         path="/health/workout"
+        jsonLd={breadcrumbs([
+          { name: "Home", path: "/" },
+          { name: "Health & Performance", path: "/health" },
+          { name: "Workout Plan", path: "/health/workout" },
+        ])}
       />
 
       <Stack spacing={2} sx={{ mb: 3 }}>

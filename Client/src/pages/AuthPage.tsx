@@ -214,7 +214,7 @@ const AuthPage: React.FC = () => {
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <Box
                   component="img"
-                  src="/sportslab_logo.png"
+                  src="/logo-192.png"
                   alt="SportLab AI"
                   sx={{
                     width: 48,

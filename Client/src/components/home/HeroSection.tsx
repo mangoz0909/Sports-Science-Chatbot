@@ -134,7 +134,15 @@ export default function HeroSection() {
                         transition={wordTransition}
                         style={{ display: "inline-block", marginRight: "0.28em" }}
                       >
-                        {word}
+                        {/*
+                          The words are separate inline-blocks so each can animate
+                          in on its own, but the gap between them was pure CSS
+                          margin. That left the H1's text content as one run-on
+                          string ("Makeathletedecisions…") for crawlers and screen
+                          readers. The trailing space collapses visually inside an
+                          inline-block, so it costs nothing and restores the words.
+                        */}
+                        {`${word} `}
                       </motion.span>
                     ))}
                   </Typography>
@@ -249,7 +257,7 @@ export default function HeroSection() {
                       transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
                       sx={{ width: 56, height: 56, borderRadius: "14px", display: "grid", placeItems: "center", bgcolor: "#e0f2fe", overflow: "hidden" }}
                     >
-                      <Box component="img" src="/sportslab_logo.png" alt="SportLab AI" sx={{ width: 44, height: 44, objectFit: "contain" }} />
+                      <Box component="img" src="/logo-192.png" alt="SportLab AI" sx={{ width: 44, height: 44, objectFit: "contain" }} />
                     </MotionBox>
                   </Stack>
 

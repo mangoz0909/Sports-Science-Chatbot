@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
 const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (
   <Box
     component="img"
-    src="/sportslab_logo.png"
+    src="/logo-192.png"
     alt="SportLab AI"
     sx={{
       width: size,

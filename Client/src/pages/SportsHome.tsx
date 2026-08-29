@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Chip, Stack } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import AiChatHome from "../components/AiChatHome";
-import Seo from "../components/Seo";
+import Seo, { breadcrumbs } from "../components/Seo";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
 
@@ -60,6 +60,10 @@ export default function UnifiedAIHome() {
         title="Sports AI Coach"
         description="Ask your AI sports coach anything — training plans, recovery, nutrition, tactics, injury prevention, and sports science."
         path="/sports"
+        jsonLd={breadcrumbs([
+          { name: "Home", path: "/" },
+          { name: "Sports AI Coach", path: "/sports" },
+        ])}
       />
       {statusChip && (
         <Stack alignItems="flex-end" sx={{ px: { xs: 2, md: 3 }, pt: 1.5 }}>
@@ -69,7 +73,7 @@ export default function UnifiedAIHome() {
     <AiChatHome
       chatType="sports"
       title="Sports Health AI"
-      logoSrc="/sportslab_logo.png"
+      logoSrc="/logo-192.png"
       emptyIcon="🏆"
       emptyTitle="Ask about sports performance or mental wellbeing"
       emptySubtitle="Training · Recovery · Nutrition · Stress · Confidence · Focus"

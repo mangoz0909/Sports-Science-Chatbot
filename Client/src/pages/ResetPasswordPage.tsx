@@ -4,6 +4,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import Seo from "../components/Seo";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -127,6 +128,11 @@ export default function ResetPasswordPage() {
 
   return (
     <Box sx={{ minHeight: "calc(100dvh - var(--app-header-h, 64px))", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
+      <Seo
+        title="Reset Your Password"
+        description="Choose a new password for your SportLab AI account."
+        noIndex
+      />
       <Container maxWidth="xs">
         <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>
           <Typography variant="h5" fontWeight={950} color="#0f172a" sx={{ mb: 0.5 }}>
