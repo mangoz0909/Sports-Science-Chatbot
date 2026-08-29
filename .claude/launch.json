@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "client",
+      "name": "Client",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["start", "--prefix", "client"],
+      "runtimeArgs": ["start", "--prefix", "Client"],
       "port": 3000,
       "autoPort": true
     }
