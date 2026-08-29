@@ -7,7 +7,7 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Grid,
+  Divider,
   Skeleton,
   Stack,
   TextField,
@@ -17,13 +17,11 @@ import {
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
-import {
-  getLatestCheckIn,
-  getLast7CheckIns,
-} from "../services/checkinService";
+import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
@@ -33,30 +31,33 @@ const WORKOUT_SYSTEM_PROMPT =
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
 
-type WorkoutDay = {
+type ExerciseItem = {
+  name: string;
+  sets: string;
+  reps: string;
+  rest: string;
+  notes: string;
+};
+
+type DailyWorkoutPlan = {
   day: string;
+  date: string;
   focus: string;
-  exercises: string;
   intensity: WorkoutIntensity;
-  duration: string;
+  totalDuration: string;
+  coachNote: string;
+  warmup: string[];
+  exercises: ExerciseItem[];
+  cooldown: string[];
+  recoveryNote: string;
 };
-
-type SummaryItem = {
-  type: "summary";
-  text: string;
-};
-
-type UnknownRecord = Record<string, unknown>;
 
 async function callOpenAI(prompt: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-complete", {
     body: {
       prompt,
       systemPrompt: WORKOUT_SYSTEM_PROMPT,
-      // A full 7-day plan plus the summary object was already close to the
-      // ceiling; the 7-day history in the prompt pushes output longer still,
-      // and a truncated response is unparseable JSON. 2500 is the server cap.
-      maxTokens: 2500,
+      maxTokens: 2200,
       temperature: 0.4,
     },
   });
@@ -64,309 +65,10 @@ async function callOpenAI(prompt: string): Promise<string> {
   if (error) throw error;
 
   const reply = data?.result;
-
   if (typeof reply !== "string" || !reply.trim()) {
     throw new Error("The AI model returned an empty response.");
   }
-
   return reply.trim();
-}
-
-function intensityColor(intensity: WorkoutIntensity) {
-  if (intensity === "High") {
-    return {
-      bg: "#fee2e2",
-      color: "#991b1b",
-    };
-  }
-
-  if (intensity === "Medium") {
-    return {
-      bg: "#fef3c7",
-      color: "#92400e",
-    };
-  }
-
-  if (intensity === "Recovery") {
-    return {
-      bg: "#f3e8ff",
-      color: "#6b21a8",
-    };
-  }
-
-  return {
-    bg: "#dcfce7",
-    color: "#166534",
-  };
-}
-
-function isObject(value: unknown): value is UnknownRecord {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value)
-  );
-}
-
-/**
- * Converts exercises returned by the AI into a displayable string.
- *
- * Supported AI formats:
- *
- * "Squats: 3 sets of 10"
- *
- * [
- *   "Squats: 3 sets of 10",
- *   "Lunges: 3 sets of 8"
- * ]
- *
- * [
- *   {
- *     "exercise": "Squats",
- *     "sets": 3,
- *     "reps": 10
- *   }
- * ]
- */
-function formatExercises(value: unknown): string {
-  if (typeof value === "string") {
-    return value.trim();
-  }
-
-  if (Array.isArray(value)) {
-    const formattedExercises = value
-      .map((exercise) => {
-        if (typeof exercise === "string") {
-          return exercise.trim();
-        }
-
-        if (isObject(exercise)) {
-          const name =
-            exercise.exercise ??
-            exercise.name ??
-            exercise.title ??
-            "Exercise";
-
-          const sets = exercise.sets;
-          const reps = exercise.reps;
-          const duration =
-            exercise.duration ??
-            exercise.time;
-
-          const details: string[] = [];
-
-          if (
-            typeof sets === "string" ||
-            typeof sets === "number"
-          ) {
-            details.push(`${sets} sets`);
-          }
-
-          if (
-            typeof reps === "string" ||
-            typeof reps === "number"
-          ) {
-            details.push(`${reps} reps`);
-          }
-
-          if (
-            typeof duration === "string" ||
-            typeof duration === "number"
-          ) {
-            details.push(String(duration));
-          }
-
-          const safeName =
-            typeof name === "string" ||
-            typeof name === "number"
-              ? String(name)
-              : "Exercise";
-
-          if (details.length > 0) {
-            return `${safeName}: ${details.join(" × ")}`;
-          }
-
-          return safeName;
-        }
-
-        if (
-          typeof exercise === "number" ||
-          typeof exercise === "boolean"
-        ) {
-          return String(exercise);
-        }
-
-        return "";
-      })
-      .filter(Boolean);
-
-    return formattedExercises.join(" • ");
-  }
-
-  if (isObject(value)) {
-    const name =
-      value.exercise ??
-      value.name ??
-      value.title;
-
-    const sets = value.sets;
-    const reps = value.reps;
-    const duration =
-      value.duration ??
-      value.time;
-
-    const parts: string[] = [];
-
-    if (
-      typeof name === "string" ||
-      typeof name === "number"
-    ) {
-      parts.push(String(name));
-    }
-
-    if (
-      typeof sets === "string" ||
-      typeof sets === "number"
-    ) {
-      parts.push(`${sets} sets`);
-    }
-
-    if (
-      typeof reps === "string" ||
-      typeof reps === "number"
-    ) {
-      parts.push(`${reps} reps`);
-    }
-
-    if (
-      typeof duration === "string" ||
-      typeof duration === "number"
-    ) {
-      parts.push(String(duration));
-    }
-
-    if (parts.length > 0) {
-      return parts.join(" • ");
-    }
-
-    return Object.entries(value)
-      .map(([key, item]) => {
-        if (
-          typeof item === "string" ||
-          typeof item === "number" ||
-          typeof item === "boolean"
-        ) {
-          return `${key}: ${item}`;
-        }
-
-        return "";
-      })
-      .filter(Boolean)
-      .join(" • ");
-  }
-
-  return "No exercises provided.";
-}
-
-function stringValue(
-  value: unknown,
-  fallback: string
-): string {
-  if (typeof value === "string" && value.trim()) {
-    return value.trim();
-  }
-
-  if (typeof value === "number") {
-    return String(value);
-  }
-
-  return fallback;
-}
-
-function normalizeIntensity(
-  value: unknown
-): WorkoutIntensity {
-  if (
-    value === "High" ||
-    value === "Medium" ||
-    value === "Low" ||
-    value === "Recovery"
-  ) {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-
-    if (normalized === "high") {
-      return "High";
-    }
-
-    if (normalized === "medium") {
-      return "Medium";
-    }
-
-    if (normalized === "recovery") {
-      return "Recovery";
-    }
-  }
-
-  return "Low";
-}
-
-function normalizeWorkoutDay(
-  value: unknown,
-  index: number
-): WorkoutDay | null {
-  if (!isObject(value)) {
-    return null;
-  }
-
-  if (value.type === "summary") {
-    return null;
-  }
-
-  const weekdays = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
-
-  return {
-    day: stringValue(
-      value.day,
-      weekdays[index] ?? `Day ${index + 1}`
-    ),
-    focus: stringValue(
-      value.focus,
-      "General training"
-    ),
-    exercises: formatExercises(value.exercises),
-    intensity: normalizeIntensity(value.intensity),
-    duration: stringValue(
-      value.duration,
-      "45 min"
-    ),
-  };
-}
-
-function extractSummary(value: unknown): string {
-  if (!isObject(value)) {
-    return "";
-  }
-
-  if (
-    value.type === "summary" &&
-    typeof value.text === "string"
-  ) {
-    return value.text.trim();
-  }
-
-  return "";
 }
 
 function cleanJsonResponse(responseText: string): string {
@@ -377,32 +79,113 @@ function cleanJsonResponse(responseText: string): string {
     .trim();
 }
 
+function intensityColor(intensity: WorkoutIntensity) {
+  if (intensity === "High") return { bg: "#fee2e2", color: "#991b1b" };
+  if (intensity === "Medium") return { bg: "#fef3c7", color: "#92400e" };
+  if (intensity === "Recovery") return { bg: "#f3e8ff", color: "#6b21a8" };
+  return { bg: "#dcfce7", color: "#166534" };
+}
+
+function normalizeIntensity(value: unknown): WorkoutIntensity {
+  if (value === "High" || value === "Medium" || value === "Low" || value === "Recovery") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "high") return "High";
+    if (normalized === "medium") return "Medium";
+    if (normalized === "recovery") return "Recovery";
+  }
+  return "Low";
+}
+
+function stringValue(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number") return String(value);
+  return fallback;
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+}
+
+function normalizeExercises(value: unknown): ExerciseItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const record = item as Record<string, unknown>;
+      return {
+        name: stringValue(record.name, "Exercise"),
+        sets: stringValue(record.sets, "As appropriate"),
+        reps: stringValue(record.reps, "As appropriate"),
+        rest: stringValue(record.rest, "60 sec"),
+        notes: stringValue(record.notes, ""),
+      };
+    })
+    .filter((item): item is ExerciseItem => item !== null);
+}
+
+function normalizePlan(value: unknown): DailyWorkoutPlan {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("The AI returned an invalid workout plan.");
+  }
+
+  const record = value as Record<string, unknown>;
+  const exercises = normalizeExercises(record.exercises);
+  if (exercises.length === 0) {
+    throw new Error("The AI workout plan did not include any exercises.");
+  }
+
+  return {
+    day: stringValue(record.day, new Date().toLocaleDateString(undefined, { weekday: "long" })),
+    date: stringValue(record.date, new Date().toLocaleDateString()),
+    focus: stringValue(record.focus, "Today's training"),
+    intensity: normalizeIntensity(record.intensity),
+    totalDuration: stringValue(record.totalDuration, "45-60 min"),
+    coachNote: stringValue(record.coachNote, ""),
+    warmup: normalizeStringArray(record.warmup),
+    exercises,
+    cooldown: normalizeStringArray(record.cooldown),
+    recoveryNote: stringValue(record.recoveryNote, ""),
+  };
+}
+
+function getLocalDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function WorkoutPage() {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
-  const [plan, setPlan] =
-    React.useState<WorkoutDay[] | null>(null);
 
-  const [loading, setLoading] =
-    React.useState(false);
-
-  const [error, setError] =
-    React.useState<string | null>(null);
-
-  const [summary, setSummary] =
-    React.useState("");
+  const [plan, setPlan] = React.useState<DailyWorkoutPlan | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [userInstructions, setUserInstructions] = React.useState("");
 
+  const todayKey = getLocalDateKey();
+  const todayName = new Date().toLocaleDateString(undefined, { weekday: "long" });
+  const todayDisplay = new Date().toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
   const storageKey = session?.user?.id
-    ? `workout-plan-${session.user.id}`
+    ? `workout-plan-${session.user.id}-${todayKey}`
     : null;
 
   async function generatePlan() {
     setLoading(true);
     setError(null);
-    setPlan(null);
-    setSummary("");
 
     try {
       const [prefs, checkIn, last7CheckIns] = await Promise.all([
@@ -411,114 +194,55 @@ export default function WorkoutPage() {
         getLast7CheckIns(),
       ]);
 
-      const extendedPrefs = prefs as
-        | Record<string, unknown>
-        | null;
+      const extendedPrefs = prefs as Record<string, unknown> | null;
 
       const profileText = prefs
         ? [
-            `Sport: ${
-              prefs.primary_sport ||
-              "General fitness"
-            }`,
-            `Experience: ${
-              prefs.experience_level ||
-              "Intermediate"
-            }`,
-            `Goal: ${
-              prefs.main_goal ||
-              "General fitness"
-            }`,
-            `Training days/week: ${
-              prefs.training_days || "5"
-            }`,
-            `Injuries or restrictions: ${
-              prefs.injury_areas ||
-              "None reported"
-            }`,
-            `Priorities: ${
-              prefs.priorities ||
-              "General fitness"
-            }`,
-            `Athlete type: ${
-              prefs.athlete_type ||
-              "General"
-            }`,
-            `Age: ${
-              extendedPrefs?.age ||
-              "Not provided"
-            }`,
-            `Height: ${
-              extendedPrefs?.height_cm
-                ? `${extendedPrefs.height_cm} cm`
-                : "Not provided"
-            }`,
-            `Weight: ${
-              extendedPrefs?.weight_kg
-                ? `${extendedPrefs.weight_kg} kg`
-                : "Not provided"
-            }`,
-            `Activity level: ${
-              extendedPrefs?.activity_level ||
-              "Not provided"
-            }`,
-            `Preferred workout duration: ${
-              extendedPrefs?.workout_duration ||
-              "Not provided"
-            }`,
-            `Equipment access: ${
-              extendedPrefs?.equipment_access ||
-              "Not provided"
-            }`,
-            `Average sleep: ${
-              prefs.sleep_range ||
-              "Not provided"
-            }`,
+            `Sport: ${prefs.primary_sport || "General fitness"}`,
+            `Experience: ${prefs.experience_level || "Intermediate"}`,
+            `Goal: ${prefs.main_goal || "General fitness"}`,
+            `Training days/week: ${prefs.training_days || "5"}`,
+            `Injuries or restrictions: ${prefs.injury_areas || "None reported"}`,
+            `Priorities: ${prefs.priorities || "General fitness"}`,
+            `Athlete type: ${prefs.athlete_type || "General"}`,
+            `Age: ${extendedPrefs?.age || "Not provided"}`,
+            `Height: ${extendedPrefs?.height_cm ? `${extendedPrefs.height_cm} cm` : "Not provided"}`,
+            `Weight: ${extendedPrefs?.weight_kg ? `${extendedPrefs.weight_kg} kg` : "Not provided"}`,
+            `Activity level: ${extendedPrefs?.activity_level || "Not provided"}`,
+            `Preferred workout duration: ${extendedPrefs?.workout_duration || "Not provided"}`,
+            `Equipment access: ${extendedPrefs?.equipment_access || "Not provided"}`,
+            `Average sleep: ${prefs.sleep_range || "Not provided"}`,
           ].join(", ")
         : "General fitness athlete, intermediate level";
 
       const checkInText = checkIn
-        ? `Today's data — Readiness: ${
-            checkIn.readiness_score ?? "N/A"
-          }%, Recovery: ${
-            checkIn.recovery_score ?? "N/A"
-          }%, Fatigue: ${
-            checkIn.fatigue != null
-              ? checkIn.fatigue * 10
-              : "N/A"
-          }%, Sleep: ${
-            checkIn.sleep_hours ?? "N/A"
-          }h, Training intensity today: ${
-            checkIn.training_intensity ?? "N/A"
-          }/10`
+        ? `Today's data — Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Fatigue: ${checkIn.fatigue != null ? Math.round(checkIn.fatigue * 10) : "N/A"}%, Sleep: ${checkIn.sleep_hours ?? "N/A"}h, Training intensity today: ${checkIn.training_intensity ?? "N/A"}/10, Soreness: ${checkIn.soreness ?? "N/A"}, Stress: ${checkIn.stress ?? "N/A"}, Injury risk: ${checkIn.injury_risk ?? "N/A"}%`
         : "No check-in data available";
 
-        const weeklyTrendText =
-  last7CheckIns && last7CheckIns.length > 0
-    ? last7CheckIns
-        .map((item) => {
-          return [
-            item.checkin_date || item.created_at || "Unknown date",
-            `Readiness ${item.readiness_score ?? "N/A"}%`,
-            `Recovery ${item.recovery_score ?? "N/A"}%`,
-            `Fatigue ${
-              item.fatigue != null
-                ? Math.round(item.fatigue * 10)
-                : "N/A"
-            }%`,
-            `Sleep ${item.sleep_hours ?? "N/A"}h`,
-            `Training intensity ${
-              item.training_intensity ?? "N/A"
-            }/10`,
-            `Soreness ${item.soreness ?? "N/A"}`,
-            `Stress ${item.stress ?? "N/A"}`,
-            `Injury risk ${item.injury_risk ?? "N/A"}%`,
-          ].join(", ");
-        })
-        .join("\n")
-    : "No recent 7-day check-in history available.";
+      const weeklyTrendText =
+        last7CheckIns && last7CheckIns.length > 0
+          ? last7CheckIns
+              .map((item) =>
+                [
+                  item.checkin_date || item.created_at || "Unknown date",
+                  `Readiness ${item.readiness_score ?? "N/A"}%`,
+                  `Recovery ${item.recovery_score ?? "N/A"}%`,
+                  `Fatigue ${item.fatigue != null ? Math.round(item.fatigue * 10) : "N/A"}%`,
+                  `Sleep ${item.sleep_hours ?? "N/A"}h`,
+                  `Training intensity ${item.training_intensity ?? "N/A"}/10`,
+                  `Soreness ${item.soreness ?? "N/A"}`,
+                  `Stress ${item.stress ?? "N/A"}`,
+                  `Injury risk ${item.injury_risk ?? "N/A"}%`,
+                ].join(", ")
+              )
+              .join("\n")
+          : "No recent 7-day check-in history available.";
+
       const prompt = `
-You are a professional sports scientist and strength and conditioning coach.
+You are creating ONE detailed workout for TODAY ONLY.
+
+TODAY:
+${todayName}, ${todayDisplay}
 
 ATHLETE PROFILE:
 ${profileText}
@@ -532,245 +256,170 @@ ${weeklyTrendText}
 USER'S CURRENT REQUEST OR EXTRA INFORMATION:
 ${userInstructions.trim() || "No additional instructions provided."}
 
-Generate a personalised 7-day weekly workout plan as a JSON array.
+Create one detailed training session for today. Do NOT create a weekly plan and do NOT include any other day.
 
-The first element must have this structure:
-
+Return exactly one JSON object with this structure:
 {
-  "type": "summary",
-  "text": "A 1-2 sentence personalised note"
-}
-
-The remaining seven elements must each have exactly this structure:
-
-{
-  "day": "Monday",
-  "focus": "Upper-body strength",
-  "exercises": "Bench press: 3 sets of 8 reps; Rows: 3 sets of 10 reps",
+  "day": "${todayName}",
+  "date": "${todayDisplay}",
+  "focus": "Main goal of today's session",
   "intensity": "Medium",
-  "duration": "45 min"
+  "totalDuration": "60 min",
+  "coachNote": "2-4 sentence explanation of why today's session fits the athlete's current readiness, recovery, recent training trend, sport, and goals.",
+  "warmup": [
+    "5 min easy bike or jog",
+    "10 walking lunges each side",
+    "10 arm circles each direction"
+  ],
+  "exercises": [
+    {
+      "name": "Exercise name",
+      "sets": "4",
+      "reps": "6-8",
+      "rest": "2 min",
+      "notes": "Specific coaching cue, load guidance, tempo, or modification."
+    }
+  ],
+  "cooldown": [
+    "5 min easy movement",
+    "Hip flexor stretch: 30 sec each side"
+  ],
+  "recoveryNote": "Specific post-workout recovery advice for today."
 }
 
-Format requirements (the response is parsed by a program, not read by a human):
-- Respond only with a valid JSON array containing exactly 8 elements: the summary object, then Monday through Sunday in order.
-- Do not use markdown fences. Do not include any text outside the JSON array.
-- The "exercises" field MUST be one plain text string. Do not return it as an array or an object.
-- "intensity" must be exactly one of: High, Medium, Low, Recovery.
-- Keep each "exercises" string under 220 characters so the plan fits in the response.
-
-Coaching requirements:
-- Respect the athlete's injuries, age, experience, equipment access, recovery, and readiness.
-- Use the 7-day history to identify fatigue, recovery, sleep, and workload trends.
-- Do not base the entire plan on a single unusually good or bad day.
-- If fatigue has been consistently high, reduce weekly intensity.
-- If recovery/readiness have been consistently low, increase recovery sessions.
-- If recent training load has been consistently high, avoid unnecessary high-intensity sessions.
-- If sleep has been consistently poor, reduce training stress where appropriate.
-- Do not prescribe exercises that conflict with stated injuries or restrictions.
-- Keep the plan practical for the stated workout duration and equipment.
-- Do not provide medical treatment advice.
+Requirements:
+- TODAY ONLY. Return one workout, not seven days.
+- Include 5-8 main exercises unless recovery/readiness suggests a lighter session.
+- Make the session much more detailed than a weekly overview.
+- Include exact sets, reps or time, rest periods, and useful coaching notes.
+- Use the athlete's current sport, goals, equipment, preferred duration, and experience level.
+- Use today's check-in heavily when deciding intensity and exercise selection.
+- Use the last 7 check-ins to detect fatigue, recovery, sleep, and workload trends.
+- Do not overreact to one unusual check-in if the 7-day pattern suggests otherwise.
+- Respect all injuries and physical restrictions.
+- If fatigue or injury risk is high, reduce intensity and use safer alternatives.
+- If equipment is limited, only prescribe available or bodyweight exercises.
 - Treat the user's current request as important context.
-- If today's message conflicts with older profile information, prioritise today's message.
-- Respect all injuries and medical restrictions.
-- Respect equipment availability.
-- Never ignore injuries or physical restrictions even if the user requests a conflicting exercise.
+- Do not provide medical diagnosis or treatment.
+- "intensity" must be exactly one of: High, Medium, Low, Recovery.
+- Respond ONLY with valid JSON.
+- No markdown fences and no text outside the JSON object.
       `.trim();
 
       const responseText = await callOpenAI(prompt);
-      const cleaned =
-        cleanJsonResponse(responseText);
+      const cleaned = cleanJsonResponse(responseText);
 
       let parsed: unknown;
-
       try {
         parsed = JSON.parse(cleaned);
       } catch (jsonError) {
-        console.error(
-          "Invalid AI JSON response:",
-          responseText
-        );
-
-        throw new Error(
-          "The AI returned an invalid plan format. Please regenerate the plan."
-        );
+        console.error("Invalid AI JSON response:", responseText);
+        throw new Error("The AI returned an invalid plan format. Please regenerate the plan.");
       }
 
-      if (!Array.isArray(parsed)) {
-        throw new Error(
-          "The workout plan response was not a valid array."
-        );
-      }
-
-      const summaryText = parsed
-        .map(extractSummary)
-        .find((text) => Boolean(text));
-
-      const rawDays = parsed.filter(
-        (item) =>
-          !(
-            isObject(item) &&
-            item.type === "summary"
-          )
-      );
-
-      const days = rawDays
-        .map((item, index) =>
-          normalizeWorkoutDay(item, index)
-        )
-        .filter(
-          (day): day is WorkoutDay =>
-            day !== null
-        )
-        .slice(0, 7);
-
-      if (days.length !== 7) {
-        console.error(
-          "Unexpected workout response:",
-          parsed
-        );
-
-        throw new Error(
-          `The workout plan included ${days.length} valid days instead of 7. Please regenerate it.`
-        );
-      }
-
-      const finalSummary = summaryText || "";
-
-      setSummary(finalSummary);
-      setPlan(days);
+      const normalizedPlan = normalizePlan(parsed);
+      setPlan(normalizedPlan);
 
       if (storageKey) {
         localStorage.setItem(
           storageKey,
-          JSON.stringify({
-            plan: days,
-            summary: finalSummary,
-            savedAt: new Date().toISOString(),
-          })
+          JSON.stringify({ plan: normalizedPlan, savedAt: new Date().toISOString() })
         );
       }
     } catch (err: unknown) {
-      console.error(
-        "Workout plan generation failed:",
-        err
-      );
-
-      const message =
+      console.error("Workout plan generation failed:", err);
+      setError(
         err instanceof Error
           ? err.message
-          : "Failed to generate the workout plan. Please try again.";
-
-      setError(message);
+          : "Failed to generate today's workout. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   }
 
   React.useEffect(() => {
-    if (authLoading || !isLoggedIn || !storageKey) {
-      return;
-    }
+    if (authLoading || !isLoggedIn || !storageKey) return;
 
     const saved = localStorage.getItem(storageKey);
-
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-
-        if (Array.isArray(parsed?.plan)) {
-          setPlan(parsed.plan);
-          setSummary(parsed.summary || "");
+        if (parsed?.plan) {
+          setPlan(normalizePlan(parsed.plan));
           return;
         }
       } catch (error) {
-        console.error("Failed to load saved workout plan:", error);
+        console.error("Failed to load saved daily workout plan:", error);
         localStorage.removeItem(storageKey);
       }
     }
 
-    // Only generate automatically if this user has never generated a plan before.
     void generatePlan();
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isLoggedIn, storageKey]);
+
+  const intensityStyle = plan
+    ? intensityColor(plan.intensity)
+    : intensityColor("Low");
 
   return (
     <Box>
       <Seo
-        title="AI Workout Plan"
-        description="Get a personalised 7-day training plan generated from your sport, fitness level, and today's readiness data."
+        title="Today's AI Workout"
+        description="Get one detailed workout for today based on your athlete profile, readiness, recovery, and recent training trends."
         path="/health/workout"
       />
 
-<Stack spacing={2} sx={{ mb: 3 }}>
-  <Box>
-    <Typography
-      variant="h5"
-      fontWeight={950}
-      color="#0f172a"
-    >
-      Weekly Training Plan
-    </Typography>
+      <Stack spacing={2} sx={{ mb: 3 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={950} color="#0f172a">
+            Today's Training Plan
+          </Typography>
+          <Typography color="#64748b" fontSize={14}>
+            One detailed session for {todayName}, personalised using your profile,
+            today's check-in, and recent training trends.
+          </Typography>
+        </Box>
 
-    <Typography
-      color="#64748b"
-      fontSize={14}
-    >
-      Personalised using your athlete profile, today's check-in, and recent training trends.
-    </Typography>
-  </Box>
+        {isLoggedIn && (
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems="stretch">
+            <TextField
+              fullWidth
+              value={userInstructions}
+              onChange={(e) => setUserInstructions(e.target.value)}
+              placeholder="Tell the AI what changed today... e.g. I only have 30 minutes, my legs are sore, I have a match tomorrow, or I want more speed work."
+              multiline
+              minRows={2}
+              disabled={loading}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 3,
+                  bgcolor: "#fff",
+                },
+              }}
+            />
 
-  {isLoggedIn && (
-    <Stack
-      direction={{ xs: "column", md: "row" }}
-      spacing={1.5}
-      alignItems="stretch"
-    >
-      <TextField
-        fullWidth
-        value={userInstructions}
-        onChange={(e) => setUserInstructions(e.target.value)}
-        placeholder="Tell the AI what changed... e.g. I only have 30 minutes today, my legs are sore, or I have a match tomorrow."
-        multiline
-        minRows={2}
-        disabled={loading}
-        sx={{
-          "& .MuiOutlinedInput-root": {
-            borderRadius: 3,
-            bgcolor: "#fff",
-          },
-        }}
-      />
+            <Button
+              variant="contained"
+              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+              disabled={loading}
+              onClick={() => void generatePlan()}
+              sx={{
+                minWidth: { md: 190 },
+                borderRadius: 3,
+                fontWeight: 800,
+                textTransform: "none",
+                bgcolor: "#0f172a",
+                "&:hover": { bgcolor: "#1e293b" },
+              }}
+            >
+              {loading ? "Generating…" : "Regenerate Today"}
+            </Button>
+          </Stack>
+        )}
+      </Stack>
 
-      <Button
-        variant="contained"
-        startIcon={
-          loading ? (
-            <CircularProgress size={16} color="inherit" />
-          ) : (
-            <RefreshIcon />
-          )
-        }
-        disabled={loading}
-        onClick={() => {
-          void generatePlan();
-        }}
-        sx={{
-          minWidth: { md: 190 },
-          borderRadius: 3,
-          fontWeight: 800,
-          textTransform: "none",
-          bgcolor: "#0f172a",
-          "&:hover": {
-            bgcolor: "#1e293b",
-          },
-        }}
-      >
-        {loading ? "Generating…" : "Generate New Plan"}
-      </Button>
-    </Stack>
-  )}
-</Stack>
       {!authLoading && !isLoggedIn && (
         <Alert
           severity="info"
@@ -786,232 +435,172 @@ Coaching requirements:
             </Button>
           }
         >
-          Sign in to generate your personalised workout plan.
+          Sign in to generate today's personalised workout.
         </Alert>
       )}
 
       {error && isLoggedIn && (
-        <Alert
-          severity="error"
-          sx={{
-            mb: 3,
-            borderRadius: 3,
-          }}
-        >
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
           {error}
         </Alert>
       )}
 
-      {summary && (
-        <Box
-          sx={{
-            mb: 3,
-            p: "14px 18px",
-            borderRadius: 3,
-            bgcolor: "#eff6ff",
-            border: "1px solid #bfdbfe",
-          }}
-        >
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            sx={{ mb: 0.5 }}
-          >
-            <AutoAwesomeIcon
-              sx={{
-                fontSize: 16,
-                color: "#2563eb",
-              }}
-            />
-
-            <Typography
-              fontSize={11}
-              fontWeight={800}
-              letterSpacing="0.08em"
-              textTransform="uppercase"
-              color="#2563eb"
-            >
-              AI Coach Note
-            </Typography>
-          </Stack>
-
-          <Typography
-            color="#1e3a5f"
-            fontSize={14}
-            lineHeight={1.75}
-          >
-            {summary}
-          </Typography>
-        </Box>
-      )}
-
       {loading && !plan && (
-        <Grid container spacing={2}>
-          {Array.from({
-            length: 7,
-          }).map((_, index) => (
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              lg={4}
-              key={index}
-            >
-              <Card
-                elevation={0}
-                sx={{
-                  borderRadius: 4,
-                  border:
-                    "1px solid #e2e8f0",
-                }}
-              >
-                <CardContent sx={{ p: 2.5 }}>
-                  <Skeleton
-                    variant="text"
-                    width="40%"
-                    height={28}
-                  />
-                  <Skeleton
-                    variant="text"
-                    width="70%"
-                  />
-                  <Skeleton
-                    variant="text"
-                    width="90%"
-                  />
-                  <Skeleton
-                    variant="text"
-                    width="60%"
-                  />
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+          <CardContent sx={{ p: 3 }}>
+            <Skeleton variant="text" width="35%" height={32} />
+            <Skeleton variant="text" width="60%" />
+            <Skeleton variant="rounded" height={72} sx={{ my: 2 }} />
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} variant="rounded" height={82} sx={{ mb: 1.5 }} />
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {plan && (
-        <Grid container spacing={2}>
-          {plan.map((item) => {
-            const intensityStyle =
-              intensityColor(item.intensity);
-
-            return (
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                lg={4}
-                key={item.day}
+        <Stack spacing={2.5}>
+          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", sm: "center" }}
+                spacing={1.5}
+                sx={{ mb: 2 }}
               >
-                <Card
-                  elevation={0}
-                  sx={{
-                    height: "100%",
-                    borderRadius: 4,
-                    border:
-                      "1px solid #e2e8f0",
-                    "&:hover": {
-                      borderColor: "#93c5fd",
-                      boxShadow:
-                        "0 4px 16px rgba(0,0,0,0.06)",
-                    },
-                    transition:
-                      "all 0.15s ease",
-                  }}
-                >
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="flex-start"
-                      spacing={1}
-                      sx={{ mb: 1 }}
+                <Box>
+                  <Typography fontSize={12} color="#64748b" fontWeight={800}>
+                    {plan.day} • {plan.date}
+                  </Typography>
+                  <Typography variant="h5" fontWeight={950} color="#0f172a" sx={{ mt: 0.25 }}>
+                    {plan.focus}
+                  </Typography>
+                </Box>
+
+                <Stack direction="row" spacing={1}>
+                  <Chip
+                    label={plan.intensity}
+                    sx={{
+                      bgcolor: intensityStyle.bg,
+                      color: intensityStyle.color,
+                      fontWeight: 900,
+                    }}
+                  />
+                  <Chip
+                    icon={<TimerOutlinedIcon />}
+                    label={plan.totalDuration}
+                    variant="outlined"
+                    sx={{ fontWeight: 800 }}
+                  />
+                </Stack>
+              </Stack>
+
+              {plan.coachNote && (
+                <Box sx={{ p: 2, borderRadius: 3, bgcolor: "#eff6ff", border: "1px solid #bfdbfe" }}>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                    <AutoAwesomeIcon sx={{ fontSize: 17, color: "#2563eb" }} />
+                    <Typography
+                      fontSize={11}
+                      fontWeight={900}
+                      letterSpacing="0.08em"
+                      textTransform="uppercase"
+                      color="#2563eb"
                     >
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                      >
-                        <Box
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            flexShrink: 0,
-                            borderRadius: 2,
-                            bgcolor: "#eff6ff",
-                            display: "grid",
-                            placeItems: "center",
-                            color: "#2563eb",
-                          }}
-                        >
-                          <FitnessCenterIcon
-                            sx={{ fontSize: 16 }}
-                          />
-                        </Box>
+                      AI Coach Note
+                    </Typography>
+                  </Stack>
+                  <Typography color="#1e3a5f" fontSize={14} lineHeight={1.75}>
+                    {plan.coachNote}
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
 
-                        <Typography
-                          fontWeight={950}
-                          fontSize={15}
-                        >
-                          {item.day}
+          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Typography fontWeight={950} color="#0f172a" sx={{ mb: 1.5 }}>
+                Warm-up
+              </Typography>
+              <Stack spacing={0.8}>
+                {plan.warmup.map((item, index) => (
+                  <Typography key={index} color="#475569" fontSize={14}>
+                    {index + 1}. {item}
+                  </Typography>
+                ))}
+              </Stack>
+            </CardContent>
+          </Card>
+
+          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <FitnessCenterIcon sx={{ color: "#2563eb" }} />
+                <Typography fontWeight={950} color="#0f172a">
+                  Main Workout
+                </Typography>
+              </Stack>
+
+              <Stack spacing={2}>
+                {plan.exercises.map((exercise, index) => (
+                  <Box key={`${exercise.name}-${index}`}>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      justifyContent="space-between"
+                      spacing={1}
+                    >
+                      <Box>
+                        <Typography fontWeight={900} color="#0f172a">
+                          {index + 1}. {exercise.name}
                         </Typography>
-                      </Stack>
+                        {exercise.notes && (
+                          <Typography color="#64748b" fontSize={13} lineHeight={1.6} sx={{ mt: 0.5 }}>
+                            {exercise.notes}
+                          </Typography>
+                        )}
+                      </Box>
 
-                      <Chip
-                        label={item.intensity}
-                        size="small"
-                        sx={{
-                          flexShrink: 0,
-                          bgcolor:
-                            intensityStyle.bg,
-                          color:
-                            intensityStyle.color,
-                          fontWeight: 900,
-                          fontSize: 11,
-                        }}
-                      />
+                      <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+                        <Chip size="small" label={`${exercise.sets} sets`} variant="outlined" />
+                        <Chip size="small" label={`${exercise.reps} reps`} variant="outlined" />
+                        <Chip size="small" label={`Rest ${exercise.rest}`} variant="outlined" />
+                      </Stack>
                     </Stack>
 
-                    <Typography
-                      fontWeight={800}
-                      color="#0f172a"
-                      sx={{ mb: 0.5 }}
-                    >
-                      {item.focus}
-                    </Typography>
+                    {index < plan.exercises.length - 1 && <Divider sx={{ mt: 2 }} />}
+                  </Box>
+                ))}
+              </Stack>
+            </CardContent>
+          </Card>
 
-                    <Typography
-                      color="#475569"
-                      fontSize={13}
-                      lineHeight={1.7}
-                    >
-                      {item.exercises}
-                    </Typography>
+          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
+            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Typography fontWeight={950} color="#0f172a" sx={{ mb: 1.5 }}>
+                Cooldown
+              </Typography>
+              <Stack spacing={0.8}>
+                {plan.cooldown.map((item, index) => (
+                  <Typography key={index} color="#475569" fontSize={14}>
+                    {index + 1}. {item}
+                  </Typography>
+                ))}
+              </Stack>
+            </CardContent>
+          </Card>
 
-                    <Box
-                      sx={{
-                        mt: 1.5,
-                        pt: 1.5,
-                        borderTop:
-                          "1px solid #f1f5f9",
-                      }}
-                    >
-                      <Typography
-                        fontSize={12}
-                        color="#94a3b8"
-                        fontWeight={700}
-                      >
-                        ⏱ {item.duration}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
+          {plan.recoveryNote && (
+            <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: "#ecfdf5", border: "1px solid #bbf7d0" }}>
+              <Typography fontWeight={950} color="#047857" sx={{ mb: 0.5 }}>
+                Recovery for Today
+              </Typography>
+              <Typography color="#065f46" fontSize={14} lineHeight={1.75}>
+                {plan.recoveryNote}
+              </Typography>
+            </Box>
+          )}
+        </Stack>
       )}
     </Box>
   );
