@@ -8,6 +8,7 @@
  * when the athlete asks for a new one.
  */
 import { localDateString } from "../services/checkinService";
+import { readStored, removeStored, writeStored } from "./safeStorage";
 
 export type PlanKind = "workout" | "nutrition";
 
@@ -20,55 +21,36 @@ function storageKey(kind: PlanKind, userId: string) {
   return `sportlab:plan:${kind}:${userId}`;
 }
 
-/**
- * Reading `window.localStorage` throws outright when storage is blocked
- * (Safari private browsing, cookies disabled), so every access is guarded and
- * a failure just means the page generates as it did before.
- */
-function safeStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
 export function readCachedPlan<T>(
   kind: PlanKind,
   userId: string,
   today: string = localDateString()
 ): T | null {
-  const storage = safeStorage();
-
-  if (!storage) return null;
-
   const key = storageKey(kind, userId);
+  const raw = readStored(key);
+
+  if (!raw) return null;
+
+  let entry: CacheEntry<T> | null;
 
   try {
-    const raw = storage.getItem(key);
-
-    if (!raw) return null;
-
-    const entry = JSON.parse(raw) as CacheEntry<T> | null;
-
-    // Yesterday's plan is stale: drop it so the first visit today regenerates
-    // once, then caches again.
-    if (!entry || entry.date !== today || entry.plan == null) {
-      storage.removeItem(key);
-      return null;
-    }
-
-    return entry.plan;
+    entry = JSON.parse(raw) as CacheEntry<T> | null;
   } catch {
     // Corrupted JSON from an older shape — treat it as a miss.
-    try {
-      storage.removeItem(key);
-    } catch {
-      /* nothing else to do */
-    }
+    removeStored(key);
 
     return null;
   }
+
+  // Yesterday's plan is stale: drop it so the first visit today regenerates
+  // once, then caches again.
+  if (!entry || entry.date !== today || entry.plan == null) {
+    removeStored(key);
+
+    return null;
+  }
+
+  return entry.plan;
 }
 
 export function writeCachedPlan<T>(
@@ -77,28 +59,20 @@ export function writeCachedPlan<T>(
   plan: T,
   today: string = localDateString()
 ): void {
-  const storage = safeStorage();
-
-  if (!storage) return;
-
   const entry: CacheEntry<T> = { date: today, plan };
 
+  let serialized: string;
+
   try {
-    storage.setItem(storageKey(kind, userId), JSON.stringify(entry));
+    serialized = JSON.stringify(entry);
   } catch {
-    // A full quota is not worth failing the page over. The plan still renders,
-    // it just will not survive the next navigation.
+    // A plan that cannot be serialised simply is not cached.
+    return;
   }
+
+  writeStored(storageKey(kind, userId), serialized);
 }
 
 export function clearCachedPlan(kind: PlanKind, userId: string): void {
-  const storage = safeStorage();
-
-  if (!storage) return;
-
-  try {
-    storage.removeItem(storageKey(kind, userId));
-  } catch {
-    /* nothing else to do */
-  }
+  removeStored(storageKey(kind, userId));
 }

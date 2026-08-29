@@ -232,9 +232,6 @@ const questions = [
   },
 ] as const;
 
-const SPORTS_MATCH_SYSTEM_PROMPT =
-  "You are SportLab's sports matching coach. Recommend sports based on the athlete's profile and preferences like an experienced coach, not a rigid scoring algorithm.";
-
 export function SportsFinder({ compact = false }: SportsFinderProps) {
   const [answers, setAnswers] = React.useState<SurveyAnswers>(defaultAnswers);
   const [pastSports, setPastSports] = React.useState("");
@@ -307,7 +304,7 @@ Keep it concise, practical, and student-friendly.
       const { data, error: fnError } = await supabase.functions.invoke("ai-complete", {
         body: {
           prompt,
-          systemPrompt: SPORTS_MATCH_SYSTEM_PROMPT,
+          task: "sports_match",
           maxTokens: 900,
           temperature: 0.7,
         },

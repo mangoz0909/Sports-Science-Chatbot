@@ -38,6 +38,41 @@ export async function syncGoogleProfile() {
   return data as Profile;
 }
 
+/**
+ * Saves the athlete's display name onto their profile row.
+ *
+ * The name is kept in two places and both are load-bearing: the profile form
+ * reads it back from `auth.users.user_metadata`, and syncGoogleProfile
+ * re-derives from that metadata on every OAuth sign-in — while the dashboard
+ * greeting and getMyProfile read `profiles.name`. The profile page wrote only
+ * the metadata, so renaming yourself changed the profile form and left the
+ * dashboard greeting on the old name for good. Callers should write both.
+ */
+export async function saveMyName(name: string) {
+  const cleanName = name.trim();
+
+  if (!cleanName) throw new Error("Please enter your name.");
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) throw new Error("You must be logged in.");
+
+  const { error } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      name: cleanName,
+      email: user.email,
+    },
+    { onConflict: "id" }
+  );
+
+  if (error) throw error;
+}
+
 export async function getMyProfile() {
   const {
     data: { user },

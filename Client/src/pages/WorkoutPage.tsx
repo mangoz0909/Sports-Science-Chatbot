@@ -25,9 +25,8 @@ import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo, { breadcrumbs } from "../components/Seo";
-
-const WORKOUT_SYSTEM_PROMPT =
-  "You are a careful sports scientist and strength and conditioning assistant. Provide general educational fitness guidance only. Respect injuries, restrictions, equipment access, experience level, recovery, and age. Do not diagnose medical conditions. Return valid JSON when requested.";
+import { cleanJsonResponse } from "../lib/aiJson";
+import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
 
@@ -56,7 +55,7 @@ async function callOpenAI(prompt: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-complete", {
     body: {
       prompt,
-      systemPrompt: WORKOUT_SYSTEM_PROMPT,
+      task: "workout",
       maxTokens: 2200,
       temperature: 0.4,
     },
@@ -69,14 +68,6 @@ async function callOpenAI(prompt: string): Promise<string> {
     throw new Error("The AI model returned an empty response.");
   }
   return reply.trim();
-}
-
-function cleanJsonResponse(responseText: string): string {
-  return responseText
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/i, "")
-    .trim();
 }
 
 function intensityColor(intensity: WorkoutIntensity) {
@@ -154,24 +145,19 @@ function normalizePlan(value: unknown): DailyWorkoutPlan {
   };
 }
 
-function getLocalDateKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 export default function WorkoutPage() {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
 
   const [plan, setPlan] = React.useState<DailyWorkoutPlan | null>(null);
   const [loading, setLoading] = React.useState(false);
+  // Distinct from `loading`: restoring is looking up a plan that already
+  // exists, generating is paying for a new one. Both hide the empty page, but
+  // only one of them should put "Generating…" on the button.
+  const [restoring, setRestoring] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [userInstructions, setUserInstructions] = React.useState("");
 
-  const todayKey = getLocalDateKey();
   const todayName = new Date().toLocaleDateString(undefined, { weekday: "long" });
   const todayDisplay = new Date().toLocaleDateString(undefined, {
     month: "long",
@@ -179,9 +165,11 @@ export default function WorkoutPage() {
     year: "numeric",
   });
 
-  const storageKey = session?.user?.id
-    ? `workout-plan-${session.user.id}-${todayKey}`
-    : null;
+  // Supabase is the source of truth, with the browser cache as the offline
+  // fallback — so a session generated on a phone at 7am is the same session the
+  // laptop shows at 7pm, and is reused all day rather than regenerated.
+  const userId = session?.user?.id ?? null;
+  const busy = loading || restoring;
 
   async function generatePlan() {
     setLoading(true);
@@ -320,11 +308,11 @@ Requirements:
       const normalizedPlan = normalizePlan(parsed);
       setPlan(normalizedPlan);
 
-      if (storageKey) {
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({ plan: normalizedPlan, savedAt: new Date().toISOString() })
-        );
+      if (userId) {
+        // Caches locally, then syncs to Supabase. A failed sync is logged and
+        // swallowed: the plan is already on screen, and failing here would
+        // report a successful generation as an error.
+        await saveTodaysPlan<DailyWorkoutPlan>("workout", userId, normalizedPlan);
       }
     } catch (err: unknown) {
       console.error("Workout plan generation failed:", err);
@@ -339,25 +327,49 @@ Requirements:
   }
 
   React.useEffect(() => {
-    if (authLoading || !isLoggedIn || !storageKey) return;
+    if (authLoading || !isLoggedIn || !userId) return;
 
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
+    let cancelled = false;
+    setRestoring(true);
+
+    (async () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed?.plan) {
-          setPlan(normalizePlan(parsed.plan));
-          return;
-        }
-      } catch (error) {
-        console.error("Failed to load saved daily workout plan:", error);
-        localStorage.removeItem(storageKey);
-      }
-    }
+        // Falls back to the browser cache on its own if Supabase fails.
+        const saved = await loadTodaysPlan<DailyWorkoutPlan>("workout", userId);
 
-    void generatePlan();
+        if (cancelled) return;
+
+        if (saved) {
+          try {
+            setPlan(normalizePlan(saved));
+            return;
+          } catch (error) {
+            // A plan stored by an older version of this page can be valid JSON
+            // in a shape normalizePlan rejects. Generating is the recovery.
+            console.error("Saved workout plan could not be read:", error);
+          }
+        }
+
+        void generatePlan();
+      } catch (error) {
+        // loadTodaysPlan handles its own failures, so this should not fire.
+        // It is here because the cost of being wrong is a skeleton that never
+        // resolves — restoring would stay true with nothing left to clear it.
+        console.error("Could not restore today's workout:", error);
+
+        if (!cancelled) void generatePlan();
+      } finally {
+        if (!cancelled) setRestoring(false);
+      }
+    })();
+
+    // Also stops React 18 StrictMode's double-invoked effect from starting two
+    // generations — and paying for both — on the first visit of the day.
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn, storageKey]);
+  }, [authLoading, isLoggedIn, userId]);
 
   const intensityStyle = plan
     ? intensityColor(plan.intensity)
@@ -396,7 +408,7 @@ Requirements:
               placeholder="Tell the AI what changed today... e.g. I only have 30 minutes, my legs are sore, I have a match tomorrow, or I want more speed work."
               multiline
               minRows={2}
-              disabled={loading}
+              disabled={busy}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 3,
@@ -408,7 +420,7 @@ Requirements:
             <Button
               variant="contained"
               startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
-              disabled={loading}
+              disabled={busy}
               onClick={() => void generatePlan()}
               sx={{
                 minWidth: { md: 190 },
@@ -450,7 +462,7 @@ Requirements:
         </Alert>
       )}
 
-      {loading && !plan && (
+      {busy && !plan && (
         <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
           <CardContent sx={{ p: 3 }}>
             <Skeleton variant="text" width="35%" height={32} />

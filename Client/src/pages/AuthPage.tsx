@@ -36,8 +36,11 @@ import {
   sendPasswordResetEmail,
 } from "../services/authService";
 import Seo from "../components/Seo";
+import { readStored, removeStored, writeStored } from "../lib/safeStorage";
 
 type Mode = "login" | "signup";
+
+const REMEMBERED_EMAIL_KEY = "rememberedEmail";
 
 function useQuery() {
   const { search } = useLocation();
@@ -59,7 +62,7 @@ const AuthPage: React.FC = () => {
     setPassword("");
   };
   const [email, setEmail] = useState(() => {
-    if (initialMode === "login") return localStorage.getItem("rememberedEmail") || "";
+    if (initialMode === "login") return readStored(REMEMBERED_EMAIL_KEY) || "";
     return "";
   });
   const [name, setName] = useState("");
@@ -152,9 +155,9 @@ const AuthPage: React.FC = () => {
       if (mode === "login") {
         await loginUser(email, password);
         if (remember) {
-          localStorage.setItem("rememberedEmail", email);
+          writeStored(REMEMBERED_EMAIL_KEY, email);
         } else {
-          localStorage.removeItem("rememberedEmail");
+          removeStored(REMEMBERED_EMAIL_KEY);
         }
         setSuccessMsg("Logged in successfully.");
       } else {

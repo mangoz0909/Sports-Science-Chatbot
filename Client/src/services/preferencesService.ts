@@ -23,6 +23,17 @@ export type UserPreferences = {
   cooking_access?: string;
 };
 
+/**
+ * Every profile column the two forms write, all present, all strings.
+ *
+ * `UserPreferences` marks the body and nutrition columns optional because not
+ * every caller sets them — but the onboarding survey and the profile page both
+ * do, so they share one shape. Keeping a single list is the point: the survey
+ * collected eleven columns the profile page had no inputs for, which is how
+ * allergies and body metrics ended up editable only by retaking the survey.
+ */
+export type ExtendedUserPreferences = Required<UserPreferences>;
+
 export async function getUserPreferences() {
   const {
     data: { user },

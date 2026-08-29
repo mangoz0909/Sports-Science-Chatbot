@@ -30,17 +30,83 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import { supabase } from "../lib/supabaseClient";
 import {
+  ExtendedUserPreferences,
   getUserPreferences,
   saveUserPreferences,
-  UserPreferences,
 } from "../services/preferencesService";
 import { getLatestCheckIn } from "../services/checkinService";
+import { saveMyName } from "../services/profileService";
 import {
+  ACTIVITY_LEVELS,
+  COOKING_ACCESS_OPTIONS,
+  DIETARY_PREFERENCES,
   EXPERIENCE_LEVELS,
   NUMERIC_RANGES,
   isKnownOption,
   toFormString,
 } from "../data/profileOptions";
+
+/**
+ * A <Select> that still shows a value outside its option list.
+ *
+ * The survey reads these columns into dropdowns and renders anything
+ * unrecognised as an empty box, silently hiding what the athlete saved. This
+ * keeps a legacy value visible until they pick a real option.
+ */
+function OptionSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly string[];
+  onChange: (next: string) => void;
+}) {
+  return (
+    <TextField
+      fullWidth
+      select
+      label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {value && !isKnownOption(value, options) && (
+        <MenuItem value={value}>{value} (unrecognised - please reselect)</MenuItem>
+      )}
+      {options.map((option) => (
+        <MenuItem key={option} value={option}>
+          {option}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+}
+
+/**
+ * Blank passes: the profile page edits an existing athlete, so an untouched
+ * column stays untouched. A filled one has to satisfy the same range the
+ * survey enforces.
+ */
+function rangeError(
+  value: string,
+  label: string,
+  key: keyof typeof NUMERIC_RANGES
+): string | null {
+  const text = value.trim();
+
+  if (!text) return null;
+
+  const parsed = Number(text);
+  const { min, max } = NUMERIC_RANGES[key];
+
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    return `${label} must be a number between ${min} and ${max}.`;
+  }
+
+  return null;
+}
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -68,7 +134,7 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const [form, setForm] = React.useState<UserPreferences>({
+  const [form, setForm] = React.useState<ExtendedUserPreferences>({
     primary_sport: "",
     experience_level: "",
     main_goal: "",
@@ -78,6 +144,17 @@ export default function ProfilePage() {
     priorities: "",
     sleep_range: "",
     athlete_type: "",
+    age: "",
+    height_cm: "",
+    weight_kg: "",
+    activity_level: "",
+    workout_duration: "",
+    equipment_access: "",
+    dietary_preference: "",
+    food_allergies: "",
+    foods_avoid: "",
+    meals_per_day: "",
+    cooking_access: "",
   });
 
   React.useEffect(() => {
@@ -129,6 +206,17 @@ export default function ProfilePage() {
             priorities: toFormString(stored.priorities),
             sleep_range: toFormString(stored.sleep_range),
             athlete_type: toFormString(stored.athlete_type),
+            age: toFormString(stored.age),
+            height_cm: toFormString(stored.height_cm),
+            weight_kg: toFormString(stored.weight_kg),
+            activity_level: toFormString(stored.activity_level),
+            workout_duration: toFormString(stored.workout_duration),
+            equipment_access: toFormString(stored.equipment_access),
+            dietary_preference: toFormString(stored.dietary_preference),
+            food_allergies: toFormString(stored.food_allergies),
+            foods_avoid: toFormString(stored.foods_avoid),
+            meals_per_day: toFormString(stored.meals_per_day),
+            cooking_access: toFormString(stored.cooking_access),
           });
         }
       } catch (err: any) {
@@ -146,9 +234,9 @@ export default function ProfilePage() {
     };
   }, []);
 
-  function updateField<K extends keyof UserPreferences>(
+  function updateField<K extends keyof ExtendedUserPreferences>(
     key: K,
-    value: UserPreferences[K]
+    value: ExtendedUserPreferences[K]
   ) {
     setForm((prev) => ({
       ...prev,
@@ -162,25 +250,39 @@ export default function ProfilePage() {
     setSuccess(null);
 
     try {
-      // Keep this column within the range the survey enforces, so a value saved
-      // here can never block a later retake.
-      const trainingDays = form.training_days.trim();
+      // Every numeric column is held to the range the survey enforces, so a
+      // value saved here can never block a later retake. Blank is allowed —
+      // this is an edit form, and existing athletes have columns never filled.
+      const numericError =
+        rangeError(form.training_days, "Training days per week", "training_days") ??
+        rangeError(form.age, "Age", "age") ??
+        rangeError(form.height_cm, "Height", "height_cm") ??
+        rangeError(form.weight_kg, "Weight", "weight_kg") ??
+        rangeError(form.meals_per_day, "Meals per day", "meals_per_day");
 
-      if (trainingDays) {
-        const parsed = Number(trainingDays);
-        const { min, max } = NUMERIC_RANGES.training_days;
-
-        if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
-          setError(`Training days per week must be a number between ${min} and ${max}.`);
-          return;
-        }
+      if (numericError) {
+        setError(numericError);
+        return;
       }
 
+      const cleanName = name.trim();
+
+      if (!cleanName) {
+        setError("Please enter your name.");
+        return;
+      }
+
+      // Both stores, deliberately. The metadata is what this form reads back
+      // and what syncGoogleProfile re-derives from on the next OAuth sign-in;
+      // profiles.name is what the dashboard greeting reads. Writing one and
+      // not the other is what left the two showing different names.
       await supabase.auth.updateUser({
         data: {
-          full_name: name.trim(),
+          full_name: cleanName,
         },
       });
+
+      await saveMyName(cleanName);
 
       await saveUserPreferences({
         primary_sport: form.primary_sport.trim(),
@@ -192,6 +294,17 @@ export default function ProfilePage() {
         priorities: form.priorities.trim(),
         sleep_range: form.sleep_range.trim(),
         athlete_type: form.athlete_type.trim(),
+        age: form.age.trim(),
+        height_cm: form.height_cm.trim(),
+        weight_kg: form.weight_kg.trim(),
+        activity_level: form.activity_level.trim(),
+        workout_duration: form.workout_duration.trim(),
+        equipment_access: form.equipment_access.trim(),
+        dietary_preference: form.dietary_preference.trim(),
+        food_allergies: form.food_allergies.trim(),
+        foods_avoid: form.foods_avoid.trim(),
+        meals_per_day: form.meals_per_day.trim(),
+        cooking_access: form.cooking_access.trim(),
       });
 
       setSuccess("Information updated.");
@@ -286,6 +399,14 @@ export default function ProfilePage() {
     display: "grid",
     gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
     gap: 2,
+  };
+
+  // Spans the grid so a section reads as a break rather than a stray label.
+  const sectionHeadingSx = {
+    gridColumn: "1 / -1",
+    mt: 1,
+    pt: 2.5,
+    borderTop: "1px solid #e2e8f0",
   };
 
   if (loading) {
@@ -589,29 +710,12 @@ export default function ProfilePage() {
                   </Typography>
 
                   <Box sx={inputGridSx}>
-                    {/* Select, not free text: the survey reads this column into
-                        a dropdown, and any value outside the list rendered blank
-                        there. An unrecognised legacy value is offered once so it
-                        stays visible until the athlete picks a real option. */}
-                    <TextField
-                      fullWidth
-                      select
+                    <OptionSelect
                       label="Experience Level"
                       value={form.experience_level}
-                      onChange={(e) => updateField("experience_level", e.target.value)}
-                    >
-                      {form.experience_level &&
-                        !isKnownOption(form.experience_level, EXPERIENCE_LEVELS) && (
-                          <MenuItem value={form.experience_level}>
-                            {form.experience_level} (unrecognised — please reselect)
-                          </MenuItem>
-                        )}
-                      {EXPERIENCE_LEVELS.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                      options={EXPERIENCE_LEVELS}
+                      onChange={(next) => updateField("experience_level", next)}
+                    />
 
                     <TextField
                       fullWidth
@@ -625,6 +729,22 @@ export default function ProfilePage() {
                         max: NUMERIC_RANGES.training_days.max,
                       }}
                       helperText={`Whole days per week (${NUMERIC_RANGES.training_days.min}–${NUMERIC_RANGES.training_days.max})`}
+                    />
+
+                    <TextField
+                      fullWidth
+                      label="Preferred Workout Duration"
+                      placeholder="Example: 45-60 minutes"
+                      value={form.workout_duration}
+                      onChange={(e) => updateField("workout_duration", e.target.value)}
+                    />
+
+                    <TextField
+                      fullWidth
+                      label="Equipment Access"
+                      placeholder="Example: Full gym, dumbbells only, bodyweight"
+                      value={form.equipment_access}
+                      onChange={(e) => updateField("equipment_access", e.target.value)}
                     />
 
                     <TextField
@@ -672,6 +792,113 @@ export default function ProfilePage() {
                       value={form.athlete_type}
                       onChange={(e) => updateField("athlete_type", e.target.value)}
                       sx={{ gridColumn: "1 / -1" }}
+                    />
+
+                    <Typography variant="h6" fontWeight={900} sx={sectionHeadingSx}>
+                      Body Information
+                    </Typography>
+
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Age"
+                      placeholder="Example: 17"
+                      value={form.age}
+                      onChange={(e) => updateField("age", e.target.value)}
+                      inputProps={{ min: NUMERIC_RANGES.age.min, max: NUMERIC_RANGES.age.max }}
+                      helperText={`Years (${NUMERIC_RANGES.age.min}-${NUMERIC_RANGES.age.max})`}
+                    />
+
+                    <OptionSelect
+                      label="Overall Activity Level"
+                      value={form.activity_level}
+                      options={ACTIVITY_LEVELS}
+                      onChange={(next) => updateField("activity_level", next)}
+                    />
+
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Height (cm)"
+                      placeholder="Example: 175"
+                      value={form.height_cm}
+                      onChange={(e) => updateField("height_cm", e.target.value)}
+                      inputProps={{
+                        min: NUMERIC_RANGES.height_cm.min,
+                        max: NUMERIC_RANGES.height_cm.max,
+                      }}
+                      helperText={`Centimetres (${NUMERIC_RANGES.height_cm.min}-${NUMERIC_RANGES.height_cm.max})`}
+                    />
+
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Weight (kg)"
+                      placeholder="Example: 68"
+                      value={form.weight_kg}
+                      onChange={(e) => updateField("weight_kg", e.target.value)}
+                      inputProps={{
+                        min: NUMERIC_RANGES.weight_kg.min,
+                        max: NUMERIC_RANGES.weight_kg.max,
+                      }}
+                      helperText={`Kilograms (${NUMERIC_RANGES.weight_kg.min}-${NUMERIC_RANGES.weight_kg.max})`}
+                    />
+
+                    <Typography variant="h6" fontWeight={900} sx={sectionHeadingSx}>
+                      Nutrition and Food Access
+                    </Typography>
+
+                    {/* The nutrition plan is told never to ignore a saved
+                        allergy, which only holds if the athlete can correct one
+                        here rather than by finding the survey again. */}
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      label="Food Allergies or Intolerances"
+                      placeholder="Example: Peanuts, lactose intolerant, none"
+                      value={form.food_allergies}
+                      onChange={(e) => updateField("food_allergies", e.target.value)}
+                      sx={{ gridColumn: "1 / -1" }}
+                    />
+
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      label="Foods You Dislike or Avoid"
+                      placeholder="Example: Seafood, spicy food, none"
+                      value={form.foods_avoid}
+                      onChange={(e) => updateField("foods_avoid", e.target.value)}
+                      sx={{ gridColumn: "1 / -1" }}
+                    />
+
+                    <OptionSelect
+                      label="Dietary Preference"
+                      value={form.dietary_preference}
+                      options={DIETARY_PREFERENCES}
+                      onChange={(next) => updateField("dietary_preference", next)}
+                    />
+
+                    <OptionSelect
+                      label="Access to Food Preparation"
+                      value={form.cooking_access}
+                      options={COOKING_ACCESS_OPTIONS}
+                      onChange={(next) => updateField("cooking_access", next)}
+                    />
+
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Meals Per Day"
+                      placeholder="Example: 4"
+                      value={form.meals_per_day}
+                      onChange={(e) => updateField("meals_per_day", e.target.value)}
+                      inputProps={{
+                        min: NUMERIC_RANGES.meals_per_day.min,
+                        max: NUMERIC_RANGES.meals_per_day.max,
+                      }}
+                      helperText={`Meals (${NUMERIC_RANGES.meals_per_day.min}-${NUMERIC_RANGES.meals_per_day.max})`}
                     />
                   </Box>
 

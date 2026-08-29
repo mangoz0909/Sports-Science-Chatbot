@@ -31,7 +31,6 @@ type AiChatHomeProps = {
   examplesTitle: string;
   examples: string[];
   footerNote?: ReactNode;
-  systemPrompt?: string;
   sideContent?: ReactNode;
   chatType?: ChatType;
 };
@@ -75,6 +74,21 @@ declare global {
 }
 
 const MAX_MESSAGE_LENGTH = 2000;
+
+/**
+ * The athlete's IANA timezone, sent with each turn so the assistant looks up
+ * check-ins for the day they are actually having. Check-ins are stamped with
+ * the local date; the edge function runs on UTC and cannot infer the zone.
+ * Undefined on browsers without a resolved zone — the function then falls back
+ * to UTC, as it did before.
+ */
+function resolvedTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 // Preceding messages sent with each request so the assistant can follow the
 // thread. The edge function enforces its own (lower or equal) ceiling.
@@ -227,7 +241,6 @@ export default function AiChatHome({
   examplesTitle,
   examples,
   footerNote,
-  systemPrompt,
   sideContent,
   chatType,
 }: AiChatHomeProps) {
@@ -440,7 +453,9 @@ export default function AiChatHome({
           message: userMessage,
           history,
           chatType: chatType || "sports",
-          systemPrompt,
+          // Read per turn rather than at mount, so a device that crosses a
+          // zone — or rolls past midnight — is right on the next message.
+          timeZone: resolvedTimeZone(),
           // Only the pending turn's image travels; `history` is text-only.
           ...(pending.imageUrl ? { image: pending.imageUrl } : {}),
         },
@@ -480,7 +495,7 @@ export default function AiChatHome({
     } finally {
       setIsLoading(false);
     }
-  }, [chatType, systemPrompt]);
+  }, [chatType]);
 
   const submitMessage = useCallback((text: string, image?: ImageAttachment | null) => {
     // A caption is optional when there is an image, so fall back to a prompt

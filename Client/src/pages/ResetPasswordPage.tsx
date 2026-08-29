@@ -3,8 +3,40 @@ import { Alert, Box, Button, CircularProgress, Container, IconButton, InputAdorn
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { entryLocation, supabase } from "../lib/supabaseClient";
 import Seo from "../components/Seo";
+
+/**
+ * What brought the user to this page.
+ *
+ * The form must only be reachable from a reset link. It previously opened for
+ * *any* active session, so a signed-in athlete who typed the URL — or anyone
+ * at their unlocked browser — got a change-password form with nothing proving
+ * they owned the account.
+ */
+type ResetArrival =
+  | { kind: "recovery" }
+  | { kind: "link-error" }
+  | { kind: "not-a-link" };
+
+function readResetArrival(): ResetArrival {
+  const hash = new URLSearchParams(entryLocation.hash.replace(/^#/, ""));
+  const query = new URLSearchParams(entryLocation.search);
+  const param = (name: string) => hash.get(name) ?? query.get(name);
+
+  // An expired or already-used link comes back with an error rather than a
+  // token. That is still an arrival from a link, and deserves the "expired"
+  // message straight away instead of an eight-second spinner first.
+  if (param("error") || param("error_code")) return { kind: "link-error" };
+
+  // The implicit flow puts tokens in the hash with type=recovery; the PKCE and
+  // token-hash flows send an exchange code in the query instead.
+  if (param("type") === "recovery" || query.has("code") || query.has("token_hash")) {
+    return { kind: "recovery" };
+  }
+
+  return { kind: "not-a-link" };
+}
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -21,7 +53,16 @@ export default function ResetPasswordPage() {
   const [linkInvalid, setLinkInvalid] = React.useState(false);
   const redirectTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Read once, on the first render, from the URL snapshot taken at import.
+  const [arrival] = React.useState(readResetArrival);
+
   React.useEffect(() => {
+    // No reset link, no form — whatever session the browser happens to hold.
+    if (arrival.kind !== "recovery") {
+      setLinkInvalid(true);
+      return;
+    }
+
     let settled = false;
 
     const markReady = () => {
@@ -36,7 +77,10 @@ export default function ResetPasswordPage() {
       }
     });
 
-    // Also handle the case where getSession already has the recovery session
+    // PASSWORD_RECOVERY can fire before this listener attaches, because
+    // supabase-js starts reading the URL at import time — well before React
+    // mounts. Accepting the session covers that race, and is only safe because
+    // the check above already established a recovery link brought us here.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) markReady();
     });
@@ -49,7 +93,7 @@ export default function ResetPasswordPage() {
       subscription.unsubscribe();
       clearTimeout(giveUp);
     };
-  }, []);
+  }, [arrival]);
 
   React.useEffect(
     () => () => {
@@ -95,8 +139,9 @@ export default function ResetPasswordPage() {
           {linkInvalid ? (
             <Container maxWidth="xs" disableGutters>
               <Alert severity="error" sx={{ mb: 2, borderRadius: 2, textAlign: "left" }}>
-                This password reset link is invalid or has expired. Reset links
-                can only be used once, and stop working after a short time.
+                {arrival.kind === "not-a-link"
+                  ? "Open this page from the link in your password reset email. For your security, the form is only available from that link."
+                  : "This password reset link is invalid or has expired. Reset links can only be used once, and stop working after a short time."}
               </Alert>
               <Button
                 fullWidth
@@ -112,7 +157,7 @@ export default function ResetPasswordPage() {
                   "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
                 }}
               >
-                Request a new link
+                {arrival.kind === "not-a-link" ? "Email me a reset link" : "Request a new link"}
               </Button>
             </Container>
           ) : (

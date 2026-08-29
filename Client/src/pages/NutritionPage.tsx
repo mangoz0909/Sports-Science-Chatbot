@@ -28,15 +28,14 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo, { breadcrumbs } from "../components/Seo";
-
-const NUTRITION_SYSTEM_PROMPT =
-  "You are a careful sports nutrition assistant. Provide general educational guidance only, avoid diagnosis, respect allergies and dietary restrictions, and return valid JSON when requested.";
+import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
+import { cleanJsonResponse } from "../lib/aiJson";
 
 async function callOpenAI(prompt: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-complete", {
     body: {
       prompt,
-      systemPrompt: NUTRITION_SYSTEM_PROMPT,
+      task: "nutrition",
       maxTokens: 1400,
       temperature: 0.4,
     },
@@ -87,15 +86,22 @@ export default function NutritionPage() {
   const [loading, setLoading] =
     React.useState(false);
 
+  // Restoring an existing plan, as opposed to paying for a new one. Both hide
+  // the empty page; only generating should say so on the button.
+  const [restoring, setRestoring] =
+    React.useState(false);
+
   const [error, setError] =
     React.useState<string | null>(null);
 
   const [userInstructions, setUserInstructions] =
     React.useState("");
 
-  const storageKey = session?.user?.id
-    ? `nutrition-plan-${session.user.id}`
-    : null;
+  // Supabase is the source of truth, with the browser cache as the offline
+  // fallback, so today's macros are the same on every device the athlete opens
+  // and are reused all day rather than regenerated.
+  const userId = session?.user?.id ?? null;
+  const busy = loading || restoring;
 
   async function generatePlan() {
     setLoading(true);
@@ -334,36 +340,54 @@ Do not include any extra text.
       const responseText =
         await callOpenAI(prompt);
 
-      const cleaned = responseText
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/```\s*$/i, "")
-        .trim();
+      // Same salvage the workout page uses: the model wraps the object in a
+      // sentence often enough that stripping fences alone is not enough.
+      const cleaned = cleanJsonResponse(responseText);
 
-      const parsed =
-        JSON.parse(
-          cleaned
-        ) as NutritionPlan;
+      let parsed: unknown;
 
-      if (
-        !Array.isArray(parsed.meals) ||
-        parsed.meals.length === 0
-      ) {
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch (jsonError) {
+        // The raw parser message — "Unexpected token < in JSON at position 0"
+        // — was reaching the athlete verbatim. Keep the reply in the console
+        // for debugging and show them something they can act on.
+        console.error("Invalid AI JSON response:", responseText);
+
         throw new Error(
-          "The nutrition plan format was incomplete."
+          "The AI returned an invalid plan format. Please regenerate the plan."
         );
       }
 
-      setPlan(parsed);
+      // Not named `plan`: that is the state variable, and shadowing it inside
+      // this function is how a later edit reads the wrong one.
+      const generated = parsed as NutritionPlan | null;
 
-      if (storageKey) {
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({
-            plan: parsed,
-            savedAt:
-              new Date().toISOString(),
-          })
+      // A reply that parses to null or a bare array reached `.meals` on a
+      // non-object and surfaced a TypeError to the athlete.
+      if (
+        !generated ||
+        typeof generated !== "object" ||
+        Array.isArray(generated) ||
+        !Array.isArray(generated.meals) ||
+        generated.meals.length === 0
+      ) {
+        console.error("Unexpected nutrition response:", parsed);
+
+        throw new Error(
+          "The nutrition plan came back incomplete. Please regenerate it."
+        );
+      }
+
+      setPlan(generated);
+
+      if (userId) {
+        // Caches locally, then syncs to Supabase. A failed sync is logged and
+        // swallowed rather than reported as a failed generation.
+        await saveTodaysPlan<NutritionPlan>(
+          "nutrition",
+          userId,
+          generated
         );
       }
     } catch (err: any) {
@@ -380,44 +404,56 @@ Do not include any extra text.
     if (
       authLoading ||
       !isLoggedIn ||
-      !storageKey
+      !userId
     ) {
       return;
     }
 
-    const saved =
-      localStorage.getItem(storageKey);
+    let cancelled = false;
+    setRestoring(true);
 
-    if (saved) {
+    (async () => {
       try {
-        const parsed =
-          JSON.parse(saved);
+        // Falls back to the browser cache on its own if Supabase fails.
+        const saved =
+          await loadTodaysPlan<NutritionPlan>(
+            "nutrition",
+            userId
+          );
 
-        if (parsed?.plan) {
-          setPlan(parsed.plan);
+        if (cancelled) return;
+
+        if (saved?.meals?.length) {
+          setPlan(saved);
           return;
         }
+
+        // Generate only when today has no plan anywhere — a first visit, or
+        // the first visit of a new day.
+        void generatePlan();
       } catch (error) {
-        console.error(
-          "Failed to load saved nutrition plan:",
-          error
-        );
+        // loadTodaysPlan handles its own failures, so this should not fire.
+        // It is here because the cost of being wrong is a skeleton that never
+        // resolves — restoring would stay true with nothing left to clear it.
+        console.error("Could not restore today's nutrition plan:", error);
 
-        localStorage.removeItem(
-          storageKey
-        );
+        if (!cancelled) void generatePlan();
+      } finally {
+        if (!cancelled) setRestoring(false);
       }
-    }
+    })();
 
-    // Only generate automatically if
-    // this user has never generated a plan.
-    void generatePlan();
+    // Also stops StrictMode's double-invoked effect from starting two
+    // generations — and paying for both — on the first visit of the day.
+    return () => {
+      cancelled = true;
+    };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     authLoading,
     isLoggedIn,
-    storageKey,
+    userId,
   ]);
 
   const macros: MacroItem[] =
@@ -515,7 +551,7 @@ Do not include any extra text.
               placeholder="Tell the AI what changed... e.g. I have a match today, I want more protein, I don't have access to a kitchen, or I want a lighter meal."
               multiline
               minRows={2}
-              disabled={loading}
+              disabled={busy}
               sx={{
                 "& .MuiOutlinedInput-root":
                   {
@@ -537,7 +573,7 @@ Do not include any extra text.
                   <RefreshIcon />
                 )
               }
-              disabled={loading}
+              disabled={busy}
               onClick={() => {
                 void generatePlan();
               }}
@@ -606,7 +642,7 @@ Do not include any extra text.
         )}
 
       {isLoggedIn &&
-        loading &&
+        busy &&
         !plan && (
           <Grid
             container

@@ -17,9 +17,9 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  ExtendedUserPreferences,
   getUserPreferences,
   saveUserPreferences,
-  UserPreferences,
 } from "../services/preferencesService";
 import {
   ACTIVITY_LEVELS,
@@ -30,19 +30,6 @@ import {
   toFormString,
 } from "../data/profileOptions";
 
-type ExtendedUserPreferences = UserPreferences & {
-  age: string;
-  height_cm: string;
-  weight_kg: string;
-  activity_level: string;
-  workout_duration: string;
-  equipment_access: string;
-  dietary_preference: string;
-  food_allergies: string;
-  foods_avoid: string;
-  meals_per_day: string;
-  cooking_access: string;
-};
 
 const initialForm: ExtendedUserPreferences = {
   primary_sport: "",
