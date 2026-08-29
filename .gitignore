@@ -59,3 +59,6 @@ client_secret*.json
 client_secret*.json
 client_secret*.json
 .env
+
+# Source snapshot archive - kept locally, not tracked (see F18)
+Client.zip

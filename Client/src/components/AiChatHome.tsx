@@ -808,8 +808,22 @@ export default function AiChatHome({
             <h3>{examplesTitle}</h3>
             <ul>
               {examples.map((example) => (
-                <li key={example} onClick={() => submitMessage(example)} role="button" tabIndex={0}
-                    onKeyDown={(e) => e.key === "Enter" && submitMessage(example)}>
+                <li
+                  key={example}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => submitMessage(example)}
+                  // Announced as a button, so it has to behave like one: a real
+                  // button fires on Space as well as Enter. Space alone used to
+                  // scroll the page instead, which is its default on a focused
+                  // non-button — hence the preventDefault.
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      submitMessage(example);
+                    }
+                  }}
+                >
                   {example}
                 </li>
               ))}
