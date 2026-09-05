@@ -75,13 +75,29 @@ function riskColor(value: number) {
   return colors.red;
 }
 
-function getAIRecommendation(profile: {
-  injuryRisk: number;
-  sleep: number;
-  fatigue: number;
-  load: number;
-  recovery: number;
-}) {
+/*
+ * Advice for today, or an honest refusal.
+ *
+ * `hasData` is not optional. With no check-in on file every metric below is 0,
+ * which is indistinguishable from a genuine reading of zero: the sleep branch
+ * fired on `sleep: 0` and told a brand-new athlete their sleep was low and to
+ * hold their training load back. Coaching invented from absent data is worse
+ * than no coaching, so nothing here runs until there is something to read.
+ */
+function getAIRecommendation(
+  hasData: boolean,
+  profile: {
+    injuryRisk: number;
+    sleep: number;
+    fatigue: number;
+    load: number;
+    recovery: number;
+  }
+) {
+  if (!hasData) {
+    return "Log your first daily check-in and your coach tips will start appearing here, based on your own readiness, sleep, and training load.";
+  }
+
   if (profile.injuryRisk >= 60) {
     return "Your injury risk is high. Reduce high-intensity training and focus on mobility, hydration, and sleep.";
   }
@@ -519,7 +535,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       </Typography>
                     </Stack>
                     <Typography color="#1e3a5f" fontSize={14} lineHeight={1.8}>
-                      {getAIRecommendation(userProfile)}
+                      {getAIRecommendation(!hasNoData, userProfile)}
                     </Typography>
                   </Box>
                 </Box>
@@ -527,7 +543,9 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                 <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
                   <Typography fontWeight={950}>Today’s Focus</Typography>
                   <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                    {userProfile.fatigue >= 60
+                    {hasNoData
+                      ? `Once you have logged a check-in, today's focus will be tailored to your readiness and recovery.`
+                      : userProfile.fatigue >= 60
                       ? `High fatigue detected. Keep ${userProfile.sport} work technical and low-intensity today — prioritise sleep and hydration.`
                       : userProfile.recovery < 50
                       ? `Recovery is low. Focus on ${userProfile.sport} skill drills rather than high-load sessions, and aim for 8+ hours sleep tonight.`
@@ -535,14 +553,21 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   </Typography>
                 </Box>
 
-                <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#fff7ed", border: "1px solid #fed7aa" }}>
-                  <Typography fontWeight={950} color="#c2410c">
-                    Fatigue Detection
-                  </Typography>
-                  <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                    Current fatigue is {userProfile.fatigue}%. You are not overloaded, but avoid stacking too many high-intensity sessions.
-                  </Typography>
-                </Box>
+                {/*
+                  Hidden rather than zeroed: with no check-in on file this read
+                  "Current fatigue is 0%. You are not overloaded" — a reassuring
+                  measurement of nothing.
+                */}
+                {!hasNoData && (
+                  <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#fff7ed", border: "1px solid #fed7aa" }}>
+                    <Typography fontWeight={950} color="#c2410c">
+                      Fatigue Detection
+                    </Typography>
+                    <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
+                      Current fatigue is {userProfile.fatigue}%. You are not overloaded, but avoid stacking too many high-intensity sessions.
+                    </Typography>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Box>

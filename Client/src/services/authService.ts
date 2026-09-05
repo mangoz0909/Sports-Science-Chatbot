@@ -84,17 +84,6 @@ export async function logoutUser() {
   if (error) throw error;
 }
 
-export async function getCurrentUser() {
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) throw error;
-
-  return user;
-}
-
 export async function sendPasswordResetEmail(email: string) {
   const cleanEmail = email.trim().toLowerCase();
 
@@ -104,18 +93,6 @@ export async function sendPasswordResetEmail(email: string) {
 
   const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
     redirectTo: `${window.location.origin}/reset-password`,
-  });
-
-  if (error) throw error;
-}
-
-export async function updatePassword(newPassword: string) {
-  if (newPassword.length < 6) {
-    throw new Error("Password must be at least 6 characters.");
-  }
-
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword,
   });
 
   if (error) throw error;

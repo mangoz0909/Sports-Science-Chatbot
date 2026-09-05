@@ -72,7 +72,3 @@ export function writeCachedPlan<T>(
 
   writeStored(storageKey(kind, userId), serialized);
 }
-
-export function clearCachedPlan(kind: PlanKind, userId: string): void {
-  removeStored(storageKey(kind, userId));
-}

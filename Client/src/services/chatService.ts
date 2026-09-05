@@ -2,8 +2,6 @@ import { supabase } from "../lib/supabaseClient";
 
 export type ChatType = "sports";
 
-export type ChatRole = "user" | "bot";
-
 type StoredChatRole = "user" | "assistant";
 
 type StoredChatMessage = {
@@ -14,43 +12,6 @@ type StoredChatMessage = {
   content: string;
   created_at: string;
 };
-
-/**
- * Save a chat message.
- *
- * The frontend uses "bot", while the database stores the standard
- * OpenAI-style role "assistant".
- */
-export async function saveChatMessage(
-  content: string,
-  role: ChatRole,
-  chatType: ChatType,
-) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) throw new Error("User not logged in.");
-
-  const databaseRole: StoredChatRole =
-    role === "bot" ? "assistant" : "user";
-
-  const { error } = await supabase
-    .from("chat_messages")
-    .insert({
-      user_id: user.id,
-      chat_type: chatType,
-      role: databaseRole,
-      content,
-    });
-
-  if (error) {
-    console.error("Failed to save chat message:", error);
-    throw error;
-  }
-}
 
 /**
  * Save a completed question-and-answer turn.

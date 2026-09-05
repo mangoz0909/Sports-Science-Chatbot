@@ -1,5 +1,5 @@
 import { readStored, writeStored, removeStored } from "./safeStorage";
-import { readCachedPlan, writeCachedPlan, clearCachedPlan } from "./planCache";
+import { readCachedPlan, writeCachedPlan } from "./planCache";
 
 const original = Object.getOwnPropertyDescriptor(window, "localStorage");
 
@@ -78,7 +78,6 @@ describe("planCache on a browser with storage blocked", () => {
   it("degrades to a cache miss instead of taking the page down", () => {
     blockStorage();
     expect(() => writeCachedPlan("workout", "u1", { focus: "Legs" })).not.toThrow();
-    expect(() => clearCachedPlan("workout", "u1")).not.toThrow();
     expect(readCachedPlan("workout", "u1")).toBeNull();
   });
 

@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Alert,
   AppBar,
   Box,
   Button,
@@ -12,6 +13,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Snackbar,
   Stack,
   Toolbar,
   Typography,
@@ -20,7 +22,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import CloseIcon from "@mui/icons-material/Close";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { logoutUser } from "../services/authService";
 import { useAuth } from "../contexts/AuthContext";
 
 type NavItem = { label: string; to: string; match?: string };
@@ -51,6 +53,7 @@ const Header: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
   const [profileAnchor, setProfileAnchor] = React.useState<null | HTMLElement>(null);
+  const [logoutError, setLogoutError] = React.useState<string | null>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -63,11 +66,26 @@ const Header: React.FC = () => {
 
   const closeDrawer = () => setDrawerOpen(false);
 
+  /*
+   * The catch is the point. This was try/finally, so a signOut that rejected —
+   * offline, or an already-missing session — stopped the spinner, skipped the
+   * navigate, said nothing, and left the rejection unhandled. The user pressed
+   * "Log out" and stayed logged in with no indication why.
+   */
   const handleLogout = async () => {
     setLoggingOut(true);
+    setLogoutError(null);
+
     try {
-      await supabase.auth.signOut();
+      await logoutUser();
       navigate("/", { replace: true });
+    } catch (err: unknown) {
+      console.error("Log out failed:", err);
+      setLogoutError(
+        err instanceof Error
+          ? `Could not log you out: ${err.message}`
+          : "Could not log you out. Please check your connection and try again."
+      );
     } finally {
       setLoggingOut(false);
     }
@@ -425,6 +443,22 @@ const Header: React.FC = () => {
           </Stack>
         </Box>
       </Drawer>
+
+      <Snackbar
+        open={Boolean(logoutError)}
+        autoHideDuration={6000}
+        onClose={() => setLogoutError(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          variant="filled"
+          onClose={() => setLogoutError(null)}
+          sx={{ width: "100%" }}
+        >
+          {logoutError}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

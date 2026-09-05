@@ -1,5 +1,4 @@
 import {
-  clearCachedPlan,
   readCachedPlan,
   writeCachedPlan,
 } from "./planCache";
@@ -55,13 +54,6 @@ describe("plan cache", () => {
 
   it("treats an unparseable entry as a miss instead of throwing", () => {
     window.localStorage.setItem(`sportlab:plan:workout:${USER}`, "not json");
-
-    expect(readCachedPlan<Plan>("workout", USER, TODAY)).toBeNull();
-  });
-
-  it("clears a cached plan on request", () => {
-    writeCachedPlan<Plan>("workout", USER, { summary: "Push day" }, TODAY);
-    clearCachedPlan("workout", USER);
 
     expect(readCachedPlan<Plan>("workout", USER, TODAY)).toBeNull();
   });
