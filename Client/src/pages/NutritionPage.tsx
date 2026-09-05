@@ -30,6 +30,7 @@ import { useAuth } from "../contexts/AuthContext";
 import Seo, { breadcrumbs } from "../components/Seo";
 import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 import { cleanJsonResponse } from "../lib/aiJson";
+import { functionErrorMessage } from "../lib/functionError";
 
 async function callOpenAI(prompt: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-complete", {
@@ -41,7 +42,11 @@ async function callOpenAI(prompt: string): Promise<string> {
     },
   });
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(
+      await functionErrorMessage(error, "Failed to reach the AI service."),
+    );
+  }
 
   const reply = data?.result;
 

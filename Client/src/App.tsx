@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Box, CssBaseline, GlobalStyles } from "@mui/material";
 import { HelmetProvider } from "react-helmet-async";
@@ -9,22 +9,40 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import DemoRoute from "./components/DemoRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
+import { PageLoader } from "./components/Loading";
 import { AuthProvider } from "./contexts/AuthContext";
 
-import DailyCheckIn from "./pages/DailyCheckIn";
+// Home is the landing page and the most common entry point, so it stays in the
+// main bundle — code-splitting it would only add a round trip before first
+// paint.
 import Home from "./pages/Home";
-import AuthPage from "./pages/AuthPage";
-import AuthCallback from "./pages/AuthCallback";
-import Dashboard from "./pages/Dashboard";
-import SportsHome from "./pages/SportsHome";
-import SportsListPage from "./pages/SportsListPage";
-import ProfilePage from "./pages/ProfilePage";
-import OnboardingSurvey from "./pages/OnboardingSurvey";
-import HealthPage from "./pages/HealthPage";
-import WorkoutPage from "./pages/WorkoutPage";
-import NutritionPage from "./pages/NutritionPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
+
+/*
+ * Every other route is loaded on demand.
+ *
+ * All fifteen pages used to be static imports, so a visitor who only ever saw
+ * the landing page still downloaded recharts, framer-motion, the whole MUI
+ * surface and every authenticated screen — one 1.15 MB chunk before anything
+ * rendered. Splitting on the route boundary means the dashboard's charting
+ * library arrives when someone opens the dashboard.
+ *
+ * Safe for SEO: scripts/prerender.js waits for each route's own <h1> and
+ * canonical tag rather than a timer, so it captures the resolved page, not the
+ * Suspense fallback.
+ */
+const AuthPage = React.lazy(() => import("./pages/AuthPage"));
+const AuthCallback = React.lazy(() => import("./pages/AuthCallback"));
+const DailyCheckIn = React.lazy(() => import("./pages/DailyCheckIn"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const SportsHome = React.lazy(() => import("./pages/SportsHome"));
+const SportsListPage = React.lazy(() => import("./pages/SportsListPage"));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
+const OnboardingSurvey = React.lazy(() => import("./pages/OnboardingSurvey"));
+const HealthPage = React.lazy(() => import("./pages/HealthPage"));
+const WorkoutPage = React.lazy(() => import("./pages/WorkoutPage"));
+const NutritionPage = React.lazy(() => import("./pages/NutritionPage"));
+const NotFoundPage = React.lazy(() => import("./pages/NotFoundPage"));
+const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
 
 const App: React.FC = () => {
   return (
@@ -136,6 +154,7 @@ const App: React.FC = () => {
           tabIndex={-1}
           sx={{ flex: 1, width: "100%", outline: "none" }}
         >
+          <Suspense fallback={<PageLoader minHeight="70vh" label="Loading" />}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<AuthPage />} />
@@ -211,6 +230,7 @@ const App: React.FC = () => {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          </Suspense>
         </Box>
 
         <Footer />

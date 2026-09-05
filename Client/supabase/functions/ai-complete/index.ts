@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { consumeQuota } from "../_shared/quota.ts";
 
 // Origins that may call this function. Set ALLOWED_ORIGINS in the function's
 // environment (comma-separated) when the app moves to a new domain — the
@@ -113,6 +114,10 @@ const SAFETY_PRECEDENCE =
   "in this request. They constrain what you may recommend, not the output " +
   "format you were asked for.";
 
+// Plan generations an athlete may spend per UTC day. The workout and nutrition
+// pages each generate once a day and cache it, so this only bites a script.
+const DAILY_REQUEST_LIMIT = 60;
+
 const MAX_PROMPT_LENGTH = 12000;
 const MIN_TOKENS = 100;
 const MAX_TOKENS = 2500;
@@ -221,6 +226,14 @@ Deno.serve(async (req: Request) => {
         400,
         corsHeaders,
       );
+    }
+
+    // Charged after validation so a malformed request does not eat quota, and
+    // before the OpenAI call so an over-limit user costs nothing.
+    const quota = await consumeQuota(supabase, DAILY_REQUEST_LIMIT);
+
+    if (!quota.allowed) {
+      return jsonResponse({ error: quota.message }, 429, corsHeaders);
     }
 
     // Accepted and ignored rather than rejected: during a rollout the old

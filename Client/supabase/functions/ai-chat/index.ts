@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { consumeQuota } from "../_shared/quota.ts";
 
 type RequestBody = {
   message?: unknown;
@@ -44,6 +45,11 @@ type OpenAIResponseBody = {
 };
 
 const MAX_MESSAGE_LENGTH = 5000;
+
+// Chat turns an athlete may spend per UTC day. A turn can cost several OpenAI
+// calls once tools and the forced final answer are counted, so this is well
+// above normal use and only bites a script.
+const DAILY_REQUEST_LIMIT = 120;
 
 // Preceding turns sent back so the assistant can follow the conversation.
 // Capped on both count and total size to bound token spend per request.
@@ -220,23 +226,21 @@ const MAX_CHECKIN_ROWS = 90;
 const MAX_TOOL_ROUNDS = 3;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+/*
+ * There is deliberately no get_profile tool.
+ *
+ * The profile is injected into the system prompt by getAthleteProfile below,
+ * so exposing it as a tool as well told the model to go and fetch data it was
+ * already holding — its description ("Call this before giving advice that
+ * should be tailored to this specific athlete") all but guaranteed a call on
+ * most turns. That cost an extra OpenAI round trip, a second copy of the
+ * profile in the context, and one of only MAX_TOOL_ROUNDS rounds, for nothing.
+ *
+ * Check-ins stay a tool because they are unbounded and date-ranged: injecting
+ * every check-in an athlete has ever filed is not an option, and the model has
+ * to choose the range from the question.
+ */
 const TOOLS = [
-  {
-    type: "function",
-    function: {
-      name: "get_profile",
-      description:
-        "Read the athlete's saved profile: sport, experience level, goals, " +
-        "training days per week, injuries and restrictions, body metrics, and " +
-        "dietary needs. Call this before giving advice that should be tailored " +
-        "to this specific athlete.",
-      parameters: {
-        type: "object",
-        properties: {},
-        additionalProperties: false,
-      },
-    },
-  },
   {
     type: "function",
     function: {
@@ -326,25 +330,6 @@ async function runTool(
     }
   } catch {
     return { error: "Tool arguments were not valid JSON." };
-  }
-
-  if (name === "get_profile") {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(PROFILE_COLUMNS)
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (error) return { error: error.message };
-    if (!data) {
-      return {
-        error:
-          "This athlete has not completed the onboarding survey yet. Ask them " +
-          "for the details you need, and suggest filling in their profile.",
-      };
-    }
-
-    return data;
   }
 
   if (name === "get_checkins") {
@@ -712,6 +697,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         400,
         corsHeaders,
       );
+    }
+
+    // Charged after validation so a malformed request does not eat quota, and
+    // before the first OpenAI call so an over-limit user costs nothing.
+    const quota = await consumeQuota(supabase, DAILY_REQUEST_LIMIT);
+
+    if (!quota.allowed) {
+      return jsonResponse({ error: quota.message }, 429, corsHeaders);
     }
 
     const history = normalizeHistory(body.history);

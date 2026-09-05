@@ -20,6 +20,7 @@ import SportsTennisIcon from "@mui/icons-material/SportsTennis";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { getUserPreferences } from "../services/preferencesService";
 import { supabase } from "../lib/supabaseClient";
+import { functionErrorMessage } from "../lib/functionError";
 
 type SportsFinderProps = {
   compact?: boolean;
@@ -310,7 +311,11 @@ Keep it concise, practical, and student-friendly.
         },
       });
 
-      if (fnError) throw fnError;
+      if (fnError) {
+        throw new Error(
+          await functionErrorMessage(fnError, "Failed to generate AI matches."),
+        );
+      }
 
       const result = data?.result;
       if (typeof result !== "string" || !result.trim()) {

@@ -26,6 +26,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo, { breadcrumbs } from "../components/Seo";
 import { cleanJsonResponse } from "../lib/aiJson";
+import { functionErrorMessage } from "../lib/functionError";
 import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
@@ -61,7 +62,11 @@ async function callOpenAI(prompt: string): Promise<string> {
     },
   });
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(
+      await functionErrorMessage(error, "Failed to reach the AI service."),
+    );
+  }
 
   const reply = data?.result;
   if (typeof reply !== "string" || !reply.trim()) {

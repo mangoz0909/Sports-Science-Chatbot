@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./AiChatHome.css";
 import { getChatHistory, clearChatHistory, saveChatExchange, type ChatType } from "../services/chatService";
 import { supabase } from "../lib/supabaseClient";
+import { functionErrorMessage } from "../lib/functionError";
 import { useAuth } from "../contexts/AuthContext";
 import {
   ACCEPTED_IMAGE_ACCEPT_ATTR,
@@ -461,7 +462,11 @@ export default function AiChatHome({
         },
       });
 
-      if (fnError) throw fnError;
+      if (fnError) {
+        throw new Error(
+          await functionErrorMessage(fnError, "AI request failed. Try again."),
+        );
+      }
 
       // Every tool-capable build of ai-chat reports which tools it ran, even
       // when that list is empty. Its absence means an older function is still
