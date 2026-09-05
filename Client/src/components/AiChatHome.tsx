@@ -329,7 +329,6 @@ export default function AiChatHome({
       .catch(() => {})
       .finally(() => { if (mounted) setHistoryLoading(false); });
     return () => { mounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatType]);
 
   useEffect(() => {

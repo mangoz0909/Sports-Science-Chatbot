@@ -1,70 +1,78 @@
-# Getting Started with Create React App
+# SportLab AI — client
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React + TypeScript front end, built with [Vite](https://vite.dev). Supabase
+provides auth and the database; the OpenAI calls live in Supabase edge
+functions under `supabase/functions`, never in the browser.
 
-## Available Scripts
+## Setup
 
-In the project directory, you can run:
+```bash
+npm install
+cp .env.example .env   # then fill in your Supabase project values
+npm start
+```
 
-### `npm start`
+The app runs at http://localhost:3000.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Environment variables keep the **`REACT_APP_` prefix** from the project's
+Create React App days. That is deliberate — `vite.config.ts` sets
+`envPrefix` to match, so existing `.env` files and the production hosting
+config did not have to change during the migration. `src/lib/supabaseClient.ts`
+throws at import time when the Supabase variables are missing, and
+`src/index.tsx` catches that to render a readable startup error rather than a
+blank page.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Scripts
 
-### `npm test`
+| Script | What it does |
+| --- | --- |
+| `npm start` / `npm run dev` | Vite dev server on port 3000, with HMR. |
+| `npm run build` | Typechecks, builds to `build/`, then prerenders the public routes. |
+| `npm run build:spa` | Build only — skips the prerender step. |
+| `npm run preview` | Serves the built `build/` folder locally. |
+| `npm test` | Runs the Vitest suite once. |
+| `npm run test:watch` | Vitest in watch mode. |
+| `npm run lint` | ESLint over the project. |
+| `npm run deploy` | Full build, then copies `build/` into `../docs`. |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The build output directory is `build/` rather than Vite's default `dist/`,
+because both `scripts/prerender.js` and the deploy script address it by name.
 
-### `npm run build`
+## Prerendering
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+`scripts/prerender.js` runs after the build. The app is client-rendered, so
+every URL would otherwise ship the same `index.html` — Google executes
+JavaScript and eventually sees the per-route `<Seo>` tags, but social scrapers
+(Facebook, X, LinkedIn, Slack, Discord) read the raw HTML and stop. Without
+this step every shared link previews as the generic homepage card.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+It serves `build/`, drives a real Chrome over each public route, dedupes the
+`<head>`, and writes the rendered DOM back to `build/<route>/index.html`. It
+waits for each route's own `<h1>` and canonical tag rather than a fixed timer,
+which is what makes it safe with lazily-loaded routes.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The step is deliberately non-fatal: a prerender failure leaves the normal SPA
+build in place and exits 0. Set `PRERENDER=false` to skip it.
 
-### `npm run eject`
+## Tests
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Vitest with jsdom, configured in the `test` block of `vite.config.ts`.
+`describe`/`it`/`expect` are globals; `vi` is imported where mocking is needed.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+npm test
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Supabase
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+SQL lives in `supabase/migrations` and is applied with `supabase db push`.
+Edge functions are deployed individually:
 
-## Learn More
+```bash
+supabase functions deploy ai-chat
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+`ai-chat` and `ai-complete` read `OPENAI_API_KEY`, `SUPABASE_URL`,
+`SUPABASE_ANON_KEY` and the comma-separated `ALLOWED_ORIGINS` from the function
+environment. `delete-account` additionally needs `SUPABASE_SERVICE_ROLE_KEY`.
+The client never holds an OpenAI key.

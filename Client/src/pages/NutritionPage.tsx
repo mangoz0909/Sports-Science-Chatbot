@@ -353,7 +353,7 @@ Do not include any extra text.
 
       try {
         parsed = JSON.parse(cleaned);
-      } catch (jsonError) {
+      } catch {
         // The raw parser message — "Unexpected token < in JSON at position 0"
         // — was reaching the athlete verbatim. Keep the reply in the console
         // for debugging and show them something they can act on.

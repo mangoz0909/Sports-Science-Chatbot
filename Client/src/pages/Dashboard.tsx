@@ -154,7 +154,6 @@ export default function Dashboard() {
     }
     loadDashboard();
     return () => { mounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
 const userProfile = isGuest ? {

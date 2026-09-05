@@ -1,11 +1,12 @@
+import { vi } from "vitest";
 import { loadTodaysPlan, saveTodaysPlan, storeTodaysPlan } from "./planService";
 import { readCachedPlan, writeCachedPlan } from "../lib/planCache";
 
-const mockGetUser = jest.fn();
-const mockMaybeSingle = jest.fn();
-const mockUpsert = jest.fn();
+const mockGetUser = vi.fn();
+const mockMaybeSingle = vi.fn();
+const mockUpsert = vi.fn();
 
-jest.mock("../lib/supabaseClient", () => ({
+vi.mock("../lib/supabaseClient", () => ({
   supabase: {
     auth: {
       getUser: () => mockGetUser(),
@@ -34,10 +35,10 @@ const LOCAL_PLAN: Plan = { summary: "from this device" };
 
 beforeEach(() => {
   window.localStorage.clear();
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 
   // Every code path under test logs its own failures; keep the run readable.
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   mockGetUser.mockResolvedValue({ data: { user: { id: USER } }, error: null });
   mockMaybeSingle.mockResolvedValue({ data: null, error: null });
@@ -45,7 +46,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("loadTodaysPlan", () => {

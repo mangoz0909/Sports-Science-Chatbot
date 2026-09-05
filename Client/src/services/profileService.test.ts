@@ -1,9 +1,10 @@
+import { vi } from "vitest";
 import { saveMyName } from "./profileService";
 
-const mockGetUser = jest.fn();
-const mockUpsert = jest.fn();
+const mockGetUser = vi.fn();
+const mockUpsert = vi.fn();
 
-jest.mock("../lib/supabaseClient", () => ({
+vi.mock("../lib/supabaseClient", () => ({
   supabase: {
     auth: { getUser: () => mockGetUser() },
     from: (table: string) => ({
@@ -16,7 +17,7 @@ jest.mock("../lib/supabaseClient", () => ({
 const USER = { id: "athlete-1", email: "athlete@example.com" };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   mockGetUser.mockResolvedValue({ data: { user: USER }, error: null });
   mockUpsert.mockResolvedValue({ error: null });
 });

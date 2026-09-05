@@ -129,7 +129,6 @@ export default function ProfilePage() {
 
   React.useEffect(() => {
     return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
     };
   }, []);
@@ -328,7 +327,7 @@ export default function ProfilePage() {
 
       if (!session) throw new Error("You must be logged in.");
 
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseUrl = import.meta.env.REACT_APP_SUPABASE_URL;
       if (!supabaseUrl) throw new Error("Missing REACT_APP_SUPABASE_URL.");
 
       const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {

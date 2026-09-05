@@ -305,7 +305,7 @@ Requirements:
       let parsed: unknown;
       try {
         parsed = JSON.parse(cleaned);
-      } catch (jsonError) {
+      } catch {
         console.error("Invalid AI JSON response:", responseText);
         throw new Error("The AI returned an invalid plan format. Please regenerate the plan.");
       }
