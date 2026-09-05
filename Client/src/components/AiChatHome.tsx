@@ -476,6 +476,23 @@ export default function AiChatHome({
         );
       }
 
+      // An image only reaches the model if the DEPLOYED function understands
+      // the `image` field. An older deployment parses the JSON, ignores it and
+      // answers the caption alone, so the picture appears to upload fine and
+      // the assistant simply says it cannot see anything. Say what is actually
+      // wrong instead of leaving it to look like a model failure.
+      if (pending.imageUrl && data && data.imageReceived !== true) {
+        console.warn(
+          "[SportLab] The deployed ai-chat function did not accept the attached " +
+            "image, so the assistant never saw it. Redeploy it with: " +
+            "supabase functions deploy ai-chat"
+        );
+        setError(
+          "The server did not receive the attached image, so the assistant " +
+            "answered without it. The ai-chat function needs to be redeployed."
+        );
+      }
+
       const reply = data?.reply;
       if (typeof reply !== "string" || !reply.trim()) {
         throw new Error("The AI returned an empty response.");

@@ -898,7 +898,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     return jsonResponse(
-      { reply, toolsUsed },
+      // `imageReceived` lets the client tell "the model looked and had
+      // nothing to say" apart from "this deployment never got the image" —
+      // an older build of this function silently ignores the field, and the
+      // only symptom is the assistant claiming it cannot see a picture.
+      { reply, toolsUsed, imageReceived: !!imageDataUrl },
       200,
       corsHeaders,
     );
