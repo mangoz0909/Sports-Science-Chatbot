@@ -124,6 +124,30 @@ const MAX_TOKENS = 2500;
 const DEFAULT_TOKENS = 1200;
 const DEFAULT_TEMPERATURE = 0.4;
 
+/**
+ * An error whose message is meant for the caller.
+ *
+ * The catch-all below used to return `err.message` verbatim, so anything
+ * thrown inside the handler was published to whoever made the request —
+ * including "OPENAI_API_KEY is missing.", which tells an authenticated user
+ * the state of the server's configuration. Deno runtime errors would have gone
+ * the same way, carrying internals nobody outside this function should see.
+ *
+ * Throwing this type is now the only way to put wording in front of a caller;
+ * a plain Error is internal, logged and answered generically. Validation and
+ * quota responses are unaffected — those never throw, they return directly, so
+ * the athlete still gets "You have reached today's limit of 60 AI requests."
+ */
+class PublicError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status = 500) {
+    super(message);
+    this.name = "PublicError";
+    this.status = status;
+  }
+}
+
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   const num = typeof value === "number" && Number.isFinite(value) ? value : fallback;
   return Math.min(max, Math.max(min, num));
@@ -311,7 +335,16 @@ Deno.serve(async (req: Request) => {
     if (!openAiResponse.ok) {
       const errorText = await openAiResponse.text();
       console.error("OpenAI error:", errorText);
-      throw new Error("Failed to generate an AI response.");
+
+      // 429 from OpenAI is the project's own rate limit or billing, not the
+      // athlete's quota — worth telling them to retry rather than implying
+      // they did something wrong.
+      throw openAiResponse.status === 429
+        ? new PublicError(
+          "The AI service is busy right now. Please try again in a moment.",
+          503,
+        )
+        : new PublicError("Failed to generate an AI response.", 502);
     }
 
     const openAiData = await openAiResponse.json();
@@ -320,7 +353,7 @@ Deno.serve(async (req: Request) => {
       openAiData?.choices?.[0]?.message?.content?.trim();
 
     if (!result) {
-      throw new Error("OpenAI returned an empty response.");
+      throw new PublicError("The AI returned an empty response.", 502);
     }
 
     return jsonResponse(
@@ -329,12 +362,16 @@ Deno.serve(async (req: Request) => {
       corsHeaders,
     );
   } catch (err) {
+    // Logged in full either way — the detail belongs in the function's logs,
+    // not in the response body.
     console.error("ai-complete error:", err);
 
-    return jsonResponse(
-      { error: err instanceof Error ? err.message : "Unexpected server error." },
-      500,
-      corsHeaders,
-    );
+    return err instanceof PublicError
+      ? jsonResponse({ error: err.message }, err.status, corsHeaders)
+      : jsonResponse(
+        { error: "Something went wrong generating your plan. Please try again." },
+        500,
+        corsHeaders,
+      );
   }
 });

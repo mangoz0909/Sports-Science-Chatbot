@@ -828,13 +828,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
           JSON.stringify(completion.data),
         );
 
+        /*
+         * OpenAI's own message is logged, not forwarded. It describes this
+         * project's account rather than anything the athlete did — a bad key
+         * comes back as "Incorrect API key provided: sk-…", and an unpaid bill
+         * as "You exceeded your current quota, please check your plan and
+         * billing details", which is both confusing to them and nobody else's
+         * business. A 429 here is the project's rate limit, NOT the athlete's
+         * daily quota; that one is returned further up with its own wording.
+         */
         return jsonResponse(
           {
-            error:
-              completion.data.error?.message ??
-              "Failed to generate an AI response.",
+            error: completion.status === 429
+              ? "The assistant is busy right now. Please try again in a moment."
+              : "The assistant could not answer that just now. Please try again.",
           },
-          completion.status,
+          completion.status === 429 ? 503 : 502,
           corsHeaders,
         );
       }
@@ -900,15 +909,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       corsHeaders,
     );
   } catch (error) {
+    // Logged in full; answered generically. Returning `error.message` verbatim
+    // published whatever went wrong inside this handler — a Deno runtime
+    // failure, a misconfigured environment variable — to whoever made the
+    // request. Every message the athlete is meant to see is returned directly
+    // above, not thrown, so nothing user-facing is lost here.
     console.error("ai-chat function error:", error);
 
     return jsonResponse(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "An unexpected server error occurred.",
-      },
+      { error: "Something went wrong. Please try again." },
       500,
       corsHeaders,
     );
