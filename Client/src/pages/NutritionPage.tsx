@@ -24,6 +24,7 @@ import { getUserPreferences } from "../services/preferencesService";
 import {
   getLatestCheckIn,
   getLast7CheckIns,
+  isCheckInFromToday,
 } from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
@@ -208,17 +209,29 @@ export default function NutritionPage() {
           ].join(", ")
         : "General fitness athlete, intermediate level";
 
+      // getLatestCheckIn returns the most recent row at ANY date, so this is
+      // only today's reading when the athlete actually checked in today.
+      const checkInFreshness = isCheckInFromToday(checkIn)
+        ? "Filed today"
+        : `Filed on ${
+            checkIn?.checkin_date ?? "an earlier date"
+          } — the athlete has NOT checked in today, so treat these numbers as out of date and lean on the 7-day history instead`;
+
+      // Hydration is the athlete's own 1-10 rating from the daily check-in, not
+      // a volume. Sending it as "7L" told the nutritionist model they were
+      // already drinking seven litres a day, which skewed every hydration
+      // target it returned.
       const checkInText = checkIn
-        ? `Readiness: ${
+        ? `${checkInFreshness}. Readiness: ${
             checkIn.readiness_score ?? "N/A"
           }%, Recovery: ${
             checkIn.recovery_score ?? "N/A"
-          }%, Hydration: ${
+          }%, Self-rated hydration: ${
             checkIn.hydration ?? "N/A"
-          }L, Training intensity today: ${
+          }/10, Training intensity: ${
             checkIn.training_intensity ?? "N/A"
           }/10`
-        : "No check-in data available";
+        : "No check-in on file";
 
       const weeklyTrendText =
         last7CheckIns &&
@@ -240,15 +253,18 @@ export default function NutritionPage() {
                     "N/A"
                   }%`,
 
+                  // Both are 1-10 self-ratings, like the current reading above.
+                  // Unlabelled, the model was free to read them as litres and
+                  // servings.
                   `Hydration ${
                     item.hydration ??
                     "N/A"
-                  }`,
+                  }/10`,
 
-                  `Nutrition ${
+                  `Nutrition quality ${
                     item.nutrition ??
                     "N/A"
-                  }`,
+                  }/10`,
 
                   `Sleep ${
                     item.sleep_hours ??
@@ -278,7 +294,7 @@ You are a professional sports nutritionist.
 ATHLETE PROFILE:
 ${profileText}
 
-TODAY'S CONDITION:
+MOST RECENT CHECK-IN:
 ${checkInText}
 
 RECENT 7-DAY HISTORY:

@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getCurrentUser, requireCurrentUser } from "../lib/currentUser";
 
 export type ChatType = "sports";
 
@@ -14,6 +15,12 @@ type StoredChatMessage = {
 };
 
 /**
+ * Most recent turns restored when the chat page mounts. Two rows per exchange,
+ * so this is fifty question-and-answer pairs.
+ */
+const HISTORY_LIMIT = 100;
+
+/**
  * Save a completed question-and-answer turn.
  *
  * Both rows go in one insert with explicit, ordered timestamps. Saving them as
@@ -26,13 +33,9 @@ export async function saveChatExchange(
   botContent: string,
   chatType: ChatType,
 ) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) throw new Error("User not logged in.");
+  const user = await requireCurrentUser(
+    "You must be logged in to save this conversation.",
+  );
 
   const askedAt = new Date();
   const answeredAt = new Date(askedAt.getTime() + 1);
@@ -61,13 +64,9 @@ export async function saveChatExchange(
 }
 
 export async function clearChatHistory(chatType: ChatType) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) throw new Error("User not logged in.");
+  const user = await requireCurrentUser(
+    "You must be logged in to clear your chat history.",
+  );
 
   const { error } = await supabase
     .from("chat_messages")
@@ -82,21 +81,23 @@ export async function clearChatHistory(chatType: ChatType) {
 }
 
 export async function getChatHistory(chatType: ChatType) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (userError) throw userError;
-  if (!user) throw new Error("User not logged in.");
+  // `/sports` is open to signed-out visitors, who simply have no transcript.
+  if (!user) return [];
 
   const { data, error } = await supabase
     .from("chat_messages")
     .select("*")
     .eq("user_id", user.id)
     .eq("chat_type", chatType)
-    .order("created_at", { ascending: true })
-    .limit(100);
+    // Descending + limit so a long transcript drops its OLDEST turns. Ordering
+    // ascending applied the cap to the wrong end: once an athlete passed
+    // HISTORY_LIMIT messages, every reload showed the first hundred turns they
+    // ever sent and nothing since, with new turns vanishing on refresh.
+    // Reversed below so the page still renders them oldest-first.
+    .order("created_at", { ascending: false })
+    .limit(HISTORY_LIMIT);
 
   if (error) {
     console.error("Failed to load chat history:", error);
@@ -109,8 +110,11 @@ export async function getChatHistory(chatType: ChatType) {
    *
    * "bot" is also accepted here so any older rows still work.
    */
-  return ((data ?? []) as StoredChatMessage[]).map((row) => ({
-    ...row,
-    role: row.role === "assistant" ? "bot" : row.role,
-  }));
+  return ((data ?? []) as StoredChatMessage[])
+    .slice()
+    .reverse()
+    .map((row) => ({
+      ...row,
+      role: row.role === "assistant" ? "bot" : row.role,
+    }));
 }

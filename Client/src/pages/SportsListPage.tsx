@@ -18,9 +18,11 @@ import {
 
 import SportsTennisIcon from "@mui/icons-material/SportsTennis";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import { supabase } from "../lib/supabaseClient";
 import { functionErrorMessage } from "../lib/functionError";
+import { useAuth } from "../contexts/AuthContext";
 
 type SportsFinderProps = {
   compact?: boolean;
@@ -200,6 +202,19 @@ function formatInlineText(text: string): ReactNode {
     </>
   );
 }
+/**
+ * Which sport the AI is actually asked about.
+ *
+ * The "Your sport" box is seeded from the saved survey, so reading the survey
+ * first meant an athlete with a profile on file could type a different sport,
+ * watch it sit in the field, and have the AI answer for the old one anyway —
+ * the input was editable but inert. What the athlete typed wins; the saved
+ * value is the fallback for an empty box.
+ */
+export function resolveSport(typed: string, saved?: string | null): string {
+  return typed.trim() || saved?.trim() || "Not provided";
+}
+
 type SurveyKey = "teamwork" | "intensity" | "contact" | "coordination";
 type SurveyAnswers = Record<SurveyKey, number>;
 
@@ -234,6 +249,13 @@ const questions = [
 ] as const;
 
 export function SportsFinder({ compact = false }: SportsFinderProps) {
+  // ai-complete rejects an unauthenticated caller with 401, so the button below
+  // could never work for a guest — and this is a demo route, reachable and
+  // indexed without an account. The workout and nutrition pages already handle
+  // this by asking the visitor to sign in rather than letting them press it.
+  const { session, loading: authLoading } = useAuth();
+  const isLoggedIn = Boolean(session);
+
   const [answers, setAnswers] = React.useState<SurveyAnswers>(defaultAnswers);
   const [pastSports, setPastSports] = React.useState("");
   const [aiMatches, setAiMatches] = React.useState("");
@@ -270,13 +292,15 @@ export function SportsFinder({ compact = false }: SportsFinderProps) {
     setAiMatches("");
 
     try {
+      const sport = resolveSport(pastSports, prefs?.primary_sport);
+
       const prompt = `
 You are SportLab's sports matching coach.
 
 Use the user's profile and preferences to recommend sports. Do not use a rigid scoring algorithm. Think like a coach: consider goals, current sport, experience, injury concerns, training style, sleep, and preferences.
 
 User profile:
-Primary sport: ${prefs?.primary_sport || pastSports || "Not provided"}
+Primary sport: ${sport}
 Experience level: ${prefs?.experience_level || "Not provided"}
 Main goal: ${prefs?.main_goal || "Not provided"}
 Competition level: ${prefs?.competition_level || "Not provided"}
@@ -372,7 +396,25 @@ Keep it concise, practical, and student-friendly.
           </Box>
         </Stack>
 
-        {loadingPrefs && (
+        {!authLoading && !isLoggedIn && (
+          <Alert
+            severity="info"
+            action={
+              <Button
+                component={RouterLink}
+                to="/auth?mode=login"
+                size="small"
+                sx={{ fontWeight: 800, textTransform: "none" }}
+              >
+                Sign in
+              </Button>
+            }
+          >
+            Sign in to generate your personalised sport matches.
+          </Alert>
+        )}
+
+        {isLoggedIn && loadingPrefs && (
           <Alert severity="info">Loading your saved sport preferences...</Alert>
         )}
 
@@ -388,7 +430,7 @@ Keep it concise, practical, and student-friendly.
           </Alert>
         )}
 
-        {!loadingPrefs && !prefs && (
+        {isLoggedIn && !loadingPrefs && !prefs && (
           <Alert severity="warning">
             No saved survey found yet. You can still type your sport below.
           </Alert>
@@ -537,7 +579,7 @@ Keep it concise, practical, and student-friendly.
                   )
                 }
                 onClick={generateAiMatches}
-                disabled={aiLoading}
+                disabled={aiLoading || authLoading || !isLoggedIn}
                 sx={{
                   alignSelf: { xs: "stretch", sm: "flex-start" },
                   borderRadius: 3,

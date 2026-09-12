@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getCurrentUser, requireCurrentUser } from "../lib/currentUser";
 
 export type CheckInInput = {
   sleep_hours: number;
@@ -33,14 +34,26 @@ export function localDateString(date: Date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-export async function createDailyCheckIn(checkInData: CheckInInput) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+/**
+ * Whether a check-in row is the athlete's entry for today.
+ *
+ * `getLatestCheckIn` returns the most recent row at ANY date, so anything that
+ * calls it and then says "today" can be describing a reading from last week.
+ * The workout and nutrition prompts both did exactly that, which had the model
+ * plan around a readiness score the athlete no longer has; the status chip on
+ * the Sports AI page claimed to be using "today's check-in" on the same basis.
+ */
+export function isCheckInFromToday(
+  checkIn: { checkin_date?: string | null } | null | undefined,
+  today: string = localDateString()
+): boolean {
+  return checkIn?.checkin_date === today;
+}
 
-  if (userError) throw userError;
-  if (!user) throw new Error("You must be logged in to save a check-in.");
+export async function createDailyCheckIn(checkInData: CheckInInput) {
+  const user = await requireCurrentUser(
+    "You must be logged in to save a check-in."
+  );
 
   const today = localDateString();
 
@@ -64,12 +77,8 @@ export async function createDailyCheckIn(checkInData: CheckInInput) {
 }
 
 export async function getLatestCheckIn() {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (userError) throw userError;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -85,12 +94,8 @@ export async function getLatestCheckIn() {
 }
 
 export async function getLast7CheckIns() {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (userError) throw userError;
   if (!user) return [];
 
   const { data, error } = await supabase

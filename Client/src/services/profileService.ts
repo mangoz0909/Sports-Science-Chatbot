@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getCurrentUser, requireCurrentUser } from "../lib/currentUser";
 
 export type Profile = {
   id: string;
@@ -9,12 +10,8 @@ export type Profile = {
 };
 
 export async function syncGoogleProfile() {
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (error) throw error;
   if (!user) return null;
 
   const name =
@@ -53,13 +50,9 @@ export async function saveMyName(name: string) {
 
   if (!cleanName) throw new Error("Please enter your name.");
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) throw new Error("You must be logged in.");
+  const user = await requireCurrentUser(
+    "You must be logged in to change your name."
+  );
 
   const { error } = await supabase.from("profiles").upsert(
     {
@@ -74,13 +67,11 @@ export async function saveMyName(name: string) {
 }
 
 export async function getMyProfile() {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (userError) throw userError;
-  if (!user) throw new Error("User not logged in.");
+  // Null rather than a throw: the dashboard reads this for signed-out visitors
+  // too, where "no profile" is the ordinary answer and not a failure.
+  if (!user) return null;
 
   const { data, error } = await supabase
     .from("profiles")

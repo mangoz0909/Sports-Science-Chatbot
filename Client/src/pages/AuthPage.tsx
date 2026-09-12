@@ -42,6 +42,33 @@ type Mode = "login" | "signup";
 
 const REMEMBERED_EMAIL_KEY = "rememberedEmail";
 
+/**
+ * Failures that arrive as a redirect rather than as a rejected promise.
+ *
+ * AuthCallback sends a failed Google sign-in here as
+ * `?mode=login&error=session_missing`, and Supabase appends its own
+ * `error` / `error_description` on some redirects. Nothing read either, so the
+ * user was dropped back on an empty login form with no idea what had happened
+ * — and the natural response is to try the same button again.
+ */
+const REDIRECT_ERRORS: Record<string, string> = {
+  session_missing:
+    "We could not finish your Google sign-in — no session came back. Please try again.",
+  access_denied: "Google sign-in was cancelled.",
+};
+
+function readRedirectError(qs: URLSearchParams): string | null {
+  const code = qs.get("error");
+
+  if (!code) return null;
+
+  return (
+    REDIRECT_ERRORS[code] ||
+    qs.get("error_description") ||
+    "Sign-in did not complete. Please try again."
+  );
+}
+
 function useQuery() {
   const { search } = useLocation();
   return useMemo(() => new URLSearchParams(search), [search]);
@@ -73,13 +100,24 @@ const AuthPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [resetSubmitting, setResetSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => readRedirectError(qs));
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     params.set("mode", mode);
-    const url = `${window.location.pathname}?${params.toString()}`;
+
+    // Read once, above, and then dropped: leaving it in the address bar means a
+    // refresh — or a shared link — replays a failure that is already over.
+    params.delete("error");
+    params.delete("error_code");
+    params.delete("error_description");
+
+    const query = params.toString();
+    const url = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
+
     window.history.replaceState({}, "", url);
   }, [mode]);
 

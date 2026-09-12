@@ -8,6 +8,7 @@
  * halfway through their day.
  */
 import { supabase } from "../lib/supabaseClient";
+import { getCurrentUser, requireCurrentUser } from "../lib/currentUser";
 import { localDateString } from "./checkinService";
 import { readCachedPlan, writeCachedPlan } from "../lib/planCache";
 import type { PlanKind } from "../lib/planCache";
@@ -21,12 +22,8 @@ export async function fetchTodaysPlan<T>(
   kind: PlanKind,
   today: string = localDateString()
 ): Promise<T | null> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (userError) throw userError;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -48,13 +45,7 @@ export async function storeTodaysPlan<T>(
   plan: T,
   today: string = localDateString()
 ): Promise<void> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) throw new Error("You must be logged in to save a plan.");
+  const user = await requireCurrentUser("You must be logged in to save a plan.");
 
   const { error } = await supabase.from(PLANS_TABLE).upsert(
     {

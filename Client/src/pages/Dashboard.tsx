@@ -76,6 +76,27 @@ function riskColor(value: number) {
 }
 
 /*
+ * What the fatigue reading actually means.
+ *
+ * The card below interpolated the number but hardcoded the verdict, so an
+ * athlete at 90% fatigue was told "you are not overloaded" — directly
+ * contradicting the Coach Tip two boxes above, which reads the same value and
+ * calls for a recovery day. The 60 threshold is the one getAIRecommendation
+ * and Today's Focus already use, so all three now agree.
+ */
+function fatigueVerdict(value: number) {
+  if (value >= 60) {
+    return "That is elevated. Treat today as a recovery day: keep the intensity low, and prioritise sleep and hydration.";
+  }
+
+  if (value >= 35) {
+    return "That is moderate. You are not overloaded, but avoid stacking too many high-intensity sessions.";
+  }
+
+  return "That is low. You have room for a harder session if your schedule calls for one.";
+}
+
+/*
  * Advice for today, or an honest refusal.
  *
  * `hasData` is not optional. With no check-in on file every metric below is 0,
@@ -563,7 +584,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       Fatigue Detection
                     </Typography>
                     <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                      Current fatigue is {userProfile.fatigue}%. You are not overloaded, but avoid stacking too many high-intensity sessions.
+                      Current fatigue is {userProfile.fatigue}%. {fatigueVerdict(userProfile.fatigue)}
                     </Typography>
                   </Box>
                 )}
