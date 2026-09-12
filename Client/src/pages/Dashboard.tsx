@@ -613,7 +613,23 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       <AreaChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} />
-                        <YAxis stroke="#64748b" domain={[4, 10]} tick={{ fontSize: 12 }} width={44} />
+                        {/*
+                          Fitted to the data rather than pinned to [4, 10]. The
+                          check-in slider allows 1-10 hours, so a fixed floor of
+                          4 drew a three-hour night off the bottom of the chart
+                          — the worst sleep an athlete logs was the reading they
+                          could not see. Padded by an hour either side so the
+                          line never runs along the axis, and clamped at 0.
+                        */}
+                        <YAxis
+                          stroke="#64748b"
+                          domain={[
+                            (dataMin: number) => Math.max(0, Math.floor(dataMin - 1)),
+                            (dataMax: number) => Math.ceil(dataMax + 1),
+                          ]}
+                          tick={{ fontSize: 12 }}
+                          width={44}
+                        />
                         <Tooltip />
                         <Area
                           type="monotone"

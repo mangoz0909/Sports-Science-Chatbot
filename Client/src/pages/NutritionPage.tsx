@@ -861,12 +861,15 @@ Do not include any extra text.
 
           {/* Meal plan */}
           {plan.meals.map(
-            (meal) => (
+            // Keyed by position as well as name: the model is asked for five
+            // meals and nothing stops it returning two called "Snack", which
+            // collided as React keys and dropped one of the cards.
+            (meal, index) => (
               <Grid
                 item
                 xs={12}
                 sm={6}
-                key={meal.meal}
+                key={`${index}-${meal.meal}`}
               >
                 <Card
                   elevation={0}

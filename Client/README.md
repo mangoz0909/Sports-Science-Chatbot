@@ -6,13 +6,45 @@ functions under `supabase/functions`, never in the browser.
 
 ## Setup
 
+**Prerequisites:** Node 20.19+ (or 22.12+) and npm. Vite 7 and Vitest 5 both
+require it, and on an older Node the failure is a confusing build error rather
+than a clear message — `package.json` declares `engines` so npm warns you first.
+Check with `node -v`.
+
+You also need a **Supabase project**. The app cannot start without one:
+`src/lib/supabaseClient.ts` throws at import time when its two variables are
+missing.
+
+From a clean machine:
+
 ```bash
+git clone https://github.com/mangoz0909/Sports-Science-Chatbot.git
+```
+
+The front end lives in the `Client/` subdirectory, not the repository root —
+every command below is run from there:
+
+```bash
+cd Sports-Science-Chatbot/Client
 npm install
-cp .env.example .env   # then fill in your Supabase project values
+cp .env.example .env
+```
+
+Then open `.env` and fill in the two values from your Supabase project
+(Settings → API): the project URL and the **anon** public key. Never the
+service-role key — this file is compiled into the browser bundle.
+
+```bash
 npm start
 ```
 
-The app runs at http://localhost:3000.
+The app runs at http://localhost:3000. If that port is taken Vite moves to
+another (`strictPort` is false), so read the port it prints rather than assuming
+3000 — and add the one it chose to the edge functions' `ALLOWED_ORIGINS`, or
+their CORS check will reject your requests.
+
+Nothing else is required to run the front end. The Supabase CLI below is only
+needed to change the database or the edge functions.
 
 Environment variables keep the **`REACT_APP_` prefix** from the project's
 Create React App days. That is deliberate — `vite.config.ts` sets
@@ -63,16 +95,53 @@ Vitest with jsdom, configured in the `test` block of `vite.config.ts`.
 npm test
 ```
 
+`.env.test` holds placeholder Supabase values so the suite runs without a real
+`.env` — `supabaseClient.ts` throws at import time otherwise, which would fail
+every test that transitively imports a service. No network call is made.
+
+Two page-local functions are tested by extracting them from source rather than
+exporting them (`resetArrival.test.ts`, `redirectError.test.ts`). That is
+deliberate: it keeps the test honest, exercising the shipped function instead of
+a copy that can drift out of sync.
+
 ## Supabase
 
-SQL lives in `supabase/migrations` and is applied with `supabase db push`.
-Edge functions are deployed individually:
+Only needed to change the database or the edge functions — running the front
+end does not require the CLI.
+
+Link the project once per machine. The project ref is in your Supabase
+dashboard URL:
 
 ```bash
-supabase functions deploy ai-chat
+npx supabase link --project-ref <your-project-ref>
 ```
+
+SQL lives in `supabase/migrations` and is applied with `supabase db push`.
+
+**Edge functions do not ship with the front end.** Pushing to `main` deploys
+the site; the functions stay on whatever version was last deployed until you
+deploy them yourself:
+
+```bash
+npx supabase functions deploy ai-chat ai-complete delete-account
+```
+
+That is the usual cause of the app behaving as though a fix never landed. Two
+symptoms are specific enough to name: the browser console warning that the
+deployed `ai-chat` "did not report tool usage" means the assistant cannot read
+the athlete's profile or check-ins, and "the server did not receive the attached
+image" means it is running a build that predates image support. Both mean the
+same thing — redeploy the function.
 
 `ai-chat` and `ai-complete` read `OPENAI_API_KEY`, `SUPABASE_URL`,
 `SUPABASE_ANON_KEY` and the comma-separated `ALLOWED_ORIGINS` from the function
 environment. `delete-account` additionally needs `SUPABASE_SERVICE_ROLE_KEY`.
 The client never holds an OpenAI key.
+
+These three files are the least-covered code in the repository: `tsconfig.json`
+includes only `src`, so `tsc` never sees them, and there are no tests. Install
+Deno if you intend to edit them, and check your work before deploying:
+
+```bash
+deno check supabase/functions/ai-chat/index.ts
+```
