@@ -28,7 +28,9 @@
     "deploy": "npm run build && npx cpx \"build/**\" ../docs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check:functions": "node scripts/check-functions.js",
+    "check": "tsc --noEmit && eslint . && vitest run && npm run check:functions"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

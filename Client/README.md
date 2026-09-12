@@ -65,6 +65,8 @@ blank page.
 | `npm test` | Runs the Vitest suite once. |
 | `npm run test:watch` | Vitest in watch mode. |
 | `npm run lint` | ESLint over the project. |
+| `npm run check:functions` | Type-checks the Supabase edge functions with Deno. |
+| `npm run check` | All four gates: typecheck, lint, tests, edge functions. |
 | `npm run deploy` | Full build, then copies `build/` into `../docs`. |
 
 The build output directory is `build/` rather than Vite's default `dist/`,
@@ -138,10 +140,20 @@ same thing — redeploy the function.
 environment. `delete-account` additionally needs `SUPABASE_SERVICE_ROLE_KEY`.
 The client never holds an OpenAI key.
 
-These three files are the least-covered code in the repository: `tsconfig.json`
-includes only `src`, so `tsc` never sees them, and there are no tests. Install
-Deno if you intend to edit them, and check your work before deploying:
+`tsconfig.json` includes only `src`, so `tsc --noEmit` never sees these files.
+They are type-checked separately, against each function's own `deno.json` —
+which is how Supabase deploys them, one function to one config:
 
 ```bash
-deno check supabase/functions/ai-chat/index.ts
+npm run check:functions
 ```
+
+Run it before deploying. Functions are discovered from the directory rather
+than listed in the script, so a new one is covered the day it is created.
+
+Deno is deliberately not a dependency: the script uses a system `deno` when
+there is one and falls back to `npx deno@2` otherwise, which downloads and
+caches it on first use. Nothing to install on a clean machine.
+
+There are still no *tests* for these three files — the typecheck catches a
+typo or a wrong shape, not a wrong decision.
