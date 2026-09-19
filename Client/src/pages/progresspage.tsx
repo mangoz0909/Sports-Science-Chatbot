@@ -7,15 +7,17 @@ const ProgressPage: React.FC = () => {
       sx={{
         minHeight: "100vh",
         bgcolor: "#f8fafc",
-        py: 6,
+        py: { xs: 4, md: 6 },
       }}
     >
       <Container maxWidth="lg">
         <Typography
+          component="h1"
           variant="h3"
           sx={{
             fontWeight: 800,
             color: "#0f172a",
+            letterSpacing: "-0.03em",
             mb: 1,
           }}
         >
