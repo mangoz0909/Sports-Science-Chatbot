@@ -1,4 +1,5 @@
 import React from "react";
+
 import {
   Box,
   Button,
@@ -9,8 +10,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+
 import { Link as RouterLink } from "react-router-dom";
+
 import { motion, useReducedMotion } from "framer-motion";
+
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
@@ -18,6 +22,8 @@ import PsychologyIcon from "@mui/icons-material/Psychology";
 import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+
 import { fadeUp, stagger, viewport } from "./homeAnimations";
 
 const MotionBox = motion(Box);
@@ -32,6 +38,7 @@ const workspaceCards = [
     cta: "Open Check-In",
     color: "#ec4899",
   },
+
   {
     title: "Sports Health AI",
     desc: "Ask about training, recovery, performance, injury prevention, nutrition, stress, focus, and confidence.",
@@ -40,6 +47,7 @@ const workspaceCards = [
     cta: "Open AI Coach",
     color: "#38bdf8",
   },
+
   {
     title: "Athlete Dashboard",
     desc: "Track readiness, recovery, workload, fatigue, sleep, hydration, injury risk, and weekly trends.",
@@ -48,14 +56,25 @@ const workspaceCards = [
     cta: "View Dashboard",
     color: "#22c55e",
   },
+
   {
-    title: "Workout Planner",
-    desc: "Create personalized training plans based on your sport, goals, schedule, and athlete profile.",
+    title: "My Workout Plan",
+    desc: "Build your own workouts, record sets, reps, and weights, and get progression suggestions for your next session.",
+    icon: <AssignmentIcon />,
+    to: "/my-workout-plan",
+    cta: "Open My Workout",
+    color: "#6366f1",
+  },
+
+  {
+    title: "AI Workout Planner",
+    desc: "Generate personalized training plans based on your sport, goals, schedule, and athlete profile.",
     icon: <FitnessCenterIcon />,
     to: "/health/workout",
-    cta: "Open Workout",
+    cta: "Generate Workout",
     color: "#8b5cf6",
   },
+
   {
     title: "Sports Match",
     desc: "Find sports that match your interests, movement style, intensity, and athletic profile.",
@@ -64,6 +83,7 @@ const workspaceCards = [
     cta: "Find Sports",
     color: "#f59e0b",
   },
+
   {
     title: "Nutrition Planner",
     desc: "Get personalized nutrition guidance based on your sport, goals, dietary needs, and training demands.",
@@ -136,7 +156,7 @@ export default function WorkspacesSection() {
                 item
                 xs={12}
                 sm={6}
-                md={6}
+                md={4}
                 key={item.title}
               >
                 <MotionCard
@@ -158,15 +178,15 @@ export default function WorkspacesSection() {
                     bgcolor: "#fff",
                     position: "relative",
                     overflow: "hidden",
-                    boxShadow:
-                      "0 10px 30px rgba(15,23,42,0.04)",
+                    boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
                     transition:
                       "border-color 200ms ease, box-shadow 200ms ease",
+
                     "&:hover": {
                       borderColor: "#bae6fd",
-                      boxShadow:
-                        "0 24px 60px rgba(15,23,42,0.10)",
+                      boxShadow: "0 24px 60px rgba(15,23,42,0.10)",
                     },
+
                     "&::before": {
                       content: '""',
                       position: "absolute",
@@ -190,7 +210,9 @@ export default function WorkspacesSection() {
                       animate={
                         reduceMotion
                           ? undefined
-                          : { y: [0, -5, 0] }
+                          : {
+                              y: [0, -5, 0],
+                            }
                       }
                       transition={{
                         duration: 3.2,
@@ -207,6 +229,7 @@ export default function WorkspacesSection() {
                         display: "grid",
                         placeItems: "center",
                         mb: 2.5,
+
                         "& svg": {
                           fontSize: 34,
                         },
@@ -243,6 +266,7 @@ export default function WorkspacesSection() {
                           fontWeight: 900,
                           color: "#0f172a",
                           borderColor: "#cbd5e1",
+
                           "&:hover": {
                             borderColor: "#94a3b8",
                             bgcolor: "#f8fafc",

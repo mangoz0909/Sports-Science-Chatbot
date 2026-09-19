@@ -12,6 +12,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { PageLoader } from "./components/Loading";
 import { AuthProvider } from "./contexts/AuthContext";
 
+
 // Home is the landing page and the most common entry point, so it stays in the
 // main bundle — code-splitting it would only add a round trip before first
 // paint.
@@ -43,6 +44,7 @@ const WorkoutPage = React.lazy(() => import("./pages/WorkoutPage"));
 const NutritionPage = React.lazy(() => import("./pages/NutritionPage"));
 const NotFoundPage = React.lazy(() => import("./pages/NotFoundPage"));
 const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
+const MyWorkoutPlan = React.lazy(() => import("./pages/MyWorkoutPlan"));
 
 const App: React.FC = () => {
   return (
@@ -184,6 +186,15 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+  path="/my-workout-plan"
+  element={
+    <ProtectedRoute>
+      <MyWorkoutPlan />
+    </ProtectedRoute>
+  }
+/>
 
             <Route
               path="/dashboard"
