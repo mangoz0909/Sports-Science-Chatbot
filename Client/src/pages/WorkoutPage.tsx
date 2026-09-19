@@ -21,7 +21,11 @@ import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 
 import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
-import { getLatestCheckIn, getLast7CheckIns } from "../services/checkinService";
+import {
+  getLatestCheckIn,
+  getLast7CheckIns,
+  isCheckInFromToday,
+} from "../services/checkinService";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import Seo, { breadcrumbs } from "../components/Seo";
@@ -208,9 +212,17 @@ export default function WorkoutPage() {
           ].join(", ")
         : "General fitness athlete, intermediate level";
 
+      // getLatestCheckIn returns the most recent row at ANY date. Calling that
+      // "today's data" unconditionally meant a five-day-old entry was handed to
+      // the model as the athlete's current condition, and today's session was
+      // built around a readiness score they no longer have.
+      const checkInFreshness = isCheckInFromToday(checkIn)
+        ? "Filed today"
+        : `Filed on ${checkIn?.checkin_date ?? "an earlier date"} — the athlete has NOT checked in today, so treat these numbers as out of date and lean on the 7-day history instead`;
+
       const checkInText = checkIn
-        ? `Today's data — Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Fatigue: ${checkIn.fatigue != null ? Math.round(checkIn.fatigue * 10) : "N/A"}%, Sleep: ${checkIn.sleep_hours ?? "N/A"}h, Training intensity today: ${checkIn.training_intensity ?? "N/A"}/10, Soreness: ${checkIn.soreness ?? "N/A"}, Stress: ${checkIn.stress ?? "N/A"}, Injury risk: ${checkIn.injury_risk ?? "N/A"}%`
-        : "No check-in data available";
+        ? `${checkInFreshness}. Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Fatigue: ${checkIn.fatigue != null ? Math.round(checkIn.fatigue * 10) : "N/A"}%, Sleep: ${checkIn.sleep_hours ?? "N/A"}h, Training intensity: ${checkIn.training_intensity ?? "N/A"}/10, Soreness: ${checkIn.soreness ?? "N/A"}/10, Stress: ${checkIn.stress ?? "N/A"}/10, Injury risk: ${checkIn.injury_risk ?? "N/A"}%`
+        : "No check-in on file";
 
       const weeklyTrendText =
         last7CheckIns && last7CheckIns.length > 0
@@ -240,7 +252,7 @@ ${todayName}, ${todayDisplay}
 ATHLETE PROFILE:
 ${profileText}
 
-TODAY'S CONDITION:
+MOST RECENT CHECK-IN:
 ${checkInText}
 
 RECENT 7-DAY HISTORY:
@@ -286,7 +298,7 @@ Requirements:
 - Make the session much more detailed than a weekly overview.
 - Include exact sets, reps or time, rest periods, and useful coaching notes.
 - Use the athlete's current sport, goals, equipment, preferred duration, and experience level.
-- Use today's check-in heavily when deciding intensity and exercise selection.
+- Use the most recent check-in heavily when deciding intensity and exercise selection, but only in proportion to how current it is.
 - Use the last 7 check-ins to detect fatigue, recovery, sleep, and workload trends.
 - Do not overreact to one unusual check-in if the 7-day pattern suggests otherwise.
 - Respect all injuries and physical restrictions.

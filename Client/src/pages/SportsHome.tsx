@@ -4,15 +4,16 @@ import { Link as RouterLink } from "react-router-dom";
 import AiChatHome from "../components/AiChatHome";
 import Seo, { breadcrumbs } from "../components/Seo";
 import { getUserPreferences } from "../services/preferencesService";
-import { getLatestCheckIn } from "../services/checkinService";
+import { getLatestCheckIn, isCheckInFromToday } from "../services/checkinService";
 
 export default function UnifiedAIHome() {
   const [dataStatus, setDataStatus] = React.useState<"loading" | "full" | "profile-only" | "none">("loading");
 
-  // The assistant now reads the profile and check-in history itself, through
-  // the get_profile / get_checkins tools in the ai-chat function. These queries
-  // only drive the status chip below — pasting a snapshot into the prompt meant
-  // the model saw data frozen at page load, with no dates on the trend numbers.
+  // The assistant reads the athlete's records itself: the profile is injected
+  // into the system prompt by the ai-chat function, and check-ins come from its
+  // get_checkins tool. These queries only drive the status chip below — pasting
+  // a snapshot into the prompt meant the model saw data frozen at page load,
+  // with no dates on the trend numbers.
   React.useEffect(() => {
     async function loadDataStatus() {
       try {
@@ -21,7 +22,16 @@ export default function UnifiedAIHome() {
           getLatestCheckIn(),
         ]);
 
-        setDataStatus(prefs && latest ? "full" : prefs ? "profile-only" : "none");
+        // getLatestCheckIn returns the most recent row at ANY date, so the
+        // chip claimed "today's check-in" for an athlete whose last entry was
+        // weeks old. "profile-only" is the honest state until they file one.
+        setDataStatus(
+          prefs && isCheckInFromToday(latest)
+            ? "full"
+            : prefs
+              ? "profile-only"
+              : "none"
+        );
       } catch (err) {
         console.error("Failed to load athlete profile:", err);
         setDataStatus("none");

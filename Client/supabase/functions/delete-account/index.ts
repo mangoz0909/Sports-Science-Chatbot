@@ -3,10 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ALLOWED_ORIGIN overrides nothing — it is added to the list. The production
 // origin is kept as a default so an unset variable can't break account deletion.
+//
+// 5173 is Vite's default port. vite.config.ts asks for 3000 with
+// strictPort:false, so the dev server silently moves to 5173 whenever 3000 is
+// taken — and account deletion, alone among the three functions, failed CORS
+// there because this list had not been updated with the rest.
 const allowedOrigins = [
   Deno.env.get("ALLOWED_ORIGIN") || "",
   "https://sportslabai.onrender.com",
   "http://localhost:3000",
+  "http://localhost:5173",
 ].filter(Boolean);
 
 function getCorsHeaders(req: Request) {

@@ -1,0 +1,41 @@
+# Normalise line endings.
+#
+# Without this, what lands in a commit depends on each machine's core.autocrlf.
+# Git was reporting "LF will be replaced by CRLF" on every file it touched on
+# Windows, and the risk that carries is a collaborator on macOS or Linux seeing
+# a whole-file diff for a one-line change.
+#
+# `text=auto` stores everything Git detects as text with LF in the repository
+# and checks it out with each platform's native endings. The explicit entries
+# below remove the guesswork for the file types this project actually contains.
+
+* text=auto
+
+*.ts    text
+*.tsx   text
+*.js    text
+*.mjs   text
+*.cjs   text
+*.json  text
+*.css   text
+*.html  text
+*.md    text
+*.sql   text
+*.py    text
+*.yml   text
+*.yaml  text
+*.xml   text
+*.txt   text
+
+# No extension, and read by a deploy host that is strict about them.
+_redirects text eol=lf
+
+# Binary: never touch these, and never try to diff them as text.
+*.png   binary
+*.ico   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.zip   binary

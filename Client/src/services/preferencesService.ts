@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getCurrentUser, requireCurrentUser } from "../lib/currentUser";
 
 export type UserPreferences = {
   primary_sport: string;
@@ -35,12 +36,8 @@ export type UserPreferences = {
 export type ExtendedUserPreferences = Required<UserPreferences>;
 
 export async function getUserPreferences() {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (userError) throw userError;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -78,13 +75,9 @@ export async function getUserPreferences() {
 }
 
 export async function saveUserPreferences(preferences: Partial<UserPreferences>) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) throw userError;
-  if (!user) throw new Error("You must be logged in.");
+  const user = await requireCurrentUser(
+    "You must be logged in to save your profile."
+  );
 
   // Upsert rather than update: a user who signed up with email confirmation
   // never got a profiles row created, so `.update()` matched zero rows and

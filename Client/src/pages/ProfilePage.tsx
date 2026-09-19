@@ -29,6 +29,7 @@ import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import SpeedIcon from "@mui/icons-material/Speed";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import { supabase } from "../lib/supabaseClient";
+import { requireCurrentUser } from "../lib/currentUser";
 import {
   ExtendedUserPreferences,
   getUserPreferences,
@@ -164,14 +165,13 @@ export default function ProfilePage() {
       setError(null);
 
       try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+        // Via requireCurrentUser so a session that has gone missing reads as
+        // "log in again" rather than supabase-js's "Auth session missing!".
+        const user = await requireCurrentUser(
+          "Your session has expired. Please log in again."
+        );
 
         if (!mounted) return;
-        if (userError) throw userError;
-        if (!user) throw new Error("You must be logged in.");
 
         setEmail(user.email || "");
         setName(
