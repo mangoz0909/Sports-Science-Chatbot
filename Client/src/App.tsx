@@ -46,11 +46,6 @@ const Dashboard = React.lazy(
   () => import("./pages/Dashboard")
 );
 
-// NEW: Progress page
-const ProgressPage = React.lazy(
-  () => import("./pages/ProgressPage")
-);
-
 const SportsHome = React.lazy(
   () => import("./pages/SportsHome")
 );
@@ -278,9 +273,9 @@ const App: React.FC = () => {
                     <Route
                       path="/my-workout-plan"
                       element={
-                        <ProtectedRoute>
+                        <DemoRoute>
                           <MyWorkoutPlan />
-                        </ProtectedRoute>
+                        </DemoRoute>
                       }
                     />
 
@@ -294,13 +289,18 @@ const App: React.FC = () => {
                       }
                     />
 
-                    {/* PROGRESS - NEW */}
+                    {/*
+                      /progress used to render the same page under a different
+                      guard, so one screen was login-only at one URL and open at
+                      the other. The URL stays alive as a redirect.
+                    */}
                     <Route
                       path="/progress"
                       element={
-                        <DemoRoute>
-                          <ProgressPage />
-                        </DemoRoute>
+                        <Navigate
+                          to="/my-workout-plan"
+                          replace
+                        />
                       }
                     />
 

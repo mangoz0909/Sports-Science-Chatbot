@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   { label: "Sports AI", to: "/sports" },
   { label: "Sports Match", to: "/sports-list" },
   { label: "Dashboard", to: "/dashboard" },
-  { label: "Progress", to: "/progress" },
+  { label: "My Workout", to: "/my-workout-plan" },
   { label: "Health", to: "/health/workout", match: "/health" },
 ];
 

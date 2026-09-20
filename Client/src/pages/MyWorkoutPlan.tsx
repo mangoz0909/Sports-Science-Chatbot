@@ -1,13 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   Container,
-  Divider,
-  IconButton,
   LinearProgress,
   Paper,
   Stack,
@@ -16,207 +12,185 @@ import {
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
-import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import TuneIcon from "@mui/icons-material/Tune";
 
-type WorkoutSet = {
-  id: number;
-  reps: number;
-  weight: number;
-  completed: boolean;
-};
+import Seo from "../components/Seo";
+import CustomizeTypesDialog from "../components/workout/CustomizeTypesDialog";
+import ExerciseCard from "../components/workout/ExerciseCard";
+import RecommendationCards from "../components/workout/RecommendationCards";
+import WeekStrip from "../components/workout/WeekStrip";
+import { useAuth } from "../contexts/AuthContext";
 
-type Exercise = {
-  id: number;
-  name: string;
-  targetReps: number;
-  sets: WorkoutSet[];
-};
+import {
+  addDays,
+  demoPlan,
+  fromISODate,
+  loadPlan,
+  nextId,
+  recommendWorkouts,
+  savePlan,
+  sessionFromType,
+  sessionProgress,
+  storageKeyFor,
+  toISODate,
+  toNumber,
+  weekDays,
+  type DaySession,
+  type Plan,
+  type PlannedExercise,
+  type WorkoutType,
+} from "../lib/workoutPlan";
 
-const initialExercises: Exercise[] = [
-  {
-    id: 1,
-    name: "Bench Press",
-    targetReps: 8,
-    sets: [
-      { id: 1, reps: 8, weight: 135, completed: true },
-      { id: 2, reps: 8, weight: 135, completed: true },
-      { id: 3, reps: 6, weight: 135, completed: false },
-    ],
-  },
-  {
-    id: 2,
-    name: "Incline Dumbbell Press",
-    targetReps: 10,
-    sets: [
-      { id: 1, reps: 10, weight: 45, completed: false },
-      { id: 2, reps: 10, weight: 45, completed: false },
-      { id: 3, reps: 10, weight: 45, completed: false },
-    ],
-  },
-];
-
+/**
+ * One page for the whole training week: pick a day, pick what to train from a
+ * recovery-ranked split, then log sets against it. Workout types and their
+ * default exercises are set up once in the customize dialog.
+ */
 export default function MyWorkoutPlan() {
-  const [workoutName, setWorkoutName] = useState("Push Day");
-  const [exercises, setExercises] = useState<Exercise[]>(initialExercises);
+  const { user } = useAuth();
+
+  const storageKey = user ? storageKeyFor(user.id) : null;
+
+  const todayISO = toISODate(new Date());
+  const [selectedISO, setSelectedISO] = useState(todayISO);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
   const [newExerciseName, setNewExerciseName] = useState("");
 
-  const totalSets = useMemo(
-    () => exercises.reduce((total, exercise) => total + exercise.sets.length, 0),
-    [exercises]
+  const [plan, setPlan] = useState<Plan>(() =>
+    storageKey ? loadPlan(storageKey) : demoPlan()
   );
 
-  const completedSets = useMemo(
-    () =>
-      exercises.reduce(
-        (total, exercise) =>
-          total + exercise.sets.filter((set) => set.completed).length,
-        0
-      ),
-    [exercises]
+  // Signing in or out mid-visit swaps which plan is on screen: the demo seed
+  // must not be written into a real account, and one account's plan must not
+  // linger into another's.
+  const loadedKey = useRef(storageKey);
+  useEffect(() => {
+    if (loadedKey.current === storageKey) return;
+    loadedKey.current = storageKey;
+    setPlan(storageKey ? loadPlan(storageKey) : demoPlan());
+  }, [storageKey]);
+
+  // Nothing is persisted for signed-out visitors — the demo plan is scratch
+  // data, and saving it would leak into their first signed-in session.
+  useEffect(() => {
+    if (!storageKey || loadedKey.current !== storageKey) return;
+    savePlan(storageKey, plan);
+  }, [plan, storageKey]);
+
+  const selectedDate = useMemo(() => fromISODate(selectedISO), [selectedISO]);
+  const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
+
+  const session: DaySession | undefined = plan.days[selectedISO];
+
+  const typeById = useMemo(
+    () => new Map<string, WorkoutType>(plan.types.map((type) => [type.id, type])),
+    [plan.types]
   );
 
-  const progress =
-    totalSets === 0 ? 0 : Math.round((completedSets / totalSets) * 100);
+  const activeType = session ? typeById.get(session.typeId) : undefined;
+  const accent = activeType?.color ?? "#0f172a";
 
-  const updateSet = (
+  const recommendations = useMemo(
+    () => recommendWorkouts(plan, selectedISO),
+    [plan, selectedISO]
+  );
+
+  const { completed, total, percent } = sessionProgress(session);
+
+  const dayLabel =
+    selectedISO === todayISO
+      ? "today"
+      : `on ${selectedDate.toLocaleDateString(undefined, {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })}`;
+
+  /* ── day mutations ───────────────────────────────────────────────────── */
+
+  const updateSession = (update: (current: DaySession) => DaySession) =>
+    setPlan((current) => {
+      const existing = current.days[selectedISO];
+      if (!existing) return current;
+
+      return {
+        ...current,
+        days: { ...current.days, [selectedISO]: update(existing) },
+      };
+    });
+
+  const updateExercises = (
+    update: (current: PlannedExercise[]) => PlannedExercise[]
+  ) =>
+    updateSession((current) => ({
+      ...current,
+      exercises: update(current.exercises),
+    }));
+
+  const startWorkout = (typeId: string) => {
+    const type = typeById.get(typeId);
+    if (!type) return;
+
+    setPlan((current) => ({
+      ...current,
+      days: { ...current.days, [selectedISO]: sessionFromType(type) },
+    }));
+  };
+
+  const clearWorkout = () =>
+    setPlan((current) => {
+      const days = { ...current.days };
+      delete days[selectedISO];
+      return { ...current, days };
+    });
+
+  const mapSet = (
     exerciseId: number,
     setId: number,
-    field: "reps" | "weight",
-    value: number
-  ) => {
-    setExercises((current) =>
+    update: (set: DaySession["exercises"][number]["sets"][number]) =>
+      DaySession["exercises"][number]["sets"][number]
+  ) =>
+    updateExercises((current) =>
       current.map((exercise) =>
         exercise.id === exerciseId
           ? {
               ...exercise,
               sets: exercise.sets.map((set) =>
-                set.id === setId
-                  ? {
-                      ...set,
-                      [field]: Math.max(0, value),
-                    }
-                  : set
+                set.id === setId ? update(set) : set
               ),
             }
           : exercise
       )
     );
-  };
-
-  const toggleSetComplete = (exerciseId: number, setId: number) => {
-    setExercises((current) =>
-      current.map((exercise) =>
-        exercise.id === exerciseId
-          ? {
-              ...exercise,
-              sets: exercise.sets.map((set) =>
-                set.id === setId
-                  ? { ...set, completed: !set.completed }
-                  : set
-              ),
-            }
-          : exercise
-      )
-    );
-  };
-
-  const addSet = (exerciseId: number) => {
-    setExercises((current) =>
-      current.map((exercise) => {
-        if (exercise.id !== exerciseId) return exercise;
-
-        const lastSet = exercise.sets[exercise.sets.length - 1];
-
-        const newSet: WorkoutSet = {
-          id: Date.now(),
-          reps: lastSet?.reps ?? exercise.targetReps,
-          weight: lastSet?.weight ?? 0,
-          completed: false,
-        };
-
-        return {
-          ...exercise,
-          sets: [...exercise.sets, newSet],
-        };
-      })
-    );
-  };
-
-  const removeSet = (exerciseId: number, setId: number) => {
-    setExercises((current) =>
-      current.map((exercise) =>
-        exercise.id === exerciseId
-          ? {
-              ...exercise,
-              sets: exercise.sets.filter((set) => set.id !== setId),
-            }
-          : exercise
-      )
-    );
-  };
 
   const addExercise = () => {
     const name = newExerciseName.trim();
+    if (!name || !session) return;
 
-    if (!name) return;
+    updateExercises((current) => [
+      ...current,
+      {
+        id: nextId(),
+        name,
+        targetReps: 8,
+        cues: [],
+        sets: [{ id: nextId(), reps: "8", weight: "0", completed: false }],
+      },
+    ]);
 
-    const newExercise: Exercise = {
-      id: Date.now(),
-      name,
-      targetReps: 8,
-      sets: [
-        {
-          id: Date.now() + 1,
-          reps: 8,
-          weight: 0,
-          completed: false,
-        },
-      ],
-    };
-
-    setExercises((current) => [...current, newExercise]);
     setNewExerciseName("");
   };
 
-  const removeExercise = (exerciseId: number) => {
-    setExercises((current) =>
-      current.filter((exercise) => exercise.id !== exerciseId)
-    );
-  };
-
-  const getWeightSuggestion = (exercise: Exercise) => {
-    const completed = exercise.sets.filter((set) => set.completed);
-
-    if (completed.length === 0) {
-      return "Complete your working sets to get a recommendation.";
-    }
-
-    const allReachedTarget = completed.every(
-      (set) => set.reps >= exercise.targetReps
-    );
-
-    const averageWeight =
-      completed.reduce((sum, set) => sum + set.weight, 0) / completed.length;
-
-    if (allReachedTarget && averageWeight > 0) {
-      const increase = averageWeight >= 100 ? 5 : 2.5;
-      const suggested = Math.round((averageWeight + increase) * 2) / 2;
-
-      return `You hit your target reps. Consider trying about ${suggested} lb next session.`;
-    }
-
-    return `Stay around ${Math.round(
-      averageWeight
-    )} lb next session and aim to complete all ${exercise.targetReps} reps before increasing the load.`;
-  };
-
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: 5 }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 3, md: 5 } }}>
+      <Seo
+        title="My Workout Plan"
+        description="Plan your training week, pick the workout your body is most recovered for, and log every set, rep, and weight."
+        path="/my-workout-plan"
+        noIndex
+      />
+
       <Container maxWidth="lg">
         {/* HEADER */}
         <Stack
@@ -224,322 +198,329 @@ export default function MyWorkoutPlan() {
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", md: "center" }}
           spacing={2}
-          mb={4}
+          mb={3}
         >
           <Box>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <FitnessCenterIcon sx={{ fontSize: 32 }} />
 
-              <Typography variant="h4" fontWeight={800}>
+              <Typography variant="h4" component="h1" fontWeight={800}>
                 My Workout Plan
               </Typography>
             </Stack>
 
             <Typography color="text.secondary" mt={1}>
-              Build your workout, track every set, and improve over time.
+              Plan your week, train what is recovered, and log every set.
             </Typography>
           </Box>
 
-          <Chip
-            label={`${completedSets} / ${totalSets} sets completed`}
-            variant="outlined"
-          />
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            {session && (
+              <Chip label={`${completed} / ${total} sets`} variant="outlined" />
+            )}
+
+            <Button
+              variant="outlined"
+              startIcon={<TuneIcon />}
+              onClick={() => setCustomizeOpen(true)}
+              sx={{
+                textTransform: "none",
+                fontWeight: 800,
+                borderRadius: 2,
+                color: "#0f172a",
+                borderColor: "#cbd5e1",
+
+                "&:hover": { borderColor: "#94a3b8", bgcolor: "#fff" },
+              }}
+            >
+              Customize
+            </Button>
+          </Stack>
         </Stack>
 
-        {/* WORKOUT OVERVIEW */}
+        {/* WEEK */}
         <Paper
           elevation={0}
           sx={{
-            p: 3,
+            p: { xs: 2, md: 3 },
             mb: 3,
             border: "1px solid",
             borderColor: "divider",
             borderRadius: 3,
           }}
         >
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            justifyContent="space-between"
-            spacing={3}
-          >
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                fontWeight={700}
-              >
-                WORKOUT
-              </Typography>
-
-              <TextField
-                variant="standard"
-                value={workoutName}
-                onChange={(e) => setWorkoutName(e.target.value)}
-                inputProps={{
-                  style: {
-                    fontSize: 24,
-                    fontWeight: 700,
-                  },
-                }}
-                sx={{ display: "block", mt: 0.5, maxWidth: 350 }}
-              />
-            </Box>
-
-            <Box sx={{ minWidth: { md: 260 } }}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                mb={1}
-              >
-                <Typography variant="body2" fontWeight={600}>
-                  Workout progress
-                </Typography>
-
-                <Typography variant="body2">{progress}%</Typography>
-              </Stack>
-
-              <LinearProgress
-                variant="determinate"
-                value={progress}
-                sx={{
-                  height: 9,
-                  borderRadius: 10,
-                }}
-              />
-            </Box>
-          </Stack>
+          <WeekStrip
+            days={days}
+            selectedISO={selectedISO}
+            todayISO={todayISO}
+            plan={plan}
+            onSelect={setSelectedISO}
+            onShiftWeek={(weeks) =>
+              setSelectedISO(toISODate(addDays(selectedDate, weeks * 7)))
+            }
+          />
         </Paper>
 
-        {/* EXERCISES */}
-        <Stack spacing={3}>
-          {exercises.map((exercise, exerciseIndex) => (
-            <Card
-              key={exercise.id}
+        {/* THE SELECTED DAY */}
+        {!session ? (
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 2.5, md: 4 },
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 3,
+            }}
+          >
+            {recommendations.length > 0 ? (
+              <RecommendationCards
+                recommendations={recommendations}
+                onStart={startWorkout}
+                dayLabel={dayLabel}
+              />
+            ) : (
+              <Stack alignItems="center" textAlign="center" py={3}>
+                <FitnessCenterIcon sx={{ fontSize: 40, color: "text.disabled" }} />
+
+                <Typography variant="h6" fontWeight={800} mt={1}>
+                  No workout types yet
+                </Typography>
+
+                <Typography color="text.secondary" mt={1} mb={2}>
+                  Add your first workout type — push, pull, legs, or whatever
+                  you split your week into.
+                </Typography>
+
+                <Button
+                  variant="contained"
+                  startIcon={<TuneIcon />}
+                  onClick={() => setCustomizeOpen(true)}
+                  sx={{ textTransform: "none", fontWeight: 800 }}
+                >
+                  Customize workouts
+                </Button>
+              </Stack>
+            )}
+          </Paper>
+        ) : (
+          <>
+            {/* SESSION HEADER */}
+            <Paper
               elevation={0}
               sx={{
+                mb: 3,
                 border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 3,
+                overflow: "hidden",
+              }}
+            >
+              <Box sx={{ height: 6, bgcolor: accent }} />
+
+              <Box sx={{ p: { xs: 2.5, md: 3 } }}>
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  justifyContent="space-between"
+                  spacing={3}
+                >
+                  <Box sx={{ flex: 1 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontWeight={700}
+                    >
+                      {selectedDate
+                        .toLocaleDateString(undefined, {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                        })
+                        .toUpperCase()}
+                    </Typography>
+
+                    <Typography variant="h5" fontWeight={800} mt={0.5}>
+                      {activeType?.name ?? "Workout"}
+                    </Typography>
+
+                    <Button
+                      size="small"
+                      color="inherit"
+                      onClick={clearWorkout}
+                      sx={{
+                        mt: 1,
+                        px: 0,
+                        textTransform: "none",
+                        fontWeight: 700,
+                        color: "text.secondary",
+                      }}
+                    >
+                      Change workout
+                    </Button>
+                  </Box>
+
+                  <Box sx={{ minWidth: { md: 260 } }}>
+                    <Stack direction="row" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2" fontWeight={600}>
+                        Workout progress
+                      </Typography>
+
+                      <Typography variant="body2">{percent}%</Typography>
+                    </Stack>
+
+                    <LinearProgress
+                      variant="determinate"
+                      value={percent}
+                      sx={{
+                        height: 9,
+                        borderRadius: 10,
+                        bgcolor: "#eef2f7",
+
+                        "& .MuiLinearProgress-bar": {
+                          bgcolor: accent,
+                          borderRadius: 10,
+                        },
+                      }}
+                    />
+                  </Box>
+                </Stack>
+              </Box>
+            </Paper>
+
+            {/* EXERCISES */}
+            <Stack spacing={3}>
+              {session.exercises.map((exercise, index) => (
+                <ExerciseCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  index={index}
+                  accent={accent}
+                  onUpdateSet={(setId, field, value) =>
+                    mapSet(exercise.id, setId, (set) => ({
+                      ...set,
+                      [field]: value,
+                    }))
+                  }
+                  onNormaliseSet={(setId, field) =>
+                    mapSet(exercise.id, setId, (set) => ({
+                      ...set,
+                      [field]: String(toNumber(set[field])),
+                    }))
+                  }
+                  onToggleSet={(setId) =>
+                    mapSet(exercise.id, setId, (set) => ({
+                      ...set,
+                      completed: !set.completed,
+                    }))
+                  }
+                  onAddSet={() =>
+                    updateExercises((current) =>
+                      current.map((entry) => {
+                        if (entry.id !== exercise.id) return entry;
+
+                        const last = entry.sets[entry.sets.length - 1];
+
+                        return {
+                          ...entry,
+                          sets: [
+                            ...entry.sets,
+                            {
+                              id: nextId(),
+                              reps: last?.reps ?? String(entry.targetReps),
+                              weight: last?.weight ?? "0",
+                              completed: false,
+                            },
+                          ],
+                        };
+                      })
+                    )
+                  }
+                  onRemoveSet={(setId) =>
+                    updateExercises((current) =>
+                      current.map((entry) =>
+                        entry.id === exercise.id
+                          ? {
+                              ...entry,
+                              sets: entry.sets.filter((set) => set.id !== setId),
+                            }
+                          : entry
+                      )
+                    )
+                  }
+                  onRemove={() =>
+                    updateExercises((current) =>
+                      current.filter((entry) => entry.id !== exercise.id)
+                    )
+                  }
+                />
+              ))}
+            </Stack>
+
+            {session.exercises.length === 0 && (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: { xs: 3, md: 5 },
+                  textAlign: "center",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 3,
+                }}
+              >
+                <Typography variant="h6" fontWeight={800}>
+                  No exercises in this session
+                </Typography>
+
+                <Typography color="text.secondary" mt={1}>
+                  Add one below, or set defaults for{" "}
+                  {activeType?.name ?? "this workout"} under Customize.
+                </Typography>
+              </Paper>
+            )}
+
+            {/* ADD EXERCISE */}
+            <Paper
+              elevation={0}
+              sx={{
+                mt: 3,
+                p: 3,
+                border: "1px dashed",
                 borderColor: "divider",
                 borderRadius: 3,
               }}
             >
-              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-                {/* EXERCISE HEADER */}
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  mb={2}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <DragIndicatorIcon color="disabled" />
+              <Typography fontWeight={800} mb={2}>
+                Add Exercise
+              </Typography>
 
-                    <Box>
-                      <Typography variant="h6" fontWeight={800}>
-                        {exercise.name}
-                      </Typography>
-
-                      <Typography variant="body2" color="text.secondary">
-                        Exercise {exerciseIndex + 1} • Target{" "}
-                        {exercise.targetReps} reps
-                      </Typography>
-                    </Box>
-                  </Stack>
-
-                  <IconButton
-                    color="error"
-                    onClick={() => removeExercise(exercise.id)}
-                  >
-                    <DeleteOutlineIcon />
-                  </IconButton>
-                </Stack>
-
-                <Divider sx={{ mb: 2 }} />
-
-                {/* COLUMN HEADINGS */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "50px 1fr 1fr 55px 45px",
-                    gap: 1.5,
-                    px: 1,
-                    mb: 1,
-                    alignItems: "center",
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  placeholder="Exercise name — e.g. Barbell Squat"
+                  value={newExerciseName}
+                  inputProps={{ "aria-label": "New exercise name" }}
+                  onChange={(e) => setNewExerciseName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addExercise();
                   }}
-                >
-                  <Typography variant="caption" color="text.secondary">
-                    SET
-                  </Typography>
-
-                  <Typography variant="caption" color="text.secondary">
-                    WEIGHT (LB)
-                  </Typography>
-
-                  <Typography variant="caption" color="text.secondary">
-                    REPS
-                  </Typography>
-
-                  <Typography variant="caption" color="text.secondary">
-                    DONE
-                  </Typography>
-
-                  <Box />
-                </Box>
-
-                {/* SET ROWS */}
-                <Stack spacing={1}>
-                  {exercise.sets.map((set, setIndex) => (
-                    <Box
-                      key={set.id}
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "50px 1fr 1fr 55px 45px",
-                        gap: 1.5,
-                        alignItems: "center",
-                        p: 1,
-                        borderRadius: 2,
-                        bgcolor: set.completed
-                          ? "action.selected"
-                          : "transparent",
-                      }}
-                    >
-                      <Typography fontWeight={700}>
-                        {setIndex + 1}
-                      </Typography>
-
-                      <TextField
-                        type="number"
-                        size="small"
-                        value={set.weight}
-                        onChange={(e) =>
-                          updateSet(
-                            exercise.id,
-                            set.id,
-                            "weight",
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-
-                      <TextField
-                        type="number"
-                        size="small"
-                        value={set.reps}
-                        onChange={(e) =>
-                          updateSet(
-                            exercise.id,
-                            set.id,
-                            "reps",
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-
-                      <IconButton
-                        onClick={() =>
-                          toggleSetComplete(exercise.id, set.id)
-                        }
-                      >
-                        {set.completed ? (
-                          <CheckCircleIcon color="success" />
-                        ) : (
-                          <RadioButtonUncheckedIcon />
-                        )}
-                      </IconButton>
-
-                      <IconButton
-                        size="small"
-                        onClick={() =>
-                          removeSet(exercise.id, set.id)
-                        }
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  ))}
-                </Stack>
+                />
 
                 <Button
+                  variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => addSet(exercise.id)}
-                  sx={{ mt: 2 }}
-                >
-                  Add Set
-                </Button>
-
-                {/* SUGGESTION */}
-                <Paper
-                  elevation={0}
+                  onClick={addExercise}
                   sx={{
-                    mt: 2,
-                    p: 2,
-                    bgcolor: "action.hover",
-                    borderRadius: 2,
+                    px: 3,
+                    whiteSpace: "nowrap",
+                    textTransform: "none",
+                    fontWeight: 800,
                   }}
                 >
-                  <Stack direction="row" spacing={1.5}>
-                    <LightbulbOutlinedIcon />
-
-                    <Box>
-                      <Typography variant="body2" fontWeight={700}>
-                        Next-session suggestion
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        mt={0.5}
-                      >
-                        {getWeightSuggestion(exercise)}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Paper>
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
-
-        {/* ADD EXERCISE */}
-        <Paper
-          elevation={0}
-          sx={{
-            mt: 3,
-            p: 3,
-            border: "1px dashed",
-            borderColor: "divider",
-            borderRadius: 3,
-          }}
-        >
-          <Typography fontWeight={800} mb={2}>
-            Add Exercise
-          </Typography>
-
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              fullWidth
-              placeholder="Exercise name — e.g. Barbell Squat"
-              value={newExerciseName}
-              onChange={(e) => setNewExerciseName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  addExercise();
-                }
-              }}
-            />
-
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={addExercise}
-              sx={{
-                px: 3,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Add Exercise
-            </Button>
-          </Stack>
-        </Paper>
+                  Add Exercise
+                </Button>
+              </Stack>
+            </Paper>
+          </>
+        )}
 
         <Typography
           variant="caption"
@@ -547,10 +528,21 @@ export default function MyWorkoutPlan() {
           display="block"
           mt={3}
         >
-          Load suggestions are simple progression estimates. Adjust training
-          based on technique, fatigue, recovery, and coaching guidance.
+          {user
+            ? "Your plan is saved on this device. Recovery percentages and load suggestions are simple estimates — adjust training based on technique, fatigue, recovery, and coaching guidance."
+            : "Sign in to save your own plan. Recovery percentages and load suggestions are simple estimates — adjust training based on technique, fatigue, recovery, and coaching guidance."}
         </Typography>
       </Container>
+
+      <CustomizeTypesDialog
+        open={customizeOpen}
+        types={plan.types}
+        onClose={() => setCustomizeOpen(false)}
+        onSave={(types) => {
+          setPlan((current) => ({ ...current, types }));
+          setCustomizeOpen(false);
+        }}
+      />
     </Box>
   );
 }
