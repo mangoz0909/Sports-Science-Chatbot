@@ -1,72 +1,524 @@
 import React from "react";
-import Seo from "../components/Seo";
 import {
   Alert,
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
   Container,
-  MenuItem,
+  LinearProgress,
   Paper,
   Skeleton,
+  Slider,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import {
+  ArrowBackRounded,
+  ArrowForwardRounded,
+  CheckRounded,
+  FitnessCenterRounded,
+} from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
+
+import Seo from "../components/Seo";
+
 import {
   ExtendedUserPreferences,
   getUserPreferences,
   saveUserPreferences,
 } from "../services/preferencesService";
-import {
-  ACTIVITY_LEVELS,
-  COOKING_ACCESS_OPTIONS,
-  DIETARY_PREFERENCES,
-  EXPERIENCE_LEVELS,
-  NUMERIC_RANGES,
-  toFormString,
-} from "../data/profileOptions";
 
+import { toFormString } from "../data/profileOptions";
 
-const initialForm: ExtendedUserPreferences = {
+/* -------------------------------------------------------------------------- */
+/*                                   TYPES                                    */
+/* -------------------------------------------------------------------------- */
+
+type FormState = ExtendedUserPreferences & {
+  soreness_level?: string;
+  energy_level?: string;
+  training_age?: string;
+  nutrition_goal?: string;
+};
+
+type OptionCardProps = {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  description?: string;
+};
+
+type MultiOptionProps = {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                                  OPTIONS                                   */
+/* -------------------------------------------------------------------------- */
+
+const ACTIVITY_OPTIONS = [
+  {
+    value: "Low",
+    label: "Low",
+    description: "Mostly sedentary outside training",
+  },
+  {
+    value: "Moderate",
+    label: "Moderate",
+    description: "Active during parts of the day",
+  },
+  {
+    value: "High",
+    label: "High",
+    description: "Very active most days",
+  },
+  {
+    value: "Very High",
+    label: "Very High",
+    description: "Heavy training or highly active lifestyle",
+  },
+];
+
+const EXPERIENCE_OPTIONS = [
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+  "Competitive",
+];
+
+const COMPETITION_OPTIONS = [
+  "None",
+  "Recreational",
+  "School",
+  "Club",
+  "Regional",
+  "National+",
+];
+
+const ATHLETE_TYPES = [
+  "Strength",
+  "Power",
+  "Speed",
+  "Endurance",
+  "Skill",
+  "Mixed",
+];
+
+const GOAL_OPTIONS = [
+  "Build strength",
+  "Build muscle",
+  "Improve speed",
+  "Improve endurance",
+  "Improve explosiveness",
+  "Improve mobility",
+  "Improve sport performance",
+  "Lose body fat",
+  "Gain weight / mass",
+  "Improve recovery",
+];
+
+const EQUIPMENT_OPTIONS = [
+  "Full gym",
+  "Home gym",
+  "Dumbbells",
+  "Resistance bands",
+  "Bodyweight only",
+];
+
+const SLEEP_OPTIONS = [
+  "<6 hours",
+  "6–7 hours",
+  "7–8 hours",
+  "8–9 hours",
+  "9+ hours",
+];
+
+const TRAINING_AGE_OPTIONS = [
+  "<1 year",
+  "1–2 years",
+  "3–5 years",
+  "5+ years",
+];
+
+const DIET_OPTIONS = [
+  "No preference",
+  "Vegetarian",
+  "Vegan",
+  "Pescatarian",
+  "Halal",
+  "Kosher",
+  "Other",
+];
+
+const NUTRITION_GOALS = [
+  "Maintain",
+  "Gain muscle / weight",
+  "Support performance",
+  "General healthy eating",
+];
+
+const COOKING_OPTIONS = [
+  "No cooking access",
+  "Microwave / basic prep",
+  "Shared kitchen",
+  "Full kitchen",
+  "Dining hall / meal plan",
+];
+
+const BODY_AREAS = [
+  "None",
+  "Shoulder",
+  "Elbow",
+  "Wrist",
+  "Back",
+  "Hip",
+  "Knee",
+  "Ankle",
+  "Other",
+];
+
+/* -------------------------------------------------------------------------- */
+/*                               INITIAL STATE                                */
+/* -------------------------------------------------------------------------- */
+
+const initialForm: FormState = {
   primary_sport: "",
   experience_level: "",
   main_goal: "",
-  training_days: "",
+  training_days: "4",
   competition_level: "",
-  injury_areas: "",
+  injury_areas: "None",
   priorities: "",
   sleep_range: "",
   athlete_type: "",
-  age: "",
-  height_cm: "",
-  weight_kg: "",
+  age: "16",
+
+  // Keep metric internally for compatibility with existing DB.
+  height_cm: "175",
+  weight_kg: "68",
+
   activity_level: "",
-  workout_duration: "",
+  workout_duration: "60",
   equipment_access: "",
-  dietary_preference: "",
-  food_allergies: "",
-  foods_avoid: "",
-  meals_per_day: "",
+  dietary_preference: "No preference",
+  food_allergies: "None",
+  foods_avoid: "None",
+  meals_per_day: "3",
   cooking_access: "",
+
+  soreness_level: "",
+  energy_level: "",
+  training_age: "",
+  nutrition_goal: "",
 };
+
+/* -------------------------------------------------------------------------- */
+/*                                  HELPERS                                   */
+/* -------------------------------------------------------------------------- */
+
+function cmToTotalInches(cm: number) {
+  return cm / 2.54;
+}
+
+function inchesToCm(inches: number) {
+  return inches * 2.54;
+}
+
+function kgToLb(kg: number) {
+  return kg * 2.2046226218;
+}
+
+function lbToKg(lb: number) {
+  return lb / 2.2046226218;
+}
+
+function calculateBMI(weightKg: number, heightCm: number) {
+  if (!weightKg || !heightCm) return null;
+
+  const meters = heightCm / 100;
+
+  if (meters <= 0) return null;
+
+  return weightKg / (meters * meters);
+}
+
+function toggleListValue(current: string, value: string) {
+  const values = current
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (values.includes(value)) {
+    return values.filter((item) => item !== value).join(", ");
+  }
+
+  return [...values, value].join(", ");
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              SMALL COMPONENTS                              */
+/* -------------------------------------------------------------------------- */
+
+function OptionCard({
+  label,
+  selected,
+  onClick,
+  description,
+}: OptionCardProps) {
+  return (
+    <Card
+      variant="outlined"
+      onClick={onClick}
+      sx={{
+        cursor: "pointer",
+        borderRadius: 3,
+        borderWidth: 2,
+        borderColor: selected ? "#0f172a" : "#e2e8f0",
+        bgcolor: selected ? "#f8fafc" : "#fff",
+        transition: "all 160ms ease",
+        height: "100%",
+        "&:hover": {
+          borderColor: "#64748b",
+          transform: "translateY(-1px)",
+          boxShadow: "0 8px 24px rgba(15,23,42,0.06)",
+        },
+      }}
+    >
+      <Box sx={{ p: 2.25 }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          spacing={1}
+        >
+          <Typography fontWeight={850}>{label}</Typography>
+
+          {selected && (
+            <Box
+              sx={{
+                width: 25,
+                height: 25,
+                borderRadius: "50%",
+                bgcolor: "#0f172a",
+                color: "#fff",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <CheckRounded sx={{ fontSize: 17 }} />
+            </Box>
+          )}
+        </Stack>
+
+        {description && (
+          <Typography
+            sx={{
+              color: "text.secondary",
+              fontSize: 13,
+              lineHeight: 1.5,
+              mt: 0.7,
+            }}
+          >
+            {description}
+          </Typography>
+        )}
+      </Box>
+    </Card>
+  );
+}
+
+function MultiOption({ label, selected, onClick }: MultiOptionProps) {
+  return (
+    <Chip
+      clickable
+      label={label}
+      onClick={onClick}
+      icon={selected ? <CheckRounded /> : undefined}
+      sx={{
+        height: 42,
+        borderRadius: 2.5,
+        px: 0.7,
+        fontWeight: 800,
+        bgcolor: selected ? "#0f172a" : "#f8fafc",
+        color: selected ? "#fff" : "#334155",
+        border: "1px solid",
+        borderColor: selected ? "#0f172a" : "#e2e8f0",
+
+        "& .MuiChip-icon": {
+          color: selected ? "#fff" : undefined,
+        },
+
+        "&:hover": {
+          bgcolor: selected ? "#1e293b" : "#f1f5f9",
+        },
+      }}
+    />
+  );
+}
+
+function SectionTitle({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Box sx={{ mb: 4 }}>
+      <Typography
+        sx={{
+          color: "#0284c7",
+          textTransform: "uppercase",
+          letterSpacing: 1.3,
+          fontSize: 12,
+          fontWeight: 950,
+          mb: 0.8,
+        }}
+      >
+        {eyebrow}
+      </Typography>
+
+      <Typography
+        variant="h4"
+        sx={{
+          fontWeight: 950,
+          letterSpacing: -0.6,
+          color: "#0f172a",
+        }}
+      >
+        {title}
+      </Typography>
+
+      <Typography
+        sx={{
+          color: "#64748b",
+          mt: 1,
+          lineHeight: 1.7,
+          maxWidth: 650,
+        }}
+      >
+        {description}
+      </Typography>
+    </Box>
+  );
+}
+
+function SliderBlock({
+  title,
+  value,
+  min,
+  max,
+  step = 1,
+  displayValue,
+  onChange,
+  marks,
+}: {
+  title: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  displayValue: string;
+  onChange: (value: number) => void;
+  marks?: { value: number; label: string }[];
+}) {
+  return (
+    <Box
+      sx={{
+        p: { xs: 2.25, sm: 3 },
+        border: "1px solid #e2e8f0",
+        borderRadius: 3,
+        bgcolor: "#fff",
+      }}
+    >
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{ mb: 2 }}
+      >
+        <Typography fontWeight={850}>{title}</Typography>
+
+        <Box
+          sx={{
+            bgcolor: "#f1f5f9",
+            px: 1.5,
+            py: 0.7,
+            borderRadius: 2,
+            minWidth: 72,
+            textAlign: "center",
+          }}
+        >
+          <Typography fontWeight={950} color="#0f172a">
+            {displayValue}
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Box sx={{ px: 1 }}>
+        <Slider
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          marks={marks}
+          onChange={(_, newValue) => onChange(newValue as number)}
+          sx={{
+            color: "#0f172a",
+            height: 7,
+
+            "& .MuiSlider-thumb": {
+              width: 22,
+              height: 22,
+            },
+
+            "& .MuiSlider-rail": {
+              opacity: 0.18,
+            },
+
+            "& .MuiSlider-markLabel": {
+              fontSize: 11,
+              color: "#94a3b8",
+            },
+          }}
+        />
+      </Box>
+    </Box>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              MAIN COMPONENT                                */
+/* -------------------------------------------------------------------------- */
 
 export default function OnboardingSurvey() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // "Retake Survey" sends the user here from /profile; send them back there on
-  // finish rather than dumping them on the dashboard they didn't come from.
   const returnTo =
-    (location.state as { returnTo?: string } | null)?.returnTo ?? "/dashboard";
+    (location.state as { returnTo?: string } | null)?.returnTo ??
+    "/dashboard";
 
-  const [form, setForm] = React.useState<ExtendedUserPreferences>(initialForm);
+  const [form, setForm] = React.useState<FormState>(initialForm);
+  const [step, setStep] = React.useState(0);
+
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const totalSteps = 5;
+
+  /* ---------------------------------------------------------------------- */
+  /*                              LOAD PROFILE                              */
+  /* ---------------------------------------------------------------------- */
 
   React.useEffect(() => {
     getUserPreferences()
@@ -75,598 +527,1372 @@ export default function OnboardingSurvey() {
 
         const stored = prefs as Record<string, unknown>;
 
-        // Every value is normalised to a string. The survey submits text, but
-        // if a column is numeric Postgres coerces on write and returns a number
-        // on read — which used to reach `.trim()` on a retake and throw.
-        setForm({
+        setForm((previous) => ({
+          ...previous,
+
           primary_sport: toFormString(stored.primary_sport),
           experience_level: toFormString(stored.experience_level),
           main_goal: toFormString(stored.main_goal),
-          training_days: toFormString(stored.training_days),
+
+          training_days:
+            toFormString(stored.training_days) || previous.training_days,
+
           competition_level: toFormString(stored.competition_level),
-          injury_areas: toFormString(stored.injury_areas),
+
+          injury_areas:
+            toFormString(stored.injury_areas) || previous.injury_areas,
+
           priorities: toFormString(stored.priorities),
           sleep_range: toFormString(stored.sleep_range),
           athlete_type: toFormString(stored.athlete_type),
-          age: toFormString(stored.age),
-          height_cm: toFormString(stored.height_cm),
-          weight_kg: toFormString(stored.weight_kg),
+
+          age: toFormString(stored.age) || previous.age,
+
+          height_cm:
+            toFormString(stored.height_cm) || previous.height_cm,
+
+          weight_kg:
+            toFormString(stored.weight_kg) || previous.weight_kg,
+
           activity_level: toFormString(stored.activity_level),
-          workout_duration: toFormString(stored.workout_duration),
+
+          workout_duration:
+            toFormString(stored.workout_duration) ||
+            previous.workout_duration,
+
           equipment_access: toFormString(stored.equipment_access),
-          dietary_preference: toFormString(stored.dietary_preference),
-          food_allergies: toFormString(stored.food_allergies),
-          foods_avoid: toFormString(stored.foods_avoid),
-          meals_per_day: toFormString(stored.meals_per_day),
+
+          dietary_preference:
+            toFormString(stored.dietary_preference) ||
+            previous.dietary_preference,
+
+          food_allergies:
+            toFormString(stored.food_allergies) ||
+            previous.food_allergies,
+
+          foods_avoid:
+            toFormString(stored.foods_avoid) ||
+            previous.foods_avoid,
+
+          meals_per_day:
+            toFormString(stored.meals_per_day) ||
+            previous.meals_per_day,
+
           cooking_access: toFormString(stored.cooking_access),
-        });
+        }));
       })
       .catch(() => {
-        setError("We could not load your existing preferences.");
+        setError("We could not load your existing athlete profile.");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
-  function updateField<K extends keyof ExtendedUserPreferences>(
+  /* ---------------------------------------------------------------------- */
+  /*                              UPDATE FIELD                              */
+  /* ---------------------------------------------------------------------- */
+
+  function updateField<K extends keyof FormState>(
     key: K,
-    value: ExtendedUserPreferences[K]
+    value: FormState[K]
   ) {
     setForm((previous) => ({
       ...previous,
       [key]: value,
     }));
+
+    setError(null);
   }
 
-  function validateNumber(
-    value: unknown,
-    label: string,
-    minimum: number,
-    maximum: number
-  ) {
-    const text = toFormString(value).trim();
-    const parsed = Number(text);
+  /* ---------------------------------------------------------------------- */
+  /*                           DERIVED BODY VALUES                           */
+  /* ---------------------------------------------------------------------- */
 
-    if (!text) return `Please enter your ${label}.`;
-    if (!Number.isFinite(parsed)) {
-      return `${label} must be a number — enter digits only (for example 5, not "5-6").`;
+  const heightCm = Number(form.height_cm) || 175;
+  const weightKg = Number(form.weight_kg) || 68;
+
+  const totalHeightInches = Math.round(cmToTotalInches(heightCm));
+
+  const heightFeet = Math.floor(totalHeightInches / 12);
+  const heightInches = totalHeightInches % 12;
+
+  const weightLb = Math.round(kgToLb(weightKg));
+
+  const bmi = calculateBMI(weightKg, heightCm);
+
+  /* ---------------------------------------------------------------------- */
+  /*                               VALIDATION                               */
+  /* ---------------------------------------------------------------------- */
+
+  function validateStep(currentStep: number) {
+    if (currentStep === 0) {
+      if (!form.age.trim()) return "Please provide your age.";
+
+      if (!form.activity_level.trim()) {
+        return "Please select your activity level.";
+      }
     }
-    if (parsed < minimum || parsed > maximum) {
-      return `Please enter a realistic ${label} between ${minimum} and ${maximum}.`;
+
+    if (currentStep === 1) {
+      if (!form.primary_sport.trim()) {
+        return "Please enter your primary sport.";
+      }
+
+      if (!form.experience_level.trim()) {
+        return "Please choose your experience level.";
+      }
+    }
+
+    if (currentStep === 2) {
+      if (!form.main_goal.trim()) {
+        return "Please choose at least one training goal.";
+      }
+
+      if (!form.training_days.trim()) {
+        return "Please choose your weekly training frequency.";
+      }
+
+      if (!form.workout_duration.trim()) {
+        return "Please choose your preferred workout duration.";
+      }
+
+      if (!form.equipment_access.trim()) {
+        return "Please choose your available equipment.";
+      }
     }
 
     return null;
   }
 
-  function validate() {
-    if (!form.primary_sport.trim()) return "Please enter your primary sport.";
-    if (!form.experience_level.trim()) return "Please enter your experience level.";
-    if (!form.main_goal.trim()) return "Please enter your main goal.";
+  function nextStep() {
+    const validationError = validateStep(step);
 
-    const trainingDaysError = validateNumber(
-      form.training_days,
-      "training days",
-      NUMERIC_RANGES.training_days.min,
-      NUMERIC_RANGES.training_days.max
-    );
-    if (trainingDaysError) return trainingDaysError;
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
-    if (!form.competition_level.trim()) return "Please enter your competition level.";
-    if (!form.injury_areas.trim()) return "Please enter injury areas or type None.";
-    if (!form.priorities.trim()) return "Please enter your fitness priorities.";
-    if (!form.sleep_range.trim()) return "Please enter your average sleep.";
-    if (!form.athlete_type.trim()) return "Please enter your athlete type.";
+    setError(null);
+    setStep((current) => Math.min(current + 1, totalSteps - 1));
 
-    const ageError = validateNumber(
-      form.age,
-      "age",
-      NUMERIC_RANGES.age.min,
-      NUMERIC_RANGES.age.max
-    );
-    if (ageError) return ageError;
-
-    const heightError = validateNumber(
-      form.height_cm,
-      "height in centimeters",
-      NUMERIC_RANGES.height_cm.min,
-      NUMERIC_RANGES.height_cm.max
-    );
-    if (heightError) return heightError;
-
-    const weightError = validateNumber(
-      form.weight_kg,
-      "weight in kilograms",
-      NUMERIC_RANGES.weight_kg.min,
-      NUMERIC_RANGES.weight_kg.max
-    );
-    if (weightError) return weightError;
-
-    if (!form.activity_level.trim()) return "Please choose your activity level.";
-    if (!form.workout_duration.trim()) return "Please enter your preferred workout duration.";
-    if (!form.equipment_access.trim()) return "Please describe the equipment you can access.";
-    if (!form.dietary_preference.trim()) return "Please select your dietary preference.";
-    if (!form.food_allergies.trim()) return "Please enter food allergies or type None.";
-    if (!form.foods_avoid.trim()) return "Please enter foods you avoid or type None.";
-
-    const mealsPerDayError = validateNumber(
-      form.meals_per_day,
-      "meals per day",
-      NUMERIC_RANGES.meals_per_day.min,
-      NUMERIC_RANGES.meals_per_day.max
-    );
-    if (mealsPerDayError) return mealsPerDayError;
-
-    if (!form.cooking_access.trim()) return "Please describe your access to food preparation.";
-
-    return null;
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
+
+  function previousStep() {
+    setError(null);
+
+    setStep((current) => Math.max(current - 1, 0));
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /*                                  SAVE                                  */
+  /* ---------------------------------------------------------------------- */
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+
     setError(null);
     setSubmitting(true);
 
-    // validate() used to run outside this try. Anything it threw escaped as an
-    // unhandled rejection, so the Save button just appeared dead.
     try {
-      const validationError = validate();
-      if (validationError) {
-        setError(validationError);
-        return;
-      }
-
       const preferencesToSave: ExtendedUserPreferences = {
         primary_sport: form.primary_sport.trim(),
         experience_level: form.experience_level.trim(),
         main_goal: form.main_goal.trim(),
+
         training_days: form.training_days.trim(),
-        competition_level: form.competition_level.trim(),
-        injury_areas: form.injury_areas.trim(),
-        priorities: form.priorities.trim(),
-        sleep_range: form.sleep_range.trim(),
-        athlete_type: form.athlete_type.trim(),
+
+        competition_level:
+          form.competition_level.trim() || "None",
+
+        injury_areas:
+          form.injury_areas.trim() || "None",
+
+        priorities:
+          form.priorities.trim() || form.main_goal.trim(),
+
+        sleep_range:
+          form.sleep_range.trim() || "Not provided",
+
+        athlete_type:
+          form.athlete_type.trim() || "Mixed",
+
         age: form.age.trim(),
+
+        // Still metric in database:
         height_cm: form.height_cm.trim(),
         weight_kg: form.weight_kg.trim(),
+
         activity_level: form.activity_level.trim(),
-        workout_duration: form.workout_duration.trim(),
-        equipment_access: form.equipment_access.trim(),
-        dietary_preference: form.dietary_preference.trim(),
-        food_allergies: form.food_allergies.trim(),
-        foods_avoid: form.foods_avoid.trim(),
-        meals_per_day: form.meals_per_day.trim(),
-        cooking_access: form.cooking_access.trim(),
+
+        workout_duration:
+          form.workout_duration.trim(),
+
+        equipment_access:
+          form.equipment_access.trim(),
+
+        dietary_preference:
+          form.dietary_preference.trim() || "No preference",
+
+        food_allergies:
+          form.food_allergies.trim() || "None",
+
+        foods_avoid:
+          form.foods_avoid.trim() || "None",
+
+        meals_per_day:
+          form.meals_per_day.trim() || "3",
+
+        cooking_access:
+          form.cooking_access.trim() || "Not provided",
       };
 
       await saveUserPreferences(preferencesToSave);
+
       navigate(returnTo);
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to save preferences.";
+        err instanceof Error
+          ? err.message
+          : "Failed to save your athlete profile.";
+
       setError(message);
     } finally {
       setSubmitting(false);
     }
   }
 
+  /* ---------------------------------------------------------------------- */
+  /*                                LOADING                                 */
+  /* ---------------------------------------------------------------------- */
+
   if (loading) {
     return (
-      <Box sx={{ bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }} aria-busy="true">
+      <Box
+        sx={{
+          minHeight: "100vh",
+          bgcolor: "#f8fafc",
+          py: { xs: 3, md: 6 },
+        }}
+      >
         <Container maxWidth="md">
-          <Skeleton variant="rounded" height={230} sx={{ borderRadius: 5, mb: 3 }} />
-          <Stack spacing={3}>
-            {[0, 1, 2].map((card) => (
-              <Skeleton key={card} variant="rounded" height={250} sx={{ borderRadius: 4 }} />
-            ))}
-          </Stack>
+          <Skeleton
+            variant="rounded"
+            height={150}
+            sx={{ borderRadius: 5, mb: 3 }}
+          />
+
+          <Skeleton
+            variant="rounded"
+            height={500}
+            sx={{ borderRadius: 5 }}
+          />
         </Container>
       </Box>
     );
   }
 
+  /* ---------------------------------------------------------------------- */
+  /*                              STEP CONTENT                              */
+  /* ---------------------------------------------------------------------- */
+
+  function renderStep() {
+    /* ------------------------------ STEP 1 ------------------------------ */
+
+    if (step === 0) {
+      return (
+        <>
+          <SectionTitle
+            eyebrow="Step 1 · Athlete profile"
+            title="Tell us about you"
+            description="Basic body and activity information helps SportLab personalize training recommendations."
+          />
+
+          <Stack spacing={3}>
+            <SliderBlock
+              title="Age"
+              value={Number(form.age) || 16}
+              min={12}
+              max={80}
+              displayValue={`${form.age || 16}`}
+              onChange={(value) =>
+                updateField("age", String(value))
+              }
+              marks={[
+                { value: 12, label: "12" },
+                { value: 30, label: "30" },
+                { value: 50, label: "50" },
+                { value: 80, label: "80" },
+              ]}
+            />
+
+            <SliderBlock
+              title="Height"
+              value={totalHeightInches}
+              min={48}
+              max={84}
+              displayValue={`${heightFeet}' ${heightInches}"`}
+              onChange={(value) =>
+                updateField(
+                  "height_cm",
+                  inchesToCm(value).toFixed(1)
+                )
+              }
+              marks={[
+                { value: 48, label: "4'" },
+                { value: 60, label: "5'" },
+                { value: 72, label: "6'" },
+                { value: 84, label: "7'" },
+              ]}
+            />
+
+            <SliderBlock
+              title="Weight"
+              value={weightLb}
+              min={70}
+              max={350}
+              displayValue={`${weightLb} lb`}
+              onChange={(value) =>
+                updateField(
+                  "weight_kg",
+                  lbToKg(value).toFixed(1)
+                )
+              }
+              marks={[
+                { value: 70, label: "70" },
+                { value: 150, label: "150" },
+                { value: 250, label: "250" },
+                { value: 350, label: "350" },
+              ]}
+            />
+
+            <Box
+              sx={{
+                p: 2.5,
+                borderRadius: 3,
+                bgcolor: "#f0f9ff",
+                border: "1px solid #bae6fd",
+              }}
+            >
+              <Stack
+                direction={{
+                  xs: "column",
+                  sm: "row",
+                }}
+                justifyContent="space-between"
+                spacing={1}
+              >
+                <Box>
+                  <Typography
+                    fontWeight={900}
+                    color="#0c4a6e"
+                  >
+                    Estimated BMI
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      color: "#0369a1",
+                      fontSize: 13,
+                      mt: 0.4,
+                    }}
+                  >
+                    Calculated automatically from your height
+                    and weight.
+                  </Typography>
+                </Box>
+
+                <Typography
+                  sx={{
+                    fontSize: 27,
+                    fontWeight: 950,
+                    color: "#0c4a6e",
+                  }}
+                >
+                  {bmi ? bmi.toFixed(1) : "—"}
+                </Typography>
+              </Stack>
+
+              <Typography
+                sx={{
+                  color: "#64748b",
+                  fontSize: 12,
+                  mt: 1.5,
+                  lineHeight: 1.5,
+                }}
+              >
+                BMI is only one general body-size measure and
+                does not directly measure athletic fitness or
+                body composition.
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Overall activity level
+              </Typography>
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                  },
+                  gap: 1.5,
+                }}
+              >
+                {ACTIVITY_OPTIONS.map((option) => (
+                  <OptionCard
+                    key={option.value}
+                    label={option.label}
+                    description={option.description}
+                    selected={
+                      form.activity_level === option.value
+                    }
+                    onClick={() =>
+                      updateField(
+                        "activity_level",
+                        option.value
+                      )
+                    }
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Stack>
+        </>
+      );
+    }
+
+    /* ------------------------------ STEP 2 ------------------------------ */
+
+    if (step === 1) {
+      return (
+        <>
+          <SectionTitle
+            eyebrow="Step 2 · Sport"
+            title="Your athletic background"
+            description="Tell SportLab what you play and your current training experience."
+          />
+
+          <Stack spacing={3.5}>
+            <TextField
+              fullWidth
+              label="Primary sport"
+              placeholder="Tennis, soccer, basketball..."
+              value={form.primary_sport}
+              onChange={(event) =>
+                updateField(
+                  "primary_sport",
+                  event.target.value
+                )
+              }
+            />
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Experience level
+              </Typography>
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr 1fr",
+                    md: "repeat(4, 1fr)",
+                  },
+                  gap: 1.25,
+                }}
+              >
+                {EXPERIENCE_OPTIONS.map((option) => (
+                  <OptionCard
+                    key={option}
+                    label={option}
+                    selected={
+                      form.experience_level === option
+                    }
+                    onClick={() =>
+                      updateField(
+                        "experience_level",
+                        option
+                      )
+                    }
+                  />
+                ))}
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Competition level
+              </Typography>
+
+              <Stack
+                direction="row"
+                gap={1}
+                flexWrap="wrap"
+              >
+                {COMPETITION_OPTIONS.map((option) => (
+                  <MultiOption
+                    key={option}
+                    label={option}
+                    selected={
+                      form.competition_level === option
+                    }
+                    onClick={() =>
+                      updateField(
+                        "competition_level",
+                        option
+                      )
+                    }
+                  />
+                ))}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                What best describes you?
+              </Typography>
+
+              <Stack
+                direction="row"
+                gap={1}
+                flexWrap="wrap"
+              >
+                {ATHLETE_TYPES.map((option) => (
+                  <MultiOption
+                    key={option}
+                    label={option}
+                    selected={
+                      form.athlete_type === option
+                    }
+                    onClick={() =>
+                      updateField("athlete_type", option)
+                    }
+                  />
+                ))}
+              </Stack>
+            </Box>
+          </Stack>
+        </>
+      );
+    }
+
+    /* ------------------------------ STEP 3 ------------------------------ */
+
+    if (step === 2) {
+      const selectedGoals = form.main_goal
+        .split(",")
+        .map((goal) => goal.trim())
+        .filter(Boolean);
+
+      return (
+        <>
+          <SectionTitle
+            eyebrow="Step 3 · Training"
+            title="Build around your goals"
+            description="Choose what you want to improve and how much time and equipment you have."
+          />
+
+          <Stack spacing={4}>
+            <Box>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1.5 }}
+              >
+                <Typography fontWeight={900}>
+                  Top goals
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color: "text.secondary",
+                    fontSize: 13,
+                  }}
+                >
+                  Choose up to 3
+                </Typography>
+              </Stack>
+
+              <Stack
+                direction="row"
+                gap={1}
+                flexWrap="wrap"
+              >
+                {GOAL_OPTIONS.map((goal) => {
+                  const selected =
+                    selectedGoals.includes(goal);
+
+                  return (
+                    <MultiOption
+                      key={goal}
+                      label={goal}
+                      selected={selected}
+                      onClick={() => {
+                        if (
+                          !selected &&
+                          selectedGoals.length >= 3
+                        ) {
+                          setError(
+                            "Choose up to three main training goals."
+                          );
+                          return;
+                        }
+
+                        updateField(
+                          "main_goal",
+                          toggleListValue(
+                            form.main_goal,
+                            goal
+                          )
+                        );
+                      }}
+                    />
+                  );
+                })}
+              </Stack>
+            </Box>
+
+            <SliderBlock
+              title="Training days per week"
+              value={Number(form.training_days) || 4}
+              min={1}
+              max={7}
+              displayValue={`${form.training_days || 4} days`}
+              onChange={(value) =>
+                updateField(
+                  "training_days",
+                  String(value)
+                )
+              }
+              marks={[
+                { value: 1, label: "1" },
+                { value: 3, label: "3" },
+                { value: 5, label: "5" },
+                { value: 7, label: "7" },
+              ]}
+            />
+
+            <SliderBlock
+              title="Preferred workout duration"
+              value={
+                Number(form.workout_duration) || 60
+              }
+              min={20}
+              max={120}
+              step={5}
+              displayValue={`${
+                form.workout_duration || 60
+              } min`}
+              onChange={(value) =>
+                updateField(
+                  "workout_duration",
+                  String(value)
+                )
+              }
+              marks={[
+                { value: 20, label: "20m" },
+                { value: 60, label: "60m" },
+                { value: 90, label: "90m" },
+                { value: 120, label: "120m" },
+              ]}
+            />
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Equipment access
+              </Typography>
+
+              <Stack
+                direction="row"
+                gap={1}
+                flexWrap="wrap"
+              >
+                {EQUIPMENT_OPTIONS.map((option) => (
+                  <MultiOption
+                    key={option}
+                    label={option}
+                    selected={
+                      form.equipment_access === option
+                    }
+                    onClick={() =>
+                      updateField(
+                        "equipment_access",
+                        option
+                      )
+                    }
+                  />
+                ))}
+              </Stack>
+            </Box>
+          </Stack>
+        </>
+      );
+    }
+
+    /* ------------------------------ STEP 4 ------------------------------ */
+
+    if (step === 3) {
+      return (
+        <>
+          <SectionTitle
+            eyebrow="Step 4 · Recovery"
+            title="Train around your recovery"
+            description="Recovery information helps SportLab avoid treating every athlete as if they have the same readiness."
+          />
+
+          <Stack spacing={4}>
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Average sleep
+              </Typography>
+
+              <Stack
+                direction="row"
+                gap={1}
+                flexWrap="wrap"
+              >
+                {SLEEP_OPTIONS.map((option) => (
+                  <MultiOption
+                    key={option}
+                    label={option}
+                    selected={
+                      form.sleep_range === option
+                    }
+                    onClick={() =>
+                      updateField(
+                        "sleep_range",
+                        option
+                      )
+                    }
+                  />
+                ))}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Years of structured training
+              </Typography>
+
+              <Stack
+                direction="row"
+                gap={1}
+                flexWrap="wrap"
+              >
+                {TRAINING_AGE_OPTIONS.map((option) => (
+                  <MultiOption
+                    key={option}
+                    label={option}
+                    selected={
+                      form.training_age === option
+                    }
+                    onClick={() =>
+                      updateField(
+                        "training_age",
+                        option
+                      )
+                    }
+                  />
+                ))}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Typical energy
+              </Typography>
+
+              <Stack direction="row" gap={1}>
+                {["Low", "Moderate", "High"].map(
+                  (option) => (
+                    <MultiOption
+                      key={option}
+                      label={option}
+                      selected={
+                        form.energy_level === option
+                      }
+                      onClick={() =>
+                        updateField(
+                          "energy_level",
+                          option
+                        )
+                      }
+                    />
+                  )
+                )}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Typical muscle soreness
+              </Typography>
+
+              <Stack direction="row" gap={1}>
+                {["Low", "Moderate", "High"].map(
+                  (option) => (
+                    <MultiOption
+                      key={option}
+                      label={option}
+                      selected={
+                        form.soreness_level === option
+                      }
+                      onClick={() =>
+                        updateField(
+                          "soreness_level",
+                          option
+                        )
+                      }
+                    />
+                  )
+                )}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+                Injuries or areas to protect
+              </Typography>
+
+              <Stack
+                direction="row"
+                gap={1}
+                flexWrap="wrap"
+              >
+                {BODY_AREAS.map((area) => (
+                  <MultiOption
+                    key={area}
+                    label={area}
+                    selected={form.injury_areas
+                      .split(",")
+                      .map((item) => item.trim())
+                      .includes(area)}
+                    onClick={() => {
+                      if (area === "None") {
+                        updateField(
+                          "injury_areas",
+                          "None"
+                        );
+                        return;
+                      }
+
+                      const withoutNone =
+                        form.injury_areas
+                          .split(",")
+                          .map((item) => item.trim())
+                          .filter(
+                            (item) =>
+                              item &&
+                              item !== "None"
+                          )
+                          .join(", ");
+
+                      updateField(
+                        "injury_areas",
+                        toggleListValue(
+                          withoutNone,
+                          area
+                        ) || "None"
+                      );
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          </Stack>
+        </>
+      );
+    }
+
+    /* ------------------------------ STEP 5 ------------------------------ */
+
+    return (
+      <>
+        <SectionTitle
+          eyebrow="Step 5 · Nutrition"
+          title="Finish your athlete profile"
+          description="A few nutrition preferences help SportLab make recommendations that actually fit your routine."
+        />
+
+        <Stack spacing={4}>
+          <Box>
+            <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+              Nutrition goal
+            </Typography>
+
+            <Stack
+              direction="row"
+              gap={1}
+              flexWrap="wrap"
+            >
+              {NUTRITION_GOALS.map((option) => (
+                <MultiOption
+                  key={option}
+                  label={option}
+                  selected={
+                    form.nutrition_goal === option
+                  }
+                  onClick={() =>
+                    updateField(
+                      "nutrition_goal",
+                      option
+                    )
+                  }
+                />
+              ))}
+            </Stack>
+          </Box>
+
+          <Box>
+            <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+              Dietary preference
+            </Typography>
+
+            <Stack
+              direction="row"
+              gap={1}
+              flexWrap="wrap"
+            >
+              {DIET_OPTIONS.map((option) => (
+                <MultiOption
+                  key={option}
+                  label={option}
+                  selected={
+                    form.dietary_preference === option
+                  }
+                  onClick={() =>
+                    updateField(
+                      "dietary_preference",
+                      option
+                    )
+                  }
+                />
+              ))}
+            </Stack>
+          </Box>
+
+          <SliderBlock
+            title="Meals per day"
+            value={Number(form.meals_per_day) || 3}
+            min={1}
+            max={6}
+            displayValue={`${form.meals_per_day || 3}`}
+            onChange={(value) =>
+              updateField(
+                "meals_per_day",
+                String(value)
+              )
+            }
+            marks={[
+              { value: 1, label: "1" },
+              { value: 3, label: "3" },
+              { value: 6, label: "6" },
+            ]}
+          />
+
+          <Box>
+            <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+              Food preparation
+            </Typography>
+
+            <Stack
+              direction="row"
+              gap={1}
+              flexWrap="wrap"
+            >
+              {COOKING_OPTIONS.map((option) => (
+                <MultiOption
+                  key={option}
+                  label={option}
+                  selected={
+                    form.cooking_access === option
+                  }
+                  onClick={() =>
+                    updateField(
+                      "cooking_access",
+                      option
+                    )
+                  }
+                />
+              ))}
+            </Stack>
+          </Box>
+
+          <TextField
+            fullWidth
+            label="Food allergies or intolerances"
+            placeholder="None, peanuts, shellfish, lactose..."
+            value={form.food_allergies}
+            onChange={(event) =>
+              updateField(
+                "food_allergies",
+                event.target.value
+              )
+            }
+          />
+
+          <TextField
+            fullWidth
+            label="Foods you avoid"
+            placeholder="None, pork, mushrooms..."
+            value={form.foods_avoid}
+            onChange={(event) =>
+              updateField(
+                "foods_avoid",
+                event.target.value
+              )
+            }
+          />
+
+          {/* Athlete summary */}
+
+          <Box
+            sx={{
+              bgcolor: "#0f172a",
+              color: "#fff",
+              borderRadius: 4,
+              p: { xs: 2.5, sm: 3.5 },
+            }}
+          >
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{ mb: 2 }}
+            >
+              <FitnessCenterRounded />
+
+              <Typography
+                variant="h6"
+                fontWeight={950}
+              >
+                Your athlete profile
+              </Typography>
+            </Stack>
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr 1fr",
+                  sm: "repeat(3, 1fr)",
+                },
+                gap: 2,
+              }}
+            >
+              <Box>
+                <Typography
+                  sx={{
+                    color: "#94a3b8",
+                    fontSize: 12,
+                  }}
+                >
+                  SPORT
+                </Typography>
+
+                <Typography fontWeight={850}>
+                  {form.primary_sport || "—"}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography
+                  sx={{
+                    color: "#94a3b8",
+                    fontSize: 12,
+                  }}
+                >
+                  BODY
+                </Typography>
+
+                <Typography fontWeight={850}>
+                  {heightFeet}' {heightInches}" ·{" "}
+                  {weightLb} lb
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography
+                  sx={{
+                    color: "#94a3b8",
+                    fontSize: 12,
+                  }}
+                >
+                  BMI
+                </Typography>
+
+                <Typography fontWeight={850}>
+                  {bmi ? bmi.toFixed(1) : "—"}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography
+                  sx={{
+                    color: "#94a3b8",
+                    fontSize: 12,
+                  }}
+                >
+                  TRAINING
+                </Typography>
+
+                <Typography fontWeight={850}>
+                  {form.training_days} days/week
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography
+                  sx={{
+                    color: "#94a3b8",
+                    fontSize: 12,
+                  }}
+                >
+                  SESSION
+                </Typography>
+
+                <Typography fontWeight={850}>
+                  {form.workout_duration} min
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography
+                  sx={{
+                    color: "#94a3b8",
+                    fontSize: 12,
+                  }}
+                >
+                  EXPERIENCE
+                </Typography>
+
+                <Typography fontWeight={850}>
+                  {form.experience_level || "—"}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Stack>
+      </>
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /*                                  PAGE                                  */
+  /* ---------------------------------------------------------------------- */
+
   return (
-    <Box sx={{ bgcolor: "#f8fafc", py: { xs: 3, md: 6 } }}>
+    <Box
+      sx={{
+        bgcolor: "#f8fafc",
+        minHeight: "100vh",
+        py: { xs: 2, md: 5 },
+      }}
+    >
       <Seo
-        title="Set Up Your Profile"
-        description="Personalise your SportLab AI experience by telling us about your sport, goals, and training background."
+        title="Build Your Athlete Profile"
+        description="Personalize SportLab AI around your body, sport, goals, recovery, and nutrition."
         path="/onboarding"
         noIndex
       />
+
       <Container maxWidth="md">
+        {/* Header */}
+
+        <Box sx={{ mb: 2.5 }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ mb: 1.2 }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 950,
+                color: "#0f172a",
+                fontSize: 14,
+              }}
+            >
+              SportLab Athlete Setup
+            </Typography>
+
+            <Typography
+              sx={{
+                color: "#64748b",
+                fontWeight: 800,
+                fontSize: 13,
+              }}
+            >
+              {step + 1} / {totalSteps}
+            </Typography>
+          </Stack>
+
+          <LinearProgress
+            variant="determinate"
+            value={((step + 1) / totalSteps) * 100}
+            sx={{
+              height: 7,
+              borderRadius: 20,
+              bgcolor: "#e2e8f0",
+
+              "& .MuiLinearProgress-bar": {
+                borderRadius: 20,
+                bgcolor: "#0f172a",
+              },
+            }}
+          />
+        </Box>
+
         <Paper
+          component="form"
+          onSubmit={handleSubmit}
           elevation={0}
           sx={{
-            borderRadius: 5,
             border: "1px solid #e2e8f0",
+            borderRadius: { xs: 3, md: 5 },
             overflow: "hidden",
+            bgcolor: "#fff",
           }}
         >
           <Box
             sx={{
-              p: { xs: 3, md: 5 },
-              bgcolor: "#0f172a",
-              color: "#fff",
+              p: {
+                xs: 2.5,
+                sm: 4,
+                md: 5,
+              },
             }}
           >
-            <Chip
-              label="SportLab Survey"
-              sx={{
-                bgcolor: "rgba(56,189,248,0.15)",
-                color: "#7dd3fc",
-                fontWeight: 900,
-                mb: 2,
-              }}
-            />
+            {error && (
+              <Alert
+                severity="error"
+                sx={{
+                  mb: 3,
+                  borderRadius: 3,
+                }}
+              >
+                {error}
+              </Alert>
+            )}
 
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 950,
-                letterSpacing: -0.8,
-                fontSize: { xs: "2rem", md: "3rem" },
-              }}
-            >
-              Personalize your SportLab experience
-            </Typography>
-
-            <Typography sx={{ color: "#cbd5e1", mt: 1.5, lineHeight: 1.8 }}>
-              Your answers help SportLab create safer, more useful workout and
-              nutrition guidance. You can edit them later from your profile.
-            </Typography>
+            {renderStep()}
           </Box>
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ p: { xs: 3, md: 5 } }}>
-            <Stack spacing={3}>
-              {error && <Alert severity="error">{error}</Alert>}
+          {/* Navigation */}
 
-              <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={900} gutterBottom>
-                    Body Information
-                  </Typography>
+          <Box
+            sx={{
+              borderTop: "1px solid #e2e8f0",
+              bgcolor: "#fafafa",
+              p: {
+                xs: 2,
+                sm: 2.5,
+              },
+            }}
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              spacing={1.5}
+            >
+              <Button
+                type="button"
+                variant="text"
+                startIcon={<ArrowBackRounded />}
+                disabled={step === 0}
+                onClick={previousStep}
+                sx={{
+                  color: "#475569",
+                  fontWeight: 850,
+                  borderRadius: 2.5,
+                }}
+              >
+                Back
+              </Button>
 
-                  <Typography sx={{ color: "text.secondary", mb: 2, fontSize: 14 }}>
-                    These measurements help estimate appropriate exercise volume
-                    and general nutrition needs. They are not used for medical diagnosis.
-                  </Typography>
-
-                  <Stack spacing={2}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Age"
-                      placeholder="Example: 16"
-                      value={form.age}
-                      onChange={(event) => updateField("age", event.target.value)}
-                      inputProps={{ min: 10, max: 100 }}
-                    />
-
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        label="Height (cm)"
-                        placeholder="Example: 175"
-                        value={form.height_cm}
-                        onChange={(event) =>
-                          updateField("height_cm", event.target.value)
-                        }
-                        inputProps={{ min: 100, max: 250, step: 0.1 }}
-                      />
-
-                      <TextField
-                        fullWidth
-                        type="number"
-                        label="Weight (kg)"
-                        placeholder="Example: 68"
-                        value={form.weight_kg}
-                        onChange={(event) =>
-                          updateField("weight_kg", event.target.value)
-                        }
-                        inputProps={{ min: 30, max: 300, step: 0.1 }}
-                      />
-                    </Stack>
-
-                    <TextField
-                      fullWidth
-                      select
-                      label="Overall activity level"
-                      value={form.activity_level}
-                      onChange={(event) =>
-                        updateField("activity_level", event.target.value)
-                      }
-                    >
-                      {ACTIVITY_LEVELS.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Stack>
-                </CardContent>
-              </Card>
-
-              <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={900} gutterBottom>
-                    Sport Background
-                  </Typography>
-
-                  <Stack spacing={2}>
-                    <TextField
-                      fullWidth
-                      label="What sports do you currently play?"
-                      placeholder="Example: Tennis, basketball, swimming..."
-                      value={form.primary_sport}
-                      onChange={(event) =>
-                        updateField("primary_sport", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      select
-                      label="Experience level"
-                      value={form.experience_level}
-                      onChange={(event) =>
-                        updateField("experience_level", event.target.value)
-                      }
-                    >
-                      {EXPERIENCE_LEVELS.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                    <TextField
-                      fullWidth
-                      label="Do you compete? If yes, at what level?"
-                      placeholder="Example: School team, club, regional, no competition..."
-                      value={form.competition_level}
-                      onChange={(event) =>
-                        updateField("competition_level", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="What type of athlete are you?"
-                      placeholder="Example: Endurance, power, skill, or team-sport athlete..."
-                      value={form.athlete_type}
-                      onChange={(event) =>
-                        updateField("athlete_type", event.target.value)
-                      }
-                    />
-                  </Stack>
-                </CardContent>
-              </Card>
-
-              <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={900} gutterBottom>
-                    Goals and Training
-                  </Typography>
-
-                  <Stack spacing={2}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      minRows={3}
-                      label="What are your main athletic goals?"
-                      placeholder="Example: Improve speed, build strength, gain endurance..."
-                      value={form.main_goal}
-                      onChange={(event) =>
-                        updateField("main_goal", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="How many days per week do you train?"
-                      placeholder="Example: 5"
-                      value={form.training_days}
-                      onChange={(event) =>
-                        updateField("training_days", event.target.value)
-                      }
-                      inputProps={{ min: 0, max: 7 }}
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="Preferred workout duration"
-                      placeholder="Example: 45–60 minutes"
-                      value={form.workout_duration}
-                      onChange={(event) =>
-                        updateField("workout_duration", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      minRows={2}
-                      label="What equipment can you access?"
-                      placeholder="Example: Full gym, dumbbells, resistance bands, bodyweight only..."
-                      value={form.equipment_access}
-                      onChange={(event) =>
-                        updateField("equipment_access", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      minRows={3}
-                      label="What are your top training priorities?"
-                      placeholder="Example: Speed, strength, recovery, flexibility..."
-                      value={form.priorities}
-                      onChange={(event) =>
-                        updateField("priorities", event.target.value)
-                      }
-                    />
-                  </Stack>
-                </CardContent>
-              </Card>
-
-              <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={900} gutterBottom>
-                    Recovery and Safety
-                  </Typography>
-
-                  <Stack spacing={2}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      minRows={3}
-                      label="Any injuries, medical restrictions, or areas of concern?"
-                      placeholder="Example: Knee pain, shoulder soreness, asthma, none..."
-                      value={form.injury_areas}
-                      onChange={(event) =>
-                        updateField("injury_areas", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="How much do you usually sleep?"
-                      placeholder="Example: 7–8 hours"
-                      value={form.sleep_range}
-                      onChange={(event) =>
-                        updateField("sleep_range", event.target.value)
-                      }
-                    />
-                  </Stack>
-                </CardContent>
-              </Card>
-
-              <Card variant="outlined" sx={{ borderRadius: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={900} gutterBottom>
-                    Nutrition and Food Access
-                  </Typography>
-
-                  <Typography sx={{ color: "text.secondary", mb: 2, fontSize: 14 }}>
-                    SportLab should never recommend foods that conflict with your
-                    allergies, dietary needs, or available food options.
-                  </Typography>
-
-                  <Stack spacing={2}>
-                    <TextField
-                      fullWidth
-                      select
-                      label="Dietary preference"
-                      value={form.dietary_preference}
-                      onChange={(event) =>
-                        updateField("dietary_preference", event.target.value)
-                      }
-                    >
-                      {DIETARY_PREFERENCES.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      minRows={2}
-                      label="Food allergies or intolerances"
-                      placeholder="Example: Peanuts, shellfish, lactose; type None if none"
-                      value={form.food_allergies}
-                      onChange={(event) =>
-                        updateField("food_allergies", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      minRows={2}
-                      label="Foods you dislike or avoid"
-                      placeholder="Example: Mushrooms, pork, spicy food; type None if none"
-                      value={form.foods_avoid}
-                      onChange={(event) =>
-                        updateField("foods_avoid", event.target.value)
-                      }
-                    />
-
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="How many meals do you usually eat per day?"
-                      placeholder="Example: 3"
-                      value={form.meals_per_day}
-                      onChange={(event) =>
-                        updateField("meals_per_day", event.target.value)
-                      }
-                      inputProps={{ min: 1, max: 10 }}
-                    />
-
-                    <TextField
-                      fullWidth
-                      select
-                      label="Access to food preparation"
-                      value={form.cooking_access}
-                      onChange={(event) =>
-                        updateField("cooking_access", event.target.value)
-                      }
-                    >
-                      {COOKING_ACCESS_OPTIONS.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Stack>
-                </CardContent>
-              </Card>
-
-              <Alert severity="info">
-                SportLab provides general fitness and nutrition guidance, not
-                medical treatment. Users with injuries, food allergies, medical
-                conditions, or significant dietary concerns should follow advice
-                from a qualified professional.
-              </Alert>
-
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              {step < totalSteps - 1 ? (
                 <Button
-                  type="submit"
+                  type="button"
                   variant="contained"
-                  disabled={submitting}
+                  endIcon={<ArrowForwardRounded />}
+                  onClick={nextStep}
                   sx={{
-                    borderRadius: 3,
                     bgcolor: "#0f172a",
-                    fontWeight: 950,
-                    py: 1.4,
+                    borderRadius: 2.5,
+                    px: 3,
+                    py: 1.15,
+                    fontWeight: 900,
                     boxShadow: "none",
+
                     "&:hover": {
                       bgcolor: "#1e293b",
                       boxShadow: "none",
                     },
                   }}
                 >
-                  {submitting ? "Saving..." : "Save Preferences"}
+                  Continue
                 </Button>
-
+              ) : (
                 <Button
-                  type="button"
-                  variant="outlined"
-                  onClick={() => navigate(returnTo)}
+                  type="submit"
+                  variant="contained"
+                  disabled={submitting}
+                  endIcon={
+                    !submitting ? (
+                      <ArrowForwardRounded />
+                    ) : undefined
+                  }
                   sx={{
-                    borderRadius: 3,
+                    bgcolor: "#0f172a",
+                    borderRadius: 2.5,
+                    px: 3,
+                    py: 1.15,
                     fontWeight: 900,
-                    py: 1.4,
+                    boxShadow: "none",
+
+                    "&:hover": {
+                      bgcolor: "#1e293b",
+                      boxShadow: "none",
+                    },
                   }}
                 >
-                  Skip for now
+                  {submitting
+                    ? "Creating profile..."
+                    : "Create my profile"}
                 </Button>
-              </Stack>
+              )}
             </Stack>
           </Box>
         </Paper>
+
+        <Typography
+          sx={{
+            textAlign: "center",
+            color: "#94a3b8",
+            fontSize: 12,
+            mt: 2,
+            lineHeight: 1.6,
+          }}
+        >
+          SportLab provides general fitness and nutrition
+          guidance and does not provide medical diagnosis or
+          treatment.
+        </Typography>
       </Container>
     </Box>
   );
