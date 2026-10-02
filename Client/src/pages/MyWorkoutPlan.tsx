@@ -183,7 +183,7 @@ export default function MyWorkoutPlan() {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", py: { xs: 3, md: 5 } }}>
+    <Box sx={{ minHeight: "calc(100dvh - var(--app-header-h, 64px))", bgcolor: "#f8fafc", py: { xs: 2.5, md: 3 } }}>
       <Seo
         title="My Workout Plan"
         description="Plan your training week, pick the workout your body is most recovered for, and log every set, rep, and weight."
@@ -191,7 +191,7 @@ export default function MyWorkoutPlan() {
         noIndex
       />
 
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
         {/* HEADER */}
         <Stack
           direction={{ xs: "column", md: "row" }}

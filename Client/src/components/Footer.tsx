@@ -1,8 +1,12 @@
 import React from "react";
 import { Box, Container, Divider, Grid, Link, Stack, Typography } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 
 const Footer: React.FC = () => {
+  const { pathname } = useLocation();
+
+  if (pathname !== "/") return null;
+
   return (
     <Box
       component="footer"

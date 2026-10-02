@@ -1,14 +1,15 @@
 /* ─── Page Shell ─── */
 
 /*
- * The chat sits between a sticky header and the footer, so a full 100vh card
+ * The chat sits below a sticky header, so a full 100vh card
  * always overflowed the window and pushed the composer off-screen — worst on
  * iOS, where 100vh also counts the collapsing browser chrome. Everything here
  * measures against the space actually left below the header, in dvh where the
  * browser supports it.
  */
 .ai-page {
-  --ai-gutter: 20px;
+  --ai-gutter: 16px;
+  --ai-page-inset: 16px;
   /* --ai-chrome-offset is measured at runtime (see AiChatHome.tsx) and covers
      the header plus anything else stacked above the chat. The header variable
      is the fallback for the first paint, before measurement runs. */
@@ -20,7 +21,7 @@
     radial-gradient(ellipse at 15% 0%, rgba(14, 165, 233, 0.10), transparent 40%),
     radial-gradient(ellipse at 85% 100%, rgba(34, 197, 94, 0.08), transparent 38%),
     #f0f4fa;
-  padding: var(--ai-gutter);
+  padding: var(--ai-gutter) var(--ai-page-inset);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #101828;
 }
@@ -32,11 +33,11 @@
 }
 
 .ai-shell {
-  width: min(1400px, 100%);
+  width: min(calc(1200px - var(--ai-page-inset) * 2), 100%);
   min-height: calc(var(--ai-available) - (var(--ai-gutter) * 2));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: var(--ai-gutter);
   align-items: start;
 }
@@ -1064,6 +1065,7 @@
   }
 
   .ai-shell {
+    width: 100%;
     min-height: 0;
     gap: 0;
   }
@@ -1182,4 +1184,12 @@
   .quick-grid button:hover {
     transform: none;
   }
+}
+/* Match the navigation container gutters at each breakpoint. */
+@media (min-width: 600px) {
+  .ai-page { --ai-page-inset: 24px; }
+}
+
+@media (min-width: 900px) {
+  .ai-page { --ai-page-inset: 32px; }
 }

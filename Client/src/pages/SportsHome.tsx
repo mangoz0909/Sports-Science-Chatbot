@@ -76,7 +76,7 @@ export default function UnifiedAIHome() {
         ])}
       />
       {statusChip && (
-        <Stack alignItems="flex-end" sx={{ px: { xs: 2, md: 3 }, pt: 1.5 }}>
+        <Stack alignItems="flex-end" sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 2, sm: 3, md: 4 }, pt: 1.5 }}>
           {statusChip}
         </Stack>
       )}

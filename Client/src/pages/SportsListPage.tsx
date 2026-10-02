@@ -670,10 +670,10 @@ export default function SportsListPage() {
         ])}
       />
       <Container
-        maxWidth="xl"
+        maxWidth="lg"
         sx={{
-          py: { xs: 2.5, md: 5 },
-          px: { xs: 2, sm: 3 },
+          py: { xs: 2.5, md: 3 },
+          px: { xs: 2, sm: 3, md: 4 },
         }}
       >
         <Stack spacing={1.2} sx={{ mb: { xs: 2, md: 3 } }}>

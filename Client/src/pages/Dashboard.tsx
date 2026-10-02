@@ -221,7 +221,7 @@ if (loading) {
   // the entire page and every element jumped into place afterwards.
   return (
     <Box sx={{ bgcolor: "#f8fafc" }} aria-busy="true" aria-live="polite">
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2.5, md: 3 } }}>
         <Stack spacing={1.2} sx={{ mb: 3 }}>
           <Skeleton variant="rounded" width={230} height={32} sx={{ borderRadius: 999 }} />
           <Skeleton variant="text" width="min(460px, 80%)" height={56} />
@@ -331,7 +331,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           {snackError}
         </Alert>
       </Snackbar>
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2.5, md: 3 } }}>
         <Stack spacing={1.2} sx={{ mb: 3 }}>
           <Chip
             label="Personal Sports Health Dashboard"

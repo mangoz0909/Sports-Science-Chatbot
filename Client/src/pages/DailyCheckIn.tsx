@@ -295,7 +295,7 @@ export default function DailyCheckIn() {
         path="/daily-check-in"
         noIndex
       />
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2.5, md: 3 } }}>
         <Stack spacing={1.2} sx={{ mb: 3 }}>
           <Chip
             label="Daily Athlete Check-In"

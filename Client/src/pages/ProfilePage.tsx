@@ -410,7 +410,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <Box sx={{ bgcolor: "#f8fafc", py: { xs: 4, md: 7 } }} aria-busy="true">
+      <Box sx={{ bgcolor: "#f8fafc", py: { xs: 2.5, md: 3 } }} aria-busy="true">
         <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
           <Stack spacing={3} alignItems="center">
             <Skeleton variant="text" width="min(560px, 90%)" height={68} />
@@ -441,7 +441,7 @@ export default function ProfilePage() {
       sx={{
         minHeight: "calc(100dvh - var(--app-header-h, 64px))",
         bgcolor: "#f8fafc",
-        py: { xs: 4, md: 7 },
+        py: { xs: 2.5, md: 3 },
         overflowX: "hidden",
       }}
     >

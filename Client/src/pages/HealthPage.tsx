@@ -21,7 +21,7 @@ export default function HealthPage() {
   return (
     <Box sx={{ bgcolor: "#f8fafc" }}>
       <Box sx={{ bgcolor: "#fff", borderBottom: "1px solid #e2e8f0" }}>
-        <Container maxWidth="xl" sx={{ pt: { xs: 3, md: 5 }, pb: 0 }}>
+        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 }, pt: { xs: 2.5, md: 3 }, pb: 0 }}>
           <Chip
             label="Health & Performance"
             sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 900, mb: 1.5 }}
@@ -78,8 +78,8 @@ export default function HealthPage() {
       </Box>
 
       <Container
-        maxWidth="xl"
-        sx={{ py: { xs: 3, md: 5 } }}
+        maxWidth="lg"
+        sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2.5, md: 3 } }}
         // The routed page IS the panel — one panel swapped by the router
         // rather than two mounted ones, so a single id both tabs point at.
         id="health-panel"
