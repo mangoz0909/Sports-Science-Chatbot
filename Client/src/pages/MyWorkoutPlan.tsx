@@ -221,7 +221,12 @@ export default function MyWorkoutPlan() {
             </Typography>
           </Box>
 
-          {activeTab === "planner" && <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1.5}
+            alignItems="center"
+            sx={{ display: activeTab === "planner" ? "flex" : "none" }}
+          >
             {session && (
               <Chip label={`${completed} / ${total} sets`} variant="outlined" />
             )}
@@ -242,7 +247,7 @@ export default function MyWorkoutPlan() {
             >
               Customize
             </Button>
-          </Stack>}
+          </Stack>
         </Stack>
 
         <Tabs
