@@ -70,7 +70,7 @@ const workspaceCards = [
     title: "AI Workout Planner",
     desc: "Generate personalized training plans based on your sport, goals, schedule, and athlete profile.",
     icon: <FitnessCenterIcon />,
-    to: "/health/workout",
+    to: "/my-workout-plan?tab=ai",
     cta: "Generate Workout",
     color: "#8b5cf6",
   },

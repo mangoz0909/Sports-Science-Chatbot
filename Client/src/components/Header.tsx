@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { label: "Sports Match", to: "/sports-list" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "My Workout", to: "/my-workout-plan" },
-  { label: "Health", to: "/health/workout", match: "/health" },
+  { label: "Health", to: "/health/nutrition", match: "/health" },
 ];
 
 const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (

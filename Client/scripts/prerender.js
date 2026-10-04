@@ -22,7 +22,7 @@ const BUILD_DIR = path.join(__dirname, "..", "build");
 const SITE_URL = "https://sportslabai.onrender.com";
 
 // Keep in sync with public/sitemap.xml — these are the indexable routes.
-const ROUTES = ["/", "/sports", "/sports-list", "/health/workout", "/health/nutrition"];
+const ROUTES = ["/", "/sports", "/sports-list", "/health/nutrition"];
 
 const MIME = {
   ".html": "text/html; charset=utf-8",

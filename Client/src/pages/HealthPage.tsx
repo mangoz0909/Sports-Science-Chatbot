@@ -1,93 +1,21 @@
-import React from "react";
-import { Box, Container, Tab, Tabs, Typography, Chip } from "@mui/material";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Box, Container, Typography, Chip } from "@mui/material";
+import { Outlet } from "react-router-dom";
 
 export default function HealthPage() {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-
-  const tabValue = pathname.startsWith("/health/nutrition") ? 1 : 0;
-
-  // Each tab is its own indexable URL, so the page heading has to name that
-  // route rather than the shared section.
-  const heading = tabValue === 1 ? "Your Nutrition Plan" : "Your Workout Plan";
-
-  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-    navigate(newValue === 0 ? "/health/workout" : "/health/nutrition");
-  };
-
   return (
     <Box sx={{ bgcolor: "#f8fafc" }}>
       <Box sx={{ bgcolor: "#fff", borderBottom: "1px solid #e2e8f0" }}>
-        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 }, pt: { xs: 2.5, md: 3 }, pb: 0 }}>
-          <Chip
-            label="Health & Performance"
-            sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 900, mb: 1.5 }}
-          />
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{
-              fontWeight: 950,
-              letterSpacing: -0.8,
-              color: "#0f172a",
-              fontSize: { xs: "1.5rem", md: "2.6rem" },
-              mb: 0.5,
-            }}
-          >
-            {heading}
+        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2.5, md: 3 } }}>
+          <Chip label="Health & Performance" sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 900, mb: 1.5 }} />
+          <Typography variant="h3" component="h1" sx={{ fontWeight: 950, letterSpacing: -0.8, color: "#0f172a", fontSize: { xs: "1.5rem", md: "2.6rem" }, mb: 0.5 }}>
+            Your Nutrition Plan
           </Typography>
-          <Typography color="#64748b" sx={{ mb: 2 }}>
-            AI-generated workout and nutrition plans personalised to your profile and daily check-in data.
+          <Typography color="#64748b">
+            AI-generated nutrition plans personalised to your profile and daily check-in data.
           </Typography>
-
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            aria-label="Health plan sections"
-            sx={{
-              "& .MuiTab-root": {
-                fontWeight: 800,
-                fontSize: "0.95rem",
-                textTransform: "none",
-                minHeight: 48,
-                color: "#64748b",
-              },
-              "& .Mui-selected": { color: "#0284c7" },
-              "& .MuiTabs-indicator": { bgcolor: "#0284c7", height: 3 },
-            }}
-          >
-            <Tab
-              icon={<FitnessCenterIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Workout Plan"
-              id="health-tab-workout"
-              aria-controls="health-panel"
-            />
-            <Tab
-              icon={<RestaurantMenuIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Nutrition Plan"
-              id="health-tab-nutrition"
-              aria-controls="health-panel"
-            />
-          </Tabs>
         </Container>
       </Box>
-
-      <Container
-        maxWidth="lg"
-        sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2.5, md: 3 } }}
-        // The routed page IS the panel — one panel swapped by the router
-        // rather than two mounted ones, so a single id both tabs point at.
-        id="health-panel"
-        role="tabpanel"
-        aria-labelledby={
-          tabValue === 0 ? "health-tab-workout" : "health-tab-nutrition"
-        }
-      >
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2.5, md: 3 } }}>
         <Outlet />
       </Container>
     </Box>

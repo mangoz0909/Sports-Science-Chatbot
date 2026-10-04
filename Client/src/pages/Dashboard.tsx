@@ -703,7 +703,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                 </Typography>
                 <Button
                   component={RouterLink}
-                  to="/health/workout"
+                  to="/my-workout-plan?tab=ai"
                   variant="contained"
                   sx={{ mt: 2.5, borderRadius: 3, bgcolor: "#1d4ed8", fontWeight: 800, textTransform: "none", boxShadow: "none", "&:hover": { bgcolor: "#1e40af", boxShadow: "none" } }}
                 >

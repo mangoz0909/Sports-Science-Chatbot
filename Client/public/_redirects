@@ -3,7 +3,7 @@
 # shadow a prerendered file, whatever the host's directory-index behaviour.
 /sports             /sports/index.html             200
 /sports-list        /sports-list/index.html        200
-/health/workout     /health/workout/index.html     200
+/health/workout     /my-workout-plan?tab=ai       301
 /health/nutrition   /health/nutrition/index.html   200
 
 # Everything else is client-routed.
