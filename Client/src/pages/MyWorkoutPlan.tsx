@@ -208,7 +208,7 @@ export default function MyWorkoutPlan() {
           mb={3}
         >
           <Box>
-            {activeTab === "planner" && <Stack direction="row" spacing={1.5} alignItems="center">
+            <Stack direction="row" spacing={1.5} alignItems="center">
               <FitnessCenterIcon sx={{ fontSize: 32 }} />
 
               <Typography variant="h4" component="h1" fontWeight={800}>
@@ -221,7 +221,7 @@ export default function MyWorkoutPlan() {
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          {activeTab === "planner" && <Stack direction="row" spacing={1.5} alignItems="center">
             {session && (
               <Chip label={`${completed} / ${total} sets`} variant="outlined" />
             )}
