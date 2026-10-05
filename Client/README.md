@@ -88,6 +88,35 @@ which is what makes it safe with lazily-loaded routes.
 The step is deliberately non-fatal: a prerender failure leaves the normal SPA
 build in place and exits 0. Set `PRERENDER=false` to skip it.
 
+## Hosting on Render
+
+The prerendered files only reach visitors if the host maps each clean URL to
+its file. Render static sites do **not** read a Netlify-style `_redirects`
+file (one used to live in `public/` and was served as a plain download while
+every route got the homepage HTML, title and canonical). The rules live in the
+Render dashboard instead: **Static Site → Settings → Redirects/Rewrites**.
+
+Order matters — Render applies the first match, so the catch-all goes last:
+
+| Source | Destination | Action |
+|---|---|---|
+| `/sports` | `/sports/index.html` | Rewrite |
+| `/sports-list` | `/sports-list/index.html` | Rewrite |
+| `/health/workout` | `/health/workout/index.html` | Rewrite |
+| `/health/nutrition` | `/health/nutrition/index.html` | Rewrite |
+| `/privacy` | `/privacy/index.html` | Rewrite |
+| `/*` | `/index.html` | Rewrite |
+
+Keep this table in step with `ROUTES` in `scripts/prerender.js`. To check a
+deploy, the raw HTML of each route must carry its own title and canonical:
+
+```bash
+curl -s https://sportslabai.onrender.com/sports | grep -o '<link rel="canonical"[^>]*>'
+```
+
+Unknown URLs still return `200` with the app's client-side 404 page (marked
+`noindex`), because the catch-all has to serve `index.html` for client routes.
+
 ## Tests
 
 Vitest with jsdom, configured in the `test` block of `vite.config.ts`.

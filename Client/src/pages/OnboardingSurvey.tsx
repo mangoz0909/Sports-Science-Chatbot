@@ -700,6 +700,26 @@ export default function OnboardingSurvey() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
+    /*
+     * Pressing Enter in a step's only text field (e.g. "Primary sport")
+     * submits the whole form — the browser does that even with no submit
+     * button on screen. Treat it as "Continue" until the final step.
+     */
+    if (step < totalSteps - 1) {
+      nextStep();
+      return;
+    }
+
+    for (let s = 0; s < totalSteps; s++) {
+      const validationError = validateStep(s);
+
+      if (validationError) {
+        setStep(s);
+        setError(validationError);
+        return;
+      }
+    }
+
     setError(null);
     setSubmitting(true);
 

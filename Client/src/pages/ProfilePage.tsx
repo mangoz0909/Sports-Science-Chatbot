@@ -117,6 +117,10 @@ export default function ProfilePage() {
   const [deleting, setDeleting] = React.useState(false);
 
   const [error, setError] = React.useState<string | null>(null);
+  // True when the saved profile couldn't be read. Save stays disabled so a
+  // blank form can never overwrite the real profile.
+  const [loadFailed, setLoadFailed] = React.useState(false);
+  const [loadAttempt, setLoadAttempt] = React.useState(0);
   const [success, setSuccess] = React.useState<string | null>(null);
 
   const [email, setEmail] = React.useState("");
@@ -181,14 +185,27 @@ export default function ProfilePage() {
             ""
         );
 
-        const [prefs, latestCheckIn] = await Promise.all([
+        // Settled separately: a failed check-in fetch must not hide the saved
+        // preferences, and a failed preferences fetch must not leave a blank
+        // form that Save would then write over the athlete's real profile.
+        const [prefsResult, checkInResult] = await Promise.allSettled([
           getUserPreferences(),
           getLatestCheckIn(),
         ]);
 
         if (!mounted) return;
 
-        setCheckIn(latestCheckIn);
+        if (checkInResult.status === "fulfilled") {
+          setCheckIn(checkInResult.value);
+        }
+
+        if (prefsResult.status === "rejected") {
+          throw prefsResult.reason;
+        }
+
+        const prefs = prefsResult.value;
+
+        setLoadFailed(false);
 
         if (prefs) {
           const stored = prefs as Record<string, unknown>;
@@ -220,6 +237,7 @@ export default function ProfilePage() {
         }
       } catch (err: any) {
         if (!mounted) return;
+        setLoadFailed(true);
         setError(err?.message || "Failed to load profile.");
       } finally {
         if (mounted) setLoading(false);
@@ -231,7 +249,7 @@ export default function ProfilePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   function updateField<K extends keyof ExtendedUserPreferences>(
     key: K,
@@ -244,6 +262,8 @@ export default function ProfilePage() {
   }
 
   async function handleSave() {
+    if (loadFailed) return;
+
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -495,8 +515,24 @@ export default function ProfilePage() {
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ width: "100%", maxWidth: 1180 }}>
-              {error}
+            <Alert
+              severity="error"
+              sx={{ width: "100%", maxWidth: 1180 }}
+              action={
+                loadFailed ? (
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => setLoadAttempt((n) => n + 1)}
+                  >
+                    Retry
+                  </Button>
+                ) : undefined
+              }
+            >
+              {loadFailed
+                ? `${error} Saving is turned off until your profile loads, so nothing gets overwritten.`
+                : error}
             </Alert>
           )}
 
@@ -908,7 +944,7 @@ export default function ProfilePage() {
                   >
                     <Button
                       variant="contained"
-                      disabled={saving}
+                      disabled={saving || loadFailed}
                       onClick={handleSave}
                       sx={{
                         borderRadius: 3,

@@ -86,6 +86,10 @@ const MyWorkoutPlan = React.lazy(
   () => import("./pages/MyWorkoutPlan")
 );
 
+const PrivacyPage = React.lazy(
+  () => import("./pages/PrivacyPage")
+);
+
 const App: React.FC = () => {
   return (
     <HelmetProvider>
@@ -363,6 +367,12 @@ const App: React.FC = () => {
                           replace
                         />
                       }
+                    />
+
+                    {/* PRIVACY */}
+                    <Route
+                      path="/privacy"
+                      element={<PrivacyPage />}
                     />
 
                     {/* 404 */}

@@ -32,6 +32,7 @@ import Seo, { breadcrumbs } from "../components/Seo";
 import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 import { cleanJsonResponse } from "../lib/aiJson";
 import { functionErrorMessage } from "../lib/functionError";
+import { normalizeNutritionPlan, type NutritionPlan } from "../lib/nutritionPlan";
 
 async function callOpenAI(prompt: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-complete", {
@@ -64,22 +65,6 @@ type MacroItem = {
   unit: string;
 };
 
-type MealItem = {
-  meal: string;
-  foods: string;
-  timing: string;
-};
-
-type NutritionPlan = {
-  summary: string;
-  calories: string;
-  protein: string;
-  carbs: string;
-  fat: string;
-  hydration: string;
-  meals: MealItem[];
-  tip: string;
-};
 
 export default function NutritionPage() {
   const { session, loading: authLoading } = useAuth();
@@ -323,7 +308,7 @@ Required JSON fields:
 
 - "meals": array of 5 meal objects, each with:
   - "meal": meal name
-  - "foods": specific food examples
+  - "foods": specific food examples as ONE plain string, comma-separated (not an array)
   - "timing": when to eat
 
 Example meal names:
@@ -382,17 +367,11 @@ Do not include any extra text.
 
       // Not named `plan`: that is the state variable, and shadowing it inside
       // this function is how a later edit reads the wrong one.
-      const generated = parsed as NutritionPlan | null;
+      // Normalised before it is shown or cached: a raw array or object in
+      // `foods` crashed the page, and the cached copy crashed it all day.
+      const generated = normalizeNutritionPlan(parsed);
 
-      // A reply that parses to null or a bare array reached `.meals` on a
-      // non-object and surfaced a TypeError to the athlete.
-      if (
-        !generated ||
-        typeof generated !== "object" ||
-        Array.isArray(generated) ||
-        !Array.isArray(generated.meals) ||
-        generated.meals.length === 0
-      ) {
+      if (!generated) {
         console.error("Unexpected nutrition response:", parsed);
 
         throw new Error(
@@ -437,15 +416,19 @@ Do not include any extra text.
       try {
         // Falls back to the browser cache on its own if Supabase fails.
         const saved =
-          await loadTodaysPlan<NutritionPlan>(
+          await loadTodaysPlan<unknown>(
             "nutrition",
             userId
           );
 
         if (cancelled) return;
 
-        if (saved?.meals?.length) {
-          setPlan(saved);
+        // Plans cached before normalisation existed can still hold arrays
+        // or objects; an unusable one is regenerated rather than rendered.
+        const restored = normalizeNutritionPlan(saved);
+
+        if (restored) {
+          setPlan(restored);
           return;
         }
 

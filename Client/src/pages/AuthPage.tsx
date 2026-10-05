@@ -17,7 +17,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -569,6 +569,16 @@ const AuthPage: React.FC = () => {
                     ? "Login"
                     : "Create Account"}
                 </Button>
+
+                {mode === "signup" && (
+                  <Typography color="#64748b" fontSize={13} textAlign="center">
+                    By creating an account you agree to how we handle your data in our{" "}
+                    <Link component={RouterLink} to="/privacy" sx={{ fontWeight: 800 }}>
+                      Privacy Policy
+                    </Link>
+                    .
+                  </Typography>
+                )}
 
                 <Typography color="#64748b" textAlign="center">
                   {mode === "login" ? "No account yet?" : "Already have an account?"}{" "}

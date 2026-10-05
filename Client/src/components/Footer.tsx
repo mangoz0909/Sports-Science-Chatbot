@@ -97,6 +97,7 @@ const Footer: React.FC = () => {
                 { label: "Check-In", to: "/daily-check-in" },
                 { label: "Log in", to: "/auth?mode=login" },
                 { label: "Sign up", to: "/auth?mode=signup" },
+                { label: "Privacy", to: "/privacy" },
               ].map((link) => (
                 <Link
                   key={link.label}
