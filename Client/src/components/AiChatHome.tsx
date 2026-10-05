@@ -253,6 +253,7 @@ export default function AiChatHome({
   const [error, setError] = useState("");
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(!!chatType);
+  const [clearing, setClearing] = useState(false);
   const [attachment, setAttachment] = useState<ImageAttachment | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -308,6 +309,8 @@ export default function AiChatHome({
   const canSend =
     (message.trim().length > 0 || !!attachment) &&
     !isLoading &&
+    !historyLoading &&
+    !clearing &&
     !attaching &&
     !overLimit;
 
@@ -524,7 +527,7 @@ export default function AiChatHome({
     const typed = text.trim();
     const userMessage = typed || (image ? "What can you tell me about this image?" : "");
 
-    if (!userMessage || isLoading || typed.length > MAX_MESSAGE_LENGTH) return;
+    if (!userMessage || isLoading || historyLoading || clearing || typed.length > MAX_MESSAGE_LENGTH) return;
 
     if (!isLoggedIn) {
       setError("Sign in to start chatting with the AI.");
@@ -545,14 +548,14 @@ export default function AiChatHome({
     setMessage("");
     setAttachment(null);
     void requestReply(next);
-  }, [messages, isLoading, isLoggedIn, requestReply]);
+  }, [messages, isLoading, historyLoading, clearing, isLoggedIn, requestReply]);
 
   const retryLastMessage = useCallback(() => {
-    if (isLoading) return;
+    if (isLoading || historyLoading || clearing) return;
     // `messages` still ends with the user message that failed, so replaying the
     // conversation as-is retries it without duplicating anything.
     void requestReply(messages);
-  }, [messages, isLoading, requestReply]);
+  }, [messages, isLoading, historyLoading, clearing, requestReply]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -566,9 +569,19 @@ export default function AiChatHome({
     }
   };
 
-  const clearConversation = () => {
-    setMessages([]);
-    if (chatType) clearChatHistory(chatType).catch(() => {});
+  const clearConversation = async () => {
+    if (isLoading || historyLoading || clearing) return;
+    setClearing(true);
+    try {
+      if (chatType) await clearChatHistory(chatType, session?.user.id);
+      setMessages([]);
+      setLastFailedMessage(null);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not clear your chat. Please try again.");
+    } finally {
+      setClearing(false);
+    }
   };
 
   return (
@@ -589,8 +602,8 @@ export default function AiChatHome({
             </div>
             {messages.length > 0 && (
               <div className="header-actions">
-                <button className="clear-btn" type="button" onClick={clearConversation}>
-                  ✕ Clear chat
+                <button className="clear-btn" type="button" disabled={isLoading || historyLoading || clearing} onClick={() => void clearConversation()}>
+                  {clearing ? "Clearing…" : "✕ Clear chat"}
                 </button>
               </div>
             )}

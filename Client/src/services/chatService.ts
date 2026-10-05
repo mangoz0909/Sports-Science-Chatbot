@@ -68,10 +68,14 @@ export async function saveChatExchange(
   }
 }
 
-export async function clearChatHistory(chatType: ChatType) {
+export async function clearChatHistory(chatType: ChatType, expectedUserId?: string) {
   const user = await requireCurrentUser(
     "You must be logged in to clear your chat history.",
   );
+
+  if (expectedUserId && user.id !== expectedUserId) {
+    throw new Error("The signed-in account changed while clearing this conversation.");
+  }
 
   const { error } = await supabase
     .from("chat_messages")

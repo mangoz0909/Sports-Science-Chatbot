@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type QueryCall = { column: string; ascending: boolean; limit: number };
 
 const calls: QueryCall[] = [];
+const inserts = vi.hoisted(() => vi.fn(async () => ({ error: null })));
 let rows: Array<Record<string, unknown>> = [];
 
 vi.mock("../lib/supabaseClient", () => {
@@ -20,6 +21,7 @@ vi.mock("../lib/supabaseClient", () => {
     ascending: true,
   };
 
+  builder.insert = inserts;
   builder.select = () => builder;
   builder.eq = () => builder;
   builder.order = (column: string, options: { ascending: boolean }) => {
@@ -51,7 +53,7 @@ vi.mock("../lib/supabaseClient", () => {
   };
 });
 
-const { getChatHistory } = await import("./chatService");
+const { getChatHistory, saveChatExchange, clearChatHistory } = await import("./chatService");
 
 /** 150 turns, oldest first, so the 100-row cap has to drop something. */
 function transcript(count: number) {
@@ -115,4 +117,19 @@ describe("getChatHistory", () => {
 
     expect(history.map((row) => row.role)).toEqual(["user", "bot"]);
   });
+});
+
+
+describe("saveChatExchange account ownership", () => {
+  it("rejects a reply started by a different account before inserting rows", async () => {
+    inserts.mockClear();
+    await expect(saveChatExchange("question", "reply", "sports", "athlete-2"))
+      .rejects.toThrow("account changed");
+    expect(inserts).not.toHaveBeenCalled();
+  });
+});
+
+
+it("does not clear the new account's chats after the signed-in account changes", async () => {
+  await expect(clearChatHistory("sports", "athlete-2")).rejects.toThrow("account changed");
 });
