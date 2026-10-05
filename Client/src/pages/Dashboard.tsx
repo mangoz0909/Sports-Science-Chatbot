@@ -266,6 +266,22 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
   const today = localDateString();
   const checkedInToday = !isGuest && latestCheckIn?.checkin_date === today;
 
+  /*
+   * The cards read the latest check-in whatever its date. Advice written for
+   * "today" only runs on today's check-in: a six-day-old 90% fatigue reading
+   * was announcing "today should be a recovery day" right beside the banner
+   * asking the athlete to log today's check-in.
+   */
+  const staleCheckIn = !isGuest && !hasNoData && !checkedInToday && Boolean(latestCheckIn);
+  const lastCheckInLabel = latestCheckIn?.checkin_date
+    ? new Date(latestCheckIn.checkin_date + "T00:00:00").toLocaleDateString(undefined, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })
+    : "";
+  const STALE_ADVICE = `Your last check-in was on ${lastCheckInLabel}. Log today's check-in and today's advice will appear here.`;
+
   const kpis = [
     {
       label: "My Readiness",
@@ -345,6 +361,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
           <Typography
             variant="h3"
+            component="h1"
             sx={{
               fontWeight: 950,
               letterSpacing: -0.8,
@@ -431,6 +448,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
             <Typography fontSize={12} color={checkedInToday ? "#4ade80" : "#b45309"} fontWeight={600}>
               {checkedInToday
                 ? "Your dashboard stats reflect today's data."
+                : staleCheckIn
+                ? `The cards below show your last check-in (${lastCheckInLabel}).`
                 : "Dashboard KPIs will update once you log your daily check-in."}
             </Typography>
           </Box>
@@ -555,7 +574,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       </Typography>
                     </Stack>
                     <Typography color="#1e3a5f" fontSize={14} lineHeight={1.8}>
-                      {getAIRecommendation(!hasNoData, userProfile)}
+                      {staleCheckIn ? STALE_ADVICE : getAIRecommendation(!hasNoData, userProfile)}
                     </Typography>
                   </Box>
                 </Box>
@@ -565,6 +584,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
                     {hasNoData
                       ? `Once you have logged a check-in, today's focus will be tailored to your readiness and recovery.`
+                      : staleCheckIn
+                      ? `Log today's check-in to get a focus tailored to how you feel today.`
                       : userProfile.fatigue >= 60
                       ? `High fatigue detected. Keep ${userProfile.sport} work technical and low-intensity today — prioritise sleep and hydration.`
                       : userProfile.recovery < 50
@@ -584,7 +605,9 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       Fatigue Detection
                     </Typography>
                     <Typography color="#475569" fontSize={14} lineHeight={1.75} sx={{ mt: 1 }}>
-                      Current fatigue is {userProfile.fatigue}%. {fatigueVerdict(userProfile.fatigue)}
+                      {staleCheckIn
+                        ? `Fatigue was ${userProfile.fatigue}% at your last check-in (${lastCheckInLabel}). Log today's check-in for today's reading.`
+                        : `Current fatigue is ${userProfile.fatigue}%. ${fatigueVerdict(userProfile.fatigue)}`}
                     </Typography>
                   </Box>
                 )}

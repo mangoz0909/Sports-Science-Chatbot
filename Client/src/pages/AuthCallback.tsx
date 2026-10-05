@@ -3,6 +3,7 @@ import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material"
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { syncGoogleProfile } from "../services/profileService";
+import { needsOnboarding, postLoginTarget, readOAuthError, takeReturnPath } from "../lib/postLogin";
 import Seo from "../components/Seo";
 
 export default function AuthCallback() {
@@ -11,6 +12,19 @@ export default function AuthCallback() {
 
   React.useEffect(() => {
     let cancelled = false;
+
+    // Read before anything else: a cancelled or failed Google sign-in comes
+    // back with `error` in the URL and no tokens. Polling for a session first
+    // cost the user a 5-second spinner and then reported "session missing".
+    const oauthError = readOAuthError(window.location.search, window.location.hash);
+
+    if (oauthError) {
+      takeReturnPath();
+      const params = new URLSearchParams({ mode: "login", error: oauthError.code });
+      if (oauthError.description) params.set("error_description", oauthError.description);
+      navigate(`/auth?${params.toString()}`, { replace: true });
+      return;
+    }
 
     const timeout = setTimeout(() => {
       if (!cancelled) {
@@ -54,23 +68,12 @@ export default function AuthCallback() {
 
         await syncGoogleProfile();
 
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("primary_sport, experience_level, main_goal")
-          .eq("id", session.user.id)
-          .maybeSingle();
+        const onboarding = await needsOnboarding(session.user.id);
 
         if (cancelled) return;
-        if (profileError) throw profileError;
 
-        const needsOnboarding =
-          !profile?.primary_sport ||
-          !profile?.experience_level ||
-          !profile?.main_goal;
-
-        navigate(needsOnboarding ? "/onboarding" : "/dashboard", {
-          replace: true,
-        });
+        const target = postLoginTarget(onboarding, takeReturnPath());
+        navigate(target.path, { replace: true, state: target.state });
       } catch (err: any) {
         if (!cancelled) {
           setError(err?.message || "Could not finish Google sign in.");

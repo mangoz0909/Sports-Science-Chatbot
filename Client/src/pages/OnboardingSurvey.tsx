@@ -387,6 +387,7 @@ function SectionTitle({
 
       <Typography
         variant="h4"
+        component="h1"
         sx={{
           fontWeight: 950,
           letterSpacing: -0.6,

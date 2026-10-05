@@ -132,10 +132,25 @@ export default function ResetPasswordPage() {
     }
   };
 
+  // Every branch carries its own <Seo>: these states used to render with
+  // the homepage title and no noindex, so a crawler or a shared reset link
+  // saw a password page presenting itself as the landing page.
+  const seo = (
+    <Seo
+      title="Reset Your Password"
+      description="Choose a new password for your SportLab AI account."
+      noIndex
+    />
+  );
+
   if (!sessionReady) {
     return (
       <Box sx={{ minHeight: "calc(100dvh - var(--app-header-h, 64px))", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
+        {seo}
         <Box textAlign="center" role="status" aria-live="polite">
+          <Typography component="h1" sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>
+            Reset your password
+          </Typography>
           {linkInvalid ? (
             <Container maxWidth="xs" disableGutters>
               <Alert severity="error" sx={{ mb: 2, borderRadius: 2, textAlign: "left" }}>
@@ -173,14 +188,10 @@ export default function ResetPasswordPage() {
 
   return (
     <Box sx={{ minHeight: "calc(100dvh - var(--app-header-h, 64px))", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
-      <Seo
-        title="Reset Your Password"
-        description="Choose a new password for your SportLab AI account."
-        noIndex
-      />
+      {seo}
       <Container maxWidth="xs">
         <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>
-          <Typography variant="h5" fontWeight={950} color="#0f172a" sx={{ mb: 0.5 }}>
+          <Typography variant="h5" component="h1" fontWeight={950} color="#0f172a" sx={{ mb: 0.5 }}>
             Set new password
           </Typography>
           <Typography color="#64748b" fontSize={14} sx={{ mb: 3 }}>

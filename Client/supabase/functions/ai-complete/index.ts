@@ -1,22 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { consumeQuota } from "../_shared/quota.ts";
+import { allowedOrigins, DEFAULT_ALLOWED_ORIGINS } from "../_shared/cors.ts";
 
-// Origins that may call this function. Set ALLOWED_ORIGINS in the function's
-// environment (comma-separated) when the app moves to a new domain — the
-// defaults below are only a fallback so an unset variable can't break prod.
-const DEFAULT_ALLOWED_ORIGINS = [
-  "https://sportslabai.onrender.com",
-  "http://localhost:3000",
-  "http://localhost:5173",
-];
+// Origins that may call this function come from ../_shared/cors.ts: set
+// ALLOWED_ORIGINS (comma-separated) in the function's environment when the app
+// moves to a new domain.
 
-const allowedOrigins = new Set([
-  ...DEFAULT_ALLOWED_ORIGINS,
-  ...(Deno.env.get("ALLOWED_ORIGINS") ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-]);
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
@@ -257,7 +246,7 @@ Deno.serve(async (req: Request) => {
     const quota = await consumeQuota(supabase, DAILY_REQUEST_LIMIT);
 
     if (!quota.allowed) {
-      return jsonResponse({ error: quota.message }, 429, corsHeaders);
+      return jsonResponse({ error: quota.message }, quota.status, corsHeaders);
     }
 
     // Accepted and ignored rather than rejected: during a rollout the old

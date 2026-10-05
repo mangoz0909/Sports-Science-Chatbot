@@ -28,7 +28,7 @@ const sections: { heading: string; body: React.ReactNode }[] = [
           <li><strong>Athlete profile:</strong> age, height, weight, activity level, sport, experience, goals, training days, injury areas, equipment, and food preferences, allergies and intolerances.</li>
           <li><strong>Daily check-ins:</strong> sleep, energy, soreness, fatigue, stress, mood, hydration, nutrition, training intensity, pain level, any notes you write, and the readiness scores calculated from them.</li>
           <li><strong>AI coach conversations:</strong> the messages you send and the replies you receive. Photos you attach are sent to the AI with your message but are not saved.</li>
-          <li><strong>Plans:</strong> the workout and nutrition plans generated for you each day, and the sets and weights you log.</li>
+          <li><strong>Plans:</strong> the workout and nutrition plans generated for you each day.</li>
           <li><strong>Usage count:</strong> how many AI requests you make each day, so we can apply a fair-use limit.</li>
         </ul>
         <p>We do not use advertising or analytics trackers.</p>
@@ -71,8 +71,11 @@ const sections: { heading: string; body: React.ReactNode }[] = [
     body: (
       <p>
         To keep you signed in and load faster, your browser stores your sign-in session and a copy of today's plans.
-        While "Remember me" is ticked (it is by default), your email address is saved so the login form can fill it in. Signing out ends
-        the session; you can clear the rest at any time in your browser's site settings.
+        Your workout log — the sets, reps and weights you record in My Workout Plan — is kept only in this browser and
+        never sent to us. While "Remember me" is ticked (it is by default), your email address is saved so the login
+        form can fill it in. Signing out ends the session and removes the cached plans; your workout log and
+        remembered email stay so they are there next time. You can clear them at any time in your browser's site
+        settings.
       </p>
     ),
   },
@@ -82,7 +85,8 @@ const sections: { heading: string; body: React.ReactNode }[] = [
       <p>
         We keep your data while your account exists. You can edit your profile at any time on the{" "}
         <Link component={RouterLink} to="/profile">Profile</Link> page, and delete your account there too. Deleting
-        your account permanently removes your profile, check-ins, conversations, plans and usage records.
+        your account permanently removes your profile, check-ins, conversations, plans and usage records, and clears
+        everything SportLab AI stored in the browser you delete it from.
       </p>
     ),
   },

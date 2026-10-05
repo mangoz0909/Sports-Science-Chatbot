@@ -92,9 +92,25 @@ export default function NutritionPage() {
   // fallback, so today's macros are the same on every device the athlete opens
   // and are reused all day rather than regenerated.
   const userId = session?.user?.id ?? null;
+
+  /*
+   * The user this component is currently showing. A generation takes several
+   * seconds; if the session ends or switches account meanwhile, its result
+   * belongs to nobody on screen and must not be shown or cached.
+   */
+  const activeUserRef = React.useRef(userId);
+  activeUserRef.current = userId;
+
+  // Signing out (here or in another tab) or switching account used to leave
+  // the previous athlete's plan on screen under the demo banner.
+  React.useEffect(() => {
+    setPlan(null);
+    setError(null);
+  }, [userId]);
   const busy = loading || restoring;
 
   async function generatePlan() {
+    const requestUserId = userId;
     setLoading(true);
     setError(null);
 
@@ -377,6 +393,8 @@ Do not include any extra text.
           "The nutrition plan came back incomplete. Please regenerate it."
         );
       }
+
+      if (activeUserRef.current !== requestUserId) return;
 
       setPlan(generated);
 

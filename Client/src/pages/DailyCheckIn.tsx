@@ -309,6 +309,7 @@ export default function DailyCheckIn() {
 
           <Typography
             variant="h3"
+            component="h1"
             sx={{
               fontWeight: 950,
               letterSpacing: -0.8,
@@ -481,6 +482,10 @@ export default function DailyCheckIn() {
                     placeholder="Add anything important: pain, match schedule, training notes, or recovery concerns."
                     value={data.notes}
                     onChange={(event) => updateValue("notes", event.target.value)}
+                    // Matches the daily_checkins_notes_size constraint, so a long
+                    // note is stopped here rather than rejected by the database.
+                    inputProps={{ maxLength: 2000, "aria-label": "Notes" }}
+                    helperText={data.notes.length > 1800 ? `${data.notes.length}/2000` : " "}
                   />
                 </CardContent>
               </Card>

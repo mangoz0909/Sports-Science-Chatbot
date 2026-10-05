@@ -1,25 +1,15 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { allowedOrigins, DEFAULT_ALLOWED_ORIGINS } from "../_shared/cors.ts";
 
-// ALLOWED_ORIGIN overrides nothing — it is added to the list. The production
-// origin is kept as a default so an unset variable can't break account deletion.
-//
-// 5173 is Vite's default port. vite.config.ts asks for 3000 with
-// strictPort:false, so the dev server silently moves to 5173 whenever 3000 is
-// taken — and account deletion, alone among the three functions, failed CORS
-// there because this list had not been updated with the rest.
-const allowedOrigins = [
-  Deno.env.get("ALLOWED_ORIGIN") || "",
-  "https://sportslabai.onrender.com",
-  "http://localhost:3000",
-  "http://localhost:5173",
-].filter(Boolean);
+// The origin list is shared with the other two functions (../_shared/cors.ts),
+// so one ALLOWED_ORIGINS setting governs all of them.
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
-  const isAllowed = allowedOrigins.includes(origin);
+  const isAllowed = allowedOrigins.has(origin);
   return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : allowedOrigins[0] || "",
+    "Access-Control-Allow-Origin": isAllowed ? origin : DEFAULT_ALLOWED_ORIGINS[0],
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     // POST is CORS-safelisted so the preflight passed without this, but that
     // is incidental — spell the method out rather than relying on it.
@@ -79,7 +69,11 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message || "Failed to delete account" }), {
+    // Logged in full, answered generically: err.message can carry Supabase or
+    // runtime internals that the caller has no use for.
+    console.error("delete-account error:", err);
+
+    return new Response(JSON.stringify({ error: "Failed to delete account. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

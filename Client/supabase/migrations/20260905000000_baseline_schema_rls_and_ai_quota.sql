@@ -28,8 +28,16 @@
 -- --------------------------------
 -- Every statement is idempotent and additive: `create table if not exists`,
 -- `add column if not exists`, and `drop policy if exists` before each
--- `create policy`. Nothing here drops a table, drops a column, or deletes a
--- row. Running it twice is the same as running it once.
+-- `create policy`. Nothing here drops a table or a column. The one place it
+-- deletes rows is the daily_checkins de-duplication below, and only rows that
+-- would otherwise make the unique constraint impossible to add. Running it
+-- twice is the same as running it once.
+--
+-- The whole file is ONE transaction, so any statement that fails rolls back
+-- everything — including ai_usage and consume_ai_quota at the bottom. That is
+-- why the existing tables are first topped up with every column this file
+-- touches and the duplicates are cleared before the constraint: a failure
+-- here used to leave the AI quota uncreated.
 --
 -- The one thing it does rewrite is foreign keys — see the cascade section.
 
@@ -130,6 +138,31 @@ create table if not exists public.daily_checkins (
   constraint daily_checkins_user_date_key unique (user_id, checkin_date)
 );
 
+-- Production's table was made by hand, so top it up with every column this file
+-- (the unique constraint and index below) and the client rely on. `create table
+-- if not exists` above only covers a fresh database; without this a missing
+-- column would abort the whole transaction at the first statement that names it.
+alter table public.daily_checkins add column if not exists id                 uuid default gen_random_uuid();
+alter table public.daily_checkins add column if not exists user_id            uuid;
+alter table public.daily_checkins add column if not exists checkin_date       date;
+alter table public.daily_checkins add column if not exists sleep_hours        numeric;
+alter table public.daily_checkins add column if not exists sleep_quality      numeric;
+alter table public.daily_checkins add column if not exists energy             numeric;
+alter table public.daily_checkins add column if not exists soreness           numeric;
+alter table public.daily_checkins add column if not exists fatigue            numeric;
+alter table public.daily_checkins add column if not exists stress             numeric;
+alter table public.daily_checkins add column if not exists mood               numeric;
+alter table public.daily_checkins add column if not exists hydration          numeric;
+alter table public.daily_checkins add column if not exists nutrition          numeric;
+alter table public.daily_checkins add column if not exists training_intensity numeric;
+alter table public.daily_checkins add column if not exists pain_level         numeric;
+alter table public.daily_checkins add column if not exists notes              text;
+alter table public.daily_checkins add column if not exists readiness_score    numeric;
+alter table public.daily_checkins add column if not exists recovery_score     numeric;
+alter table public.daily_checkins add column if not exists injury_risk        numeric;
+alter table public.daily_checkins add column if not exists created_at         timestamptz default now();
+alter table public.daily_checkins add column if not exists updated_at         timestamptz default now();
+
 -- The client upserts with onConflict "user_id,checkin_date", which requires a
 -- matching unique constraint. Added separately because the table already
 -- exists in production and may not have one — without it, a second check-in on
@@ -148,6 +181,27 @@ begin
           where attrelid = 'public.daily_checkins'::regclass and attname = 'checkin_date')
       ]
   ) then
+    -- The table has had no constraint, so production may already hold two rows
+    -- for one athlete and day. Adding the constraint over them fails, and since
+    -- this file is one transaction that would roll back the AI quota with it.
+    -- Keep the most recently updated row per athlete and day — it is the one the
+    -- athlete last saved. updated_at and created_at can be null on hand-made
+    -- rows, so they sort last, and ctid (the row's physical position) breaks any
+    -- remaining tie so the survivor is always exactly one row, never a coin flip.
+    delete from public.daily_checkins d
+     using (
+       select ctid as row_ctid,
+              row_number() over (
+                partition by user_id, checkin_date
+                order by updated_at desc nulls last,
+                         created_at desc nulls last,
+                         ctid desc
+              ) as rn
+         from public.daily_checkins
+     ) ranked
+     where d.ctid = ranked.row_ctid
+       and ranked.rn > 1;
+
     alter table public.daily_checkins
       add constraint daily_checkins_user_date_key unique (user_id, checkin_date);
   end if;
@@ -195,6 +249,19 @@ create table if not exists public.chat_messages (
   content text not null,
   created_at timestamptz not null default now()
 );
+
+-- Top up a hand-made table with every column this file and the client use.
+-- chat_type matters most: the index below names it, and if the live table
+-- predates it the `create index` fails and rolls back the whole file. The
+-- default is what existing rows are filled with, matching the client's default
+-- chat. `role` is nullable here because a NOT NULL column cannot be added to a
+-- table that already has rows.
+alter table public.chat_messages add column if not exists id         uuid default gen_random_uuid();
+alter table public.chat_messages add column if not exists user_id    uuid;
+alter table public.chat_messages add column if not exists chat_type  text not null default 'sports';
+alter table public.chat_messages add column if not exists role       text;
+alter table public.chat_messages add column if not exists content    text;
+alter table public.chat_messages add column if not exists created_at timestamptz default now();
 
 -- History is fetched oldest-first for one athlete and chat type.
 create index if not exists chat_messages_user_type_created_idx

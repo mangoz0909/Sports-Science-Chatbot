@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { consumeQuota } from "../_shared/quota.ts";
+import { allowedOrigins } from "../_shared/cors.ts";
 
 type RequestBody = {
   message?: unknown;
@@ -117,22 +118,10 @@ function parseImage(
   return { dataUrl: value };
 }
 
-// Origins that may call this function. Set ALLOWED_ORIGINS in the function's
-// environment (comma-separated) when the app moves to a new domain — the
-// defaults below are only a fallback so an unset variable can't break prod.
-const DEFAULT_ALLOWED_ORIGINS = [
-  "https://sportslabai.onrender.com",
-  "http://localhost:3000",
-  "http://localhost:5173",
-];
+// Origins that may call this function come from ../_shared/cors.ts: set
+// ALLOWED_ORIGINS (comma-separated) in the function's environment when the app
+// moves to a new domain.
 
-const allowedOrigins = new Set([
-  ...DEFAULT_ALLOWED_ORIGINS,
-  ...(Deno.env.get("ALLOWED_ORIGINS") ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-]);
 
 // Tools the model may call to read the athlete's own records. Everything runs
 // through the caller's JWT-scoped Supabase client, so RLS still applies and a
@@ -149,6 +138,20 @@ const CHECKIN_COLUMNS =
   "checkin_date, readiness_score, recovery_score, injury_risk, sleep_hours, " +
   "sleep_quality, energy, soreness, fatigue, stress, mood, hydration, " +
   "nutrition, training_intensity, pain_level, notes";
+
+// Stored profile fields and check-in notes are written straight from the
+// browser, so a row can hold far more than the forms allow (the column size
+// limits only guard new writes, and rows from before them may be oversized).
+// Both are interpolated into the prompt on every turn, so each value is cut
+// here: otherwise one bloated row would bypass MAX_MESSAGE_LENGTH and the
+// history caps and inflate the token bill of every request. 500 characters of
+// a note and 1000 of a profile field are well beyond normal answers.
+const MAX_PROFILE_FIELD_LENGTH = 1000;
+const MAX_CHECKIN_NOTES_LENGTH = 500;
+
+function truncateText(value: string, max: number): string {
+  return value.length > max ? `${value.slice(0, max)}…` : value;
+}
 
 // IANA zone names top out well under this; anything longer is not one.
 const MAX_TIME_ZONE_LENGTH = 64;
@@ -359,7 +362,12 @@ async function runTool(
 
     if (error) return { error: error.message };
 
-    const rows = (data ?? []).slice().reverse();
+    const rows = (data ?? []).slice().reverse().map(
+      (row: Record<string, unknown>) =>
+        typeof row.notes === "string"
+          ? { ...row, notes: truncateText(row.notes, MAX_CHECKIN_NOTES_LENGTH) }
+          : row,
+    );
 
     return {
       count: rows.length,
@@ -563,7 +571,16 @@ async function getAthleteProfile(
     return null;
   }
 
-  return data;
+  if (!data) return null;
+
+  return Object.fromEntries(
+    Object.entries(data as Record<string, unknown>).map(([key, value]) => [
+      key,
+      typeof value === "string"
+        ? truncateText(value, MAX_PROFILE_FIELD_LENGTH)
+        : value,
+    ]),
+  );
 }
 Deno.serve(async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
@@ -704,7 +721,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const quota = await consumeQuota(supabase, DAILY_REQUEST_LIMIT);
 
     if (!quota.allowed) {
-      return jsonResponse({ error: quota.message }, 429, corsHeaders);
+      return jsonResponse({ error: quota.message }, quota.status, corsHeaders);
     }
 
     const history = normalizeHistory(body.history);

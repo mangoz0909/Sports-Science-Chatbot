@@ -58,3 +58,22 @@ export function removeStored(key: string): void {
     /* nothing else to do */
   }
 }
+
+/** Removes every key starting with `prefix`. Keys are collected first, since
+ * removing while iterating by index skips entries. */
+export function removeStoredByPrefix(prefix: string): void {
+  const store = storage();
+
+  if (!store) return;
+
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < store.length; i++) {
+      const key = store.key(i);
+      if (key?.startsWith(prefix)) keys.push(key);
+    }
+    keys.forEach((key) => store.removeItem(key));
+  } catch {
+    /* nothing else to do */
+  }
+}

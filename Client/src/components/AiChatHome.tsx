@@ -174,10 +174,13 @@ function formatBotMessage(content: string): ReactNode {
       return;
     }
 
+    // Chat headings sit three levels down (# → h4): the page already has its
+    // own h1, and a reply rendering another one broke the document outline
+    // for screen readers. The class names keep the visual size unchanged.
     if (trimmed.startsWith("# ")) {
       flushList(`list-${i}`);
       elements.push(
-        <h1 key={i} className="markdown-heading-h1"
+        <h4 key={i} className="markdown-heading-h1"
             dangerouslySetInnerHTML={{ __html: renderInline(trimmed.slice(2)) }} />
       );
       return;
@@ -186,7 +189,7 @@ function formatBotMessage(content: string): ReactNode {
     if (trimmed.startsWith("## ")) {
       flushList(`list-${i}`);
       elements.push(
-        <h2 key={i} className="markdown-heading-h2"
+        <h5 key={i} className="markdown-heading-h2"
             dangerouslySetInnerHTML={{ __html: renderInline(trimmed.slice(3)) }} />
       );
       return;
@@ -195,7 +198,7 @@ function formatBotMessage(content: string): ReactNode {
     if (trimmed.startsWith("### ")) {
       flushList(`list-${i}`);
       elements.push(
-        <h3 key={i} className="markdown-heading-h3"
+        <h6 key={i} className="markdown-heading-h3"
             dangerouslySetInnerHTML={{ __html: renderInline(trimmed.slice(4)) }} />
       );
       return;
@@ -716,7 +719,7 @@ export default function AiChatHome({
                   type="button"
                   className="mobile-action-btn"
                   onClick={() => submitMessage(action.prompt)}
-                  disabled={isLoading}
+                  disabled={isLoading || historyLoading}
                 >
                   <span>{action.icon}</span>
                   <span>{action.label}</span>
@@ -829,7 +832,7 @@ export default function AiChatHome({
                   key={action.label}
                   type="button"
                   onClick={() => submitMessage(action.prompt)}
-                  disabled={isLoading}
+                  disabled={isLoading || historyLoading}
                 >
                   {action.icon && <span className="qa-icon">{action.icon}</span>}
                   {action.label}

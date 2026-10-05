@@ -35,8 +35,9 @@ import {
   getUserPreferences,
   saveUserPreferences,
 } from "../services/preferencesService";
-import { getLatestCheckIn } from "../services/checkinService";
+import { getLatestCheckIn, isCheckInFromToday } from "../services/checkinService";
 import { saveMyName } from "../services/profileService";
+import { clearAllUserStorage } from "../lib/userStorage";
 import {
   ACTIVITY_LEVELS,
   COOKING_ACCESS_OPTIONS,
@@ -364,6 +365,7 @@ export default function ProfilePage() {
         throw new Error(body.error || "Failed to delete account.");
       }
 
+      clearAllUserStorage(session.user.id);
       await supabase.auth.signOut();
       navigate("/", { replace: true });
     } catch (err: any) {
@@ -382,6 +384,18 @@ export default function ProfilePage() {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "U";
+
+  // The metrics read the latest check-in whatever its date, so say which day
+  // they are from rather than presenting a week-old reading as today's.
+  const checkInLabel = !checkIn
+    ? "No check-in logged yet"
+    : isCheckInFromToday(checkIn)
+    ? "From today's check-in"
+    : `From your last check-in (${new Date(checkIn.checkin_date + "T00:00:00").toLocaleDateString(undefined, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })})`;
 
   const metrics = [
     {
@@ -495,6 +509,7 @@ export default function ProfilePage() {
 
             <Typography
               variant="h2"
+              component="h1"
               sx={{
                 fontWeight: 950,
                 letterSpacing: -1.2,
@@ -612,6 +627,9 @@ export default function ProfilePage() {
                 </Box>
 
                 <Stack spacing={2.5} sx={{ width: "100%", mt: 2 }}>
+                  <Typography fontSize={12} fontWeight={800} color="#64748b">
+                    {checkInLabel}
+                  </Typography>
                   {metrics.map((metric) => (
                     <Box key={metric.label}>
                       <Stack

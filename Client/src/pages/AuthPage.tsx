@@ -18,6 +18,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import { needsOnboarding, postLoginTarget, rememberReturnPath, safeReturnPath } from "../lib/postLogin";
 
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -37,10 +38,10 @@ import {
 } from "../services/authService";
 import Seo from "../components/Seo";
 import { readStored, removeStored, writeStored } from "../lib/safeStorage";
+import { REMEMBERED_EMAIL_KEY } from "../lib/userStorage";
 
 type Mode = "login" | "signup";
 
-const REMEMBERED_EMAIL_KEY = "rememberedEmail";
 
 /**
  * Failures that arrive as a redirect rather than as a rejected promise.
@@ -76,9 +77,14 @@ function useQuery() {
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const qs = useQuery();
 
-  const initialMode = (qs.get("mode") === "signup" ? "signup" : "login") as Mode;
+  // Where the login wall stopped them (set by ProtectedRoute).
+  const from = safeReturnPath((location.state as { from?: unknown } | null)?.from);
+
+  const urlMode = (qs.get("mode") === "signup" ? "signup" : "login") as Mode;
+  const initialMode = urlMode;
 
   const [mode, setModeRaw] = useState<Mode>(initialMode);
 
@@ -103,8 +109,17 @@ const AuthPage: React.FC = () => {
   const [error, setError] = useState<string | null>(() => readRedirectError(qs));
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // The header's "Log in" / "Get started" links change ?mode= while this page
+  // stays mounted; the form used to ignore them and keep showing the old mode.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    if (urlMode !== mode) setMode(urlMode);
+    // Only a URL change should drive this; `mode` changing on its own is the
+    // in-page toggle, which the effect below writes back to the URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlMode]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
     params.set("mode", mode);
 
     // Read once, above, and then dropped: leaving it in the address bar means a
@@ -114,11 +129,17 @@ const AuthPage: React.FC = () => {
     params.delete("error_description");
 
     const query = params.toString();
-    const url = query
-      ? `${window.location.pathname}?${query}`
-      : window.location.pathname;
 
-    window.history.replaceState({}, "", url);
+    // Through the router, not history.replaceState: that left React Router's
+    // location stale (so header links to the current mode did nothing) and
+    // wiped the router state carrying `from`.
+    if (query !== location.search.replace(/^\?/, "")) {
+      navigate(
+        { pathname: location.pathname, search: query ? `?${query}` : "" },
+        { replace: true, state: location.state }
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   const title = mode === "login" ? "Welcome back" : "Create your account";
@@ -167,6 +188,7 @@ const AuthPage: React.FC = () => {
     setGoogleSubmitting(true);
 
     try {
+      rememberReturnPath(from);
       await signInWithGoogle();
     } catch (err: any) {
       setError(err?.message || "Google sign-in failed. Try again.");
@@ -191,19 +213,35 @@ const AuthPage: React.FC = () => {
 
     try {
       if (mode === "login") {
-        await loginUser(email, password);
+        const { user: signedInUser } = await loginUser(email, password);
         if (remember) {
           writeStored(REMEMBERED_EMAIL_KEY, email);
         } else {
           removeStored(REMEMBERED_EMAIL_KEY);
         }
         setSuccessMsg("Logged in successfully.");
+
+        // Same check the Google path makes: an athlete whose email signup
+        // needed confirmation never reached onboarding, and landed on the
+        // dashboard with an empty profile on every login after.
+        let onboarding = false;
+        if (signedInUser) {
+          try {
+            onboarding = await needsOnboarding(signedInUser.id);
+          } catch {
+            // A failed profile read shouldn't block a successful login.
+          }
+        }
+
+        const target = postLoginTarget(onboarding, from);
+        navigate(target.path, { state: target.state });
       } else {
         await signUpUser(name, email, password);
         setSuccessMsg("Account created successfully.");
-      }
 
-      navigate(mode === "signup" ? "/onboarding" : "/dashboard");
+        const target = postLoginTarget(true, from);
+        navigate(target.path, { state: target.state });
+      }
     } catch (err: any) {
       // Email confirmation is a successful signup with no session yet, so it
       // gets the green message and stays put instead of being reported as a
@@ -387,6 +425,7 @@ const AuthPage: React.FC = () => {
                 <Box>
                   <Typography
                     variant="h3"
+                    component="h1"
                     sx={{
                       fontWeight: 950,
                       letterSpacing: -0.8,

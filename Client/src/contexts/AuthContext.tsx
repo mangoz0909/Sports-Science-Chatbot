@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabaseClient";
+import { clearSessionStorage } from "../lib/userStorage";
 
 interface AuthContextValue {
   session: Session | null;
@@ -41,7 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      // Here rather than in the logout button, so it also runs when the
+      // session ends in another tab or the refresh token expires.
+      if (event === "SIGNED_OUT") clearSessionStorage();
+
       setSession(newSession);
       setLoading(false);
     });

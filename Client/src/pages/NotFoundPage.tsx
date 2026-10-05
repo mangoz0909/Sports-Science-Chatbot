@@ -33,6 +33,7 @@ export default function NotFoundPage() {
         </Typography>
         <Typography
           variant="h4"
+          component="h1"
           fontWeight={950}
           sx={{ mt: 2, color: "#0f172a", letterSpacing: -0.5 }}
         >
