@@ -522,8 +522,12 @@ export default function AiChatHome({
 
       // Persist the exchange only once it succeeded, and in order — a failed
       // turn used to leave an orphan user message with no reply in the history.
+      // Awaited (input stays disabled until it lands): ai-chat only trusts an
+      // earlier assistant turn it can find stored, so a follow-up sent before
+      // this save finished would lose the previous reply as context. The reply
+      // is already on screen, so the wait is invisible apart from the input.
       if (chatType) {
-        saveChatExchange(userMessage, reply.trim(), chatType, session?.user.id).catch(() => {});
+        await saveChatExchange(userMessage, reply.trim(), chatType, session?.user.id).catch(() => {});
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI request failed. Try again.";

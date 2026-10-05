@@ -61,6 +61,10 @@ create table if not exists public.profiles (
 -- Survey and profile-form columns. Text throughout: the forms submit strings,
 -- and the AI prompt interpolates them as-is. Storing age or weight as numeric
 -- would reject the free-text answers the survey actually allows.
+-- name and email too: they are in the create table above, which a table that
+-- already exists never gets, and 20261005000000_column_size_limits checks both.
+alter table public.profiles add column if not exists name               text;
+alter table public.profiles add column if not exists email              text;
 alter table public.profiles add column if not exists primary_sport      text;
 alter table public.profiles add column if not exists experience_level   text;
 alter table public.profiles add column if not exists main_goal          text;
@@ -173,7 +177,11 @@ begin
   if not exists (
     select 1 from pg_constraint
     where conrelid = 'public.daily_checkins'::regclass
-      and contype = 'u'
+      and contype in ('u', 'p')
+      -- Exactly these two columns. `@>` alone also accepted a wider key such
+      -- as (user_id, checkin_date, id), which onConflict "user_id,checkin_date"
+      -- cannot use — so the constraint the upsert needs was never added.
+      and cardinality(conkey) = 2
       and conkey @> array[
         (select attnum from pg_attribute
           where attrelid = 'public.daily_checkins'::regclass and attname = 'user_id'),
@@ -304,32 +312,68 @@ do $$
 declare
   target record;
 begin
+  -- Keys to auth.users AND to public.profiles: a table that references the
+  -- profile row instead of the auth user blocks the cascade just the same —
+  -- auth.users -> profiles cascades, then profiles is stuck behind NO ACTION
+  -- and deleteUser fails with a 500. Each key is rebuilt against the table
+  -- and column it already references.
   for target in
-    select con.oid,
-           con.conname,
-           con.conrelid::regclass::text as table_name,
-           att.attname                  as column_name
+    select con.conname,
+           con.conrelid::regclass::text  as table_name,
+           att.attname                   as column_name,
+           con.confrelid::regclass::text as ref_table,
+           ref.attname                   as ref_column
       from pg_constraint con
       join pg_attribute att
         on att.attrelid = con.conrelid
        and att.attnum = con.conkey[1]
+      join pg_attribute ref
+        on ref.attrelid = con.confrelid
+       and ref.attnum = con.confkey[1]
      where con.contype = 'f'
-       and con.confrelid = 'auth.users'::regclass
+       and con.confrelid in ('auth.users'::regclass, 'public.profiles'::regclass)
        and con.confdeltype <> 'c'  -- 'c' = cascade; anything else needs fixing
+       and cardinality(con.conkey) = 1
        and con.conrelid in (
-             'public.profiles'::regclass,
-             'public.daily_checkins'::regclass,
-             'public.chat_messages'::regclass,
-             'public.daily_plans'::regclass
+             -- By name, not ::regclass: ai_usage is created further down this
+             -- file, and casting a table that doesn't exist yet is an error.
+             select c.oid
+               from pg_class c
+               join pg_namespace n on n.oid = c.relnamespace
+              where n.nspname = 'public'
+                and c.relname in ('profiles', 'daily_checkins', 'chat_messages', 'daily_plans', 'ai_usage')
            )
   loop
     raise notice 'Rebuilding % on % with ON DELETE CASCADE', target.conname, target.table_name;
 
     execute format('alter table %s drop constraint %I', target.table_name, target.conname);
     execute format(
-      'alter table %s add constraint %I foreign key (%I) references auth.users (id) on delete cascade',
-      target.table_name, target.conname, target.column_name
+      'alter table %s add constraint %I foreign key (%I) references %s (%I) on delete cascade',
+      target.table_name, target.conname, target.column_name, target.ref_table, target.ref_column
     );
+  end loop;
+
+  -- Any OTHER table with a blocking key is reported, not changed: making its
+  -- rows cascade-delete is a decision about data this app doesn't own. Until
+  -- it is fixed by hand, account deletion fails for users with rows there.
+  for target in
+    select con.conname, con.conrelid::regclass::text as table_name
+      from pg_constraint con
+     where con.contype = 'f'
+       and con.confrelid in ('auth.users'::regclass, 'public.profiles'::regclass)
+       and con.confdeltype <> 'c'
+       and con.conrelid not in (
+             -- By name, not ::regclass: ai_usage is created further down this
+             -- file, and casting a table that doesn't exist yet is an error.
+             select c.oid
+               from pg_class c
+               join pg_namespace n on n.oid = c.relnamespace
+              where n.nspname = 'public'
+                and c.relname in ('profiles', 'daily_checkins', 'chat_messages', 'daily_plans', 'ai_usage')
+           )
+  loop
+    raise warning 'Foreign key % on % does not cascade and will block account deletion',
+      target.conname, target.table_name;
   end loop;
 end $$;
 

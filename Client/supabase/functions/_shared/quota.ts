@@ -103,3 +103,27 @@ export async function consumeQuota(
       `This resets at midnight UTC.`,
   };
 }
+
+/**
+ * Gives back the request consumeQuota just charged, for a call that failed
+ * upstream (OpenAI down, rate-limited, or returning nothing). The quota is
+ * charged before OpenAI runs so an over-limit athlete costs nothing — which
+ * meant an OpenAI outage also spent their requests, and retrying through one
+ * could use up the whole day's allowance for no answers.
+ *
+ * Never throws and never changes the response: if refund_ai_quota is missing
+ * (its migration not applied yet) or the call fails, the athlete simply keeps
+ * the old behaviour of losing that one request. Callers make sure it runs at
+ * most once per request.
+ */
+export async function refundQuota(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+): Promise<void> {
+  try {
+    const { error } = await supabase.rpc("refund_ai_quota");
+    if (error) console.error("Could not refund the AI quota:", error);
+  } catch (error) {
+    console.error("Could not refund the AI quota:", error);
+  }
+}

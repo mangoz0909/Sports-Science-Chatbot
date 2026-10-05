@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { consumeQuota } from "../_shared/quota.ts";
+import { consumeQuota, refundQuota } from "../_shared/quota.ts";
 import { allowedOrigins, DEFAULT_ALLOWED_ORIGINS } from "../_shared/cors.ts";
 
 // Origins that may call this function come from ../_shared/cors.ts: set
@@ -160,6 +160,9 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // Set once the quota is charged, so the catch can refund a failed call.
+  let refundCharge: (() => Promise<void>) | null = null;
+
   try {
     const authHeader = req.headers.get("Authorization");
 
@@ -248,6 +251,10 @@ Deno.serve(async (req: Request) => {
     if (!quota.allowed) {
       return jsonResponse({ error: quota.message }, quota.status, corsHeaders);
     }
+
+    // From here on a request has been charged; any failure below hands it
+    // back (in the catch), since the athlete gets no plan for it.
+    refundCharge = () => refundQuota(supabase);
 
     // Accepted and ignored rather than rejected: during a rollout the old
     // client is still sending one, and failing those requests would take the
@@ -354,6 +361,8 @@ Deno.serve(async (req: Request) => {
     // Logged in full either way — the detail belongs in the function's logs,
     // not in the response body.
     console.error("ai-complete error:", err);
+
+    if (refundCharge) await refundCharge();
 
     return err instanceof PublicError
       ? jsonResponse({ error: err.message }, err.status, corsHeaders)
