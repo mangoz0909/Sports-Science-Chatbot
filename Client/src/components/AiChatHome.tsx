@@ -507,7 +507,7 @@ export default function AiChatHome({
       // Persist the exchange only once it succeeded, and in order — a failed
       // turn used to leave an orphan user message with no reply in the history.
       if (chatType) {
-        saveChatExchange(userMessage, reply.trim(), chatType).catch(() => {});
+        saveChatExchange(userMessage, reply.trim(), chatType, session?.user.id).catch(() => {});
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI request failed. Try again.";
@@ -516,7 +516,7 @@ export default function AiChatHome({
     } finally {
       setIsLoading(false);
     }
-  }, [chatType]);
+  }, [chatType, session?.user.id]);
 
   const submitMessage = useCallback((text: string, image?: ImageAttachment | null) => {
     // A caption is optional when there is an image, so fall back to a prompt

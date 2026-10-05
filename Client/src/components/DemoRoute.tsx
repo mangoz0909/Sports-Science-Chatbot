@@ -95,7 +95,9 @@ export default function DemoRoute({ children }: Props) {
   return (
     <>
       {!session && <DemoBanner />}
-      {children}
+      <React.Fragment key={session?.user.id ?? "guest"}>
+        {children}
+      </React.Fragment>
     </>
   );
 }

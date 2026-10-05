@@ -72,18 +72,21 @@ export default function MyWorkoutPlan() {
   // must not be written into a real account, and one account's plan must not
   // linger into another's.
   const loadedKey = useRef(storageKey);
+  const [planOwnerKey, setPlanOwnerKey] = useState(storageKey);
   useEffect(() => {
     if (loadedKey.current === storageKey) return;
     loadedKey.current = storageKey;
     setPlan(storageKey ? loadPlan(storageKey) : demoPlan());
+    setPlanOwnerKey(storageKey);
   }, [storageKey]);
 
   // Nothing is persisted for signed-out visitors — the demo plan is scratch
   // data, and saving it would leak into their first signed-in session.
   useEffect(() => {
-    if (!storageKey || loadedKey.current !== storageKey) return;
+    // Effects from the account-change render still capture the old plan.
+    if (!storageKey || planOwnerKey !== storageKey) return;
     savePlan(storageKey, plan);
-  }, [plan, storageKey]);
+  }, [plan, storageKey, planOwnerKey]);
 
   const selectedDate = useMemo(() => fromISODate(selectedISO), [selectedISO]);
   const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
