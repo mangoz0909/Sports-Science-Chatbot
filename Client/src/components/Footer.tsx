@@ -1,6 +1,10 @@
 import React from "react";
 import { Box, Container, Divider, Grid, Link, Stack, Typography } from "@mui/material";
 import { Link as RouterLink, useLocation } from "react-router-dom";
+import { font } from "./home/landingTokens";
+
+// Small uppercase labels (column headings, tagline) in the landing page's mono face.
+const label = { fontFamily: font.mono, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase" } as const;
 
 const Footer: React.FC = () => {
   const { pathname } = useLocation();
@@ -15,6 +19,7 @@ const Footer: React.FC = () => {
         color: "#fff",
         mt: "auto",
         borderTop: "1px solid rgba(255,255,255,0.06)",
+        "& .MuiTypography-root, & .MuiLink-root": { fontFamily: font.body },
       }}
     >
       <Container maxWidth="xl" sx={{ py: { xs: 4, md: 7 } }}>
@@ -36,10 +41,10 @@ const Footer: React.FC = () => {
                 }}
               />
               <Box>
-                <Typography fontWeight={800} fontSize="1.05rem" lineHeight={1.2}>
+                <Typography sx={{ "&&": { fontFamily: font.display }, fontWeight: 700, fontSize: "1.4rem", lineHeight: 1.1, textTransform: "uppercase", letterSpacing: "0.01em" }}>
                   SportLab AI
                 </Typography>
-                <Typography fontSize={12} sx={{ color: "rgba(255,255,255,0.45)", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                <Typography fontSize={11} sx={{ ...label, "&&": { fontFamily: font.mono }, color: "rgba(255,255,255,0.45)" }}>
                   Sports Science Platform
                 </Typography>
               </Box>
@@ -52,7 +57,7 @@ const Footer: React.FC = () => {
 
           {/* Platform links */}
           <Grid item xs={6} sm={4} md={2.1}>
-            <Typography fontWeight={700} fontSize={13} sx={{ mb: 2, color: "rgba(255,255,255,0.85)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <Typography fontSize={12} sx={{ ...label, "&&": { fontFamily: font.mono }, mb: 2, color: "rgba(255,255,255,0.85)" }}>
               Platform
             </Typography>
             <Stack spacing={1.25}>
@@ -83,7 +88,7 @@ const Footer: React.FC = () => {
 
           {/* Account links */}
           <Grid item xs={6} sm={4} md={2.1}>
-            <Typography fontWeight={700} fontSize={13} sx={{ mb: 2, color: "rgba(255,255,255,0.85)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <Typography fontSize={12} sx={{ ...label, "&&": { fontFamily: font.mono }, mb: 2, color: "rgba(255,255,255,0.85)" }}>
               Account
             </Typography>
             <Stack spacing={1.25}>
@@ -114,7 +119,7 @@ const Footer: React.FC = () => {
 
           {/* Focus blurb */}
           <Grid item xs={12} sm={4} md={3.3} sx={{ display: { xs: "none", sm: "block" } }}>
-            <Typography fontWeight={700} fontSize={13} sx={{ mb: 2, color: "rgba(255,255,255,0.85)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <Typography fontSize={12} sx={{ ...label, "&&": { fontFamily: font.mono }, mb: 2, color: "rgba(255,255,255,0.85)" }}>
               What we cover
             </Typography>
             <Stack spacing={1}>

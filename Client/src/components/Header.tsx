@@ -24,6 +24,15 @@ import CloseIcon from "@mui/icons-material/Close";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { logoutUser } from "../services/authService";
 import { useAuth } from "../contexts/AuthContext";
+import { font } from "./home/landingTokens";
+
+// Barlow for every piece of text in the header, its menu and its drawer.
+const bodyFont = {
+  "& .MuiTypography-root, & .MuiButton-root, & .MuiMenuItem-root, & .MuiListItemText-primary": { fontFamily: font.body },
+} as const;
+
+// The wordmark uses the landing page's condensed display face.
+const wordmark = { fontFamily: font.display, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.01em", lineHeight: 1 } as const;
 
 type NavItem = { label: string; to: string; match?: string };
 
@@ -101,6 +110,7 @@ const Header: React.FC = () => {
           bgcolor: "rgba(255,255,255,0.96)",
           color: "#0f172a",
           borderBottom: "1px solid #e2e8f0",
+          ...bodyFont,
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
         }}
@@ -136,11 +146,10 @@ const Header: React.FC = () => {
               <Logo size={40} />
               <Typography
                 sx={{
-                  fontWeight: 900,
-                  lineHeight: 1.1,
-                  letterSpacing: "-0.02em",
-                  fontSize: { xs: "1.25rem", md: "1.35rem" },
+                  ...wordmark,
+                  fontSize: { xs: "1.5rem", md: "1.65rem" },
                   color: "#0f172a",
+                  "&&": { fontFamily: font.display },
                 }}
               >
                 SportLab AI
@@ -215,6 +224,7 @@ const Header: React.FC = () => {
                         border: "1px solid #e2e8f0",
                         boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                         mt: 0.5,
+                        ...bodyFont,
                       },
                     }}
                   >
@@ -308,6 +318,7 @@ const Header: React.FC = () => {
             maxWidth: "90vw",
             borderRadius: "20px 0 0 20px",
             border: "none",
+            ...bodyFont,
           },
         }}
       >
@@ -315,7 +326,7 @@ const Header: React.FC = () => {
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Stack direction="row" spacing={1.25} alignItems="center">
               <Logo size={36} />
-              <Typography fontWeight={800} fontSize="0.95rem">
+              <Typography sx={{ ...wordmark, fontSize: "1.25rem", "&&": { fontFamily: font.display } }}>
                 SportLab AI
               </Typography>
             </Stack>

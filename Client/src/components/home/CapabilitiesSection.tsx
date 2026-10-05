@@ -1,71 +1,39 @@
 import React from "react";
-import { Box, Card, CardContent, Container, Grid, Stack, Typography } from "@mui/material";
-import { motion, useReducedMotion } from "framer-motion";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
-import PsychologyIcon from "@mui/icons-material/Psychology";
-import SpeedIcon from "@mui/icons-material/Speed";
-import { fadeUp, stagger, viewport } from "./homeAnimations";
-
-const MotionBox = motion(Box);
-const MotionCard = motion(Card);
+import { Box } from "@mui/material";
+import { color, type } from "./landingTokens";
+import { Frame, Reveal, SectionHead } from "./LandingPrimitives";
 
 const capabilities = [
-  { icon: <MonitorHeartIcon />, title: "Readiness Monitoring", desc: "Track recovery, soreness, sleep quality, fatigue, and match readiness in a readable way." },
-  { icon: <FitnessCenterIcon />, title: "Training Load", desc: "Understand workload spikes, high-intensity exposure, and session balance." },
-  { icon: <SpeedIcon />, title: "Performance Output", desc: "Review sprint speed, endurance trends, power output, and movement quality." },
-  { icon: <PsychologyIcon />, title: "Mental Support", desc: "Support confidence, stress control, emotional regulation, and pre-game focus." },
+  { title: "Readiness monitoring", desc: "Track recovery, soreness, sleep quality, fatigue, and match readiness in a readable way." },
+  { title: "Training load", desc: "Understand workload spikes, high-intensity exposure, and session balance." },
+  { title: "Performance output", desc: "Review sprint speed, endurance trends, power output, and movement quality." },
+  { title: "Mental support", desc: "Support confidence, stress control, emotional regulation, and pre-game focus." },
 ];
 
+/** A ruled two-column list instead of a row of icon cards. */
 export default function CapabilitiesSection() {
-  const reduceMotion = useReducedMotion();
-  const transition = reduceMotion ? { duration: 0 } : { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const };
-  const hoverLift = reduceMotion ? undefined : { y: -8, transition: { duration: 0.2 } };
-
   return (
-    <Box component="section" sx={{ py: { xs: 6, md: 9 } }}>
-      <Container maxWidth="xl">
-        <MotionBox variants={fadeUp} initial="hidden" whileInView="visible" viewport={viewport} transition={transition}>
-          <Stack spacing={1.2} sx={{ mb: 4 }}>
-            <Typography color="#0284c7" fontWeight={950} letterSpacing={1.4}>WHAT IT HELPS WITH</Typography>
-            <Typography variant="h3" component="h2" sx={{ fontWeight: 950, letterSpacing: -0.9, fontSize: { xs: "2rem", md: "3rem" } }}>
-              Clean tools for sports performance thinking.
-            </Typography>
-            <Typography color="#64748b" sx={{ maxWidth: 760, lineHeight: 1.8 }}>
-              Built around the core decisions coaches and athletes actually care about: load, recovery, readiness, risk, and practical guidance.
-            </Typography>
-          </Stack>
-        </MotionBox>
+    <Box component="section" aria-labelledby="capabilities-title" sx={{ py: { xs: 8, md: 12 } }}>
+      <Frame>
+        <Reveal>
+          <SectionHead index="01" title="What it helps with" id="capabilities-title">
+            Built around the decisions coaches and athletes actually make: load, recovery, readiness, risk, and what to
+            do next.
+          </SectionHead>
+        </Reveal>
 
-        <MotionBox variants={stagger} initial="hidden" whileInView="visible" viewport={viewport}>
-          <Grid container spacing={2.5}>
-            {capabilities.map((item) => (
-              <Grid item xs={12} sm={6} md={3} key={item.title}>
-                <MotionCard
-                  variants={fadeUp}
-                  transition={transition}
-                  whileHover={hoverLift}
-                  elevation={0}
-                  sx={{
-                    height: "100%", borderRadius: 4, border: "1px solid #e2e8f0", bgcolor: "#fff",
-                    boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
-                    transition: "border-color 180ms ease, box-shadow 180ms ease",
-                    "&:hover": { borderColor: "#bae6fd", boxShadow: "0 22px 55px rgba(15,23,42,0.10)" },
-                  }}
-                >
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ width: 54, height: 54, borderRadius: 3, display: "grid", placeItems: "center", bgcolor: "#f1f5f9", color: "#0f172a", mb: 2, "& svg": { fontSize: 30 } }}>
-                      {item.icon}
-                    </Box>
-                    <Typography variant="h6" component="h3" fontWeight={950} sx={{ mb: 1 }}>{item.title}</Typography>
-                    <Typography color="#64748b" lineHeight={1.7}>{item.desc}</Typography>
-                  </CardContent>
-                </MotionCard>
-              </Grid>
-            ))}
-          </Grid>
-        </MotionBox>
-      </Container>
+        <Box component="ol" sx={{ listStyle: "none", m: 0, p: 0, display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, columnGap: 8 }}>
+          {capabilities.map((item, i) => (
+            <Box component="li" key={item.title} sx={{ borderTop: `1px solid ${color.rule}`, py: 3, display: "grid", gridTemplateColumns: "3rem 1fr" }}>
+              <Box sx={{ ...type.label, color: color.ink3, pt: 0.5 }}>{String(i + 1).padStart(2, "0")}</Box>
+              <Box>
+                <Box component="h3" sx={{ ...type.h3, m: 0, color: color.ink }}>{item.title}</Box>
+                <Box component="p" sx={{ ...type.body, m: 0, mt: 1, color: color.ink2, maxWidth: "46ch" }}>{item.desc}</Box>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Frame>
     </Box>
   );
 }

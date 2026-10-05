@@ -1,288 +1,67 @@
 import React from "react";
-
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Container,
-  Grid,
-  Stack,
-  Typography,
-} from "@mui/material";
-
+import { Box } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { color, focusRing, font, motion, type } from "./landingTokens";
+import { Frame, Reveal, SectionHead } from "./LandingPrimitives";
 
-import { motion, useReducedMotion } from "framer-motion";
-
-import AnalyticsIcon from "@mui/icons-material/Analytics";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
-import PsychologyIcon from "@mui/icons-material/Psychology";
-import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import RestaurantIcon from "@mui/icons-material/Restaurant";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-
-import { fadeUp, stagger, viewport } from "./homeAnimations";
-
-const MotionBox = motion(Box);
-const MotionCard = motion(Card);
-
-const workspaceCards = [
-  {
-    title: "Daily Athlete Check-In",
-    desc: "Log sleep, fatigue, soreness, hydration, recovery, training intensity, and wellness data.",
-    icon: <MonitorHeartIcon />,
-    to: "/daily-check-in",
-    cta: "Open Check-In",
-    color: "#ec4899",
-  },
-
-  {
-    title: "Sports Health AI",
-    desc: "Ask about training, recovery, performance, injury prevention, nutrition, stress, focus, and confidence.",
-    icon: <PsychologyIcon />,
-    to: "/sports",
-    cta: "Open AI Coach",
-    color: "#38bdf8",
-  },
-
-  {
-    title: "Athlete Dashboard",
-    desc: "Track readiness, recovery, workload, fatigue, sleep, hydration, injury risk, and weekly trends.",
-    icon: <AnalyticsIcon />,
-    to: "/dashboard",
-    cta: "View Dashboard",
-    color: "#22c55e",
-  },
-
-  {
-    title: "My Workout Plan",
-    desc: "Build your own workouts, record sets, reps, and weights, and get progression suggestions for your next session.",
-    icon: <AssignmentIcon />,
-    to: "/my-workout-plan",
-    cta: "Open My Workout",
-    color: "#6366f1",
-  },
-
-  {
-    title: "AI Workout Planner",
-    desc: "Generate personalized training plans based on your sport, goals, schedule, and athlete profile.",
-    icon: <FitnessCenterIcon />,
-    to: "/health/workout",
-    cta: "Generate Workout",
-    color: "#8b5cf6",
-  },
-
-  {
-    title: "Sports Match",
-    desc: "Find sports that match your interests, movement style, intensity, and athletic profile.",
-    icon: <SportsSoccerIcon />,
-    to: "/sports-list",
-    cta: "Find Sports",
-    color: "#f59e0b",
-  },
-
-  {
-    title: "Nutrition Planner",
-    desc: "Get personalized nutrition guidance based on your sport, goals, dietary needs, and training demands.",
-    icon: <RestaurantIcon />,
-    to: "/health/nutrition",
-    cta: "Open Nutrition",
-    color: "#f97316",
-  },
+const workspaces = [
+  { title: "Daily Athlete Check-In", desc: "Log sleep, fatigue, soreness, hydration, recovery, training intensity, and wellness data.", to: "/daily-check-in" },
+  { title: "Sports Health AI", desc: "Ask about training, recovery, performance, injury prevention, nutrition, stress, focus, and confidence.", to: "/sports" },
+  { title: "Athlete Dashboard", desc: "Track readiness, recovery, workload, fatigue, sleep, hydration, injury risk, and weekly trends.", to: "/dashboard" },
+  { title: "My Workout Plan", desc: "Build your own workouts, record sets, reps, and weights, and get progression suggestions for your next session.", to: "/my-workout-plan" },
+  { title: "AI Workout Planner", desc: "Generate training plans based on your sport, goals, schedule, and athlete profile.", to: "/health/workout" },
+  { title: "Sports Match", desc: "Find sports that match your interests, movement style, intensity, and athletic profile.", to: "/sports-list" },
+  { title: "Nutrition Planner", desc: "Get nutrition guidance based on your sport, goals, dietary needs, and training demands.", to: "/health/nutrition" },
 ];
 
+/**
+ * An index of the app, one row per workspace — the whole row is the link.
+ * Replaces seven identical cards with coloured top bars and bobbing icons.
+ */
 export default function WorkspacesSection() {
-  const reduceMotion = useReducedMotion();
-
-  const transition = reduceMotion
-    ? { duration: 0 }
-    : {
-        duration: 0.55,
-        ease: [0.22, 1, 0.36, 1] as const,
-      };
-
   return (
-    <Box
-      component="section"
-      sx={{
-        py: { xs: 6, md: 9 },
-        bgcolor: "#ffffff",
-        borderTop: "1px solid #e2e8f0",
-      }}
-    >
-      <Container maxWidth="xl">
-        <MotionBox
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={transition}
-        >
-          <Stack spacing={1.2} sx={{ mb: 4 }}>
-            <Typography
-              color="#0284c7"
-              fontWeight={950}
-              letterSpacing={1.4}
-            >
-              WORKSPACES
-            </Typography>
+    <Box component="section" aria-labelledby="workspaces-title" sx={{ py: { xs: 8, md: 12 } }}>
+      <Frame>
+        <Reveal>
+          <SectionHead index="02" title="Everything in the app" id="workspaces-title">
+            Move between AI support and analytics. Each one is a page you can open now.
+          </SectionHead>
+        </Reveal>
 
-            <Typography
-              variant="h3"
-              component="h2"
-              sx={{
-                fontWeight: 950,
-                letterSpacing: -0.9,
-                fontSize: { xs: "2rem", md: "3rem" },
-              }}
-            >
-              Move between AI support and analytics.
-            </Typography>
-          </Stack>
-        </MotionBox>
-
-        <MotionBox
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-        >
-          <Grid container spacing={2.5}>
-            {workspaceCards.map((item) => (
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={4}
-                key={item.title}
+        <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0, borderBottom: `1px solid ${color.rule}` }}>
+          {workspaces.map((item) => (
+            <Box component="li" key={item.to} sx={{ borderTop: `1px solid ${color.rule}` }}>
+              <Box
+                component={RouterLink}
+                to={item.to}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr auto", md: "16rem 1fr 11rem auto" },
+                  columnGap: 4,
+                  rowGap: 0.5,
+                  alignItems: "baseline",
+                  py: 2.5,
+                  px: { xs: 0, md: 1.5 },
+                  mx: { md: -1.5 },
+                  color: color.ink,
+                  textDecoration: "none",
+                  transition: `background-color ${motion.fast}s ease`,
+                  "&:hover": { bgcolor: color.wash },
+                  "&:hover .arrow": { color: color.accent },
+                  "&:focus-visible": { outline: "none", boxShadow: focusRing },
+                }}
               >
-                <MotionCard
-                  variants={fadeUp}
-                  transition={transition}
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          y: -10,
-                          transition: { duration: 0.22 },
-                        }
-                  }
-                  elevation={0}
-                  sx={{
-                    height: "100%",
-                    borderRadius: 4,
-                    border: "1px solid #e2e8f0",
-                    bgcolor: "#fff",
-                    position: "relative",
-                    overflow: "hidden",
-                    boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
-                    transition:
-                      "border-color 200ms ease, box-shadow 200ms ease",
-
-                    "&:hover": {
-                      borderColor: "#bae6fd",
-                      boxShadow: "0 24px 60px rgba(15,23,42,0.10)",
-                    },
-
-                    "&::before": {
-                      content: '""',
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 4,
-                      bgcolor: item.color,
-                    },
-                  }}
-                >
-                  <CardContent
-                    sx={{
-                      p: 3.5,
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <MotionBox
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              y: [0, -5, 0],
-                            }
-                      }
-                      transition={{
-                        duration: 3.2,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: 0.3,
-                      }}
-                      sx={{
-                        width: 62,
-                        height: 62,
-                        borderRadius: 3.5,
-                        bgcolor: "#0f172a",
-                        color: item.color,
-                        display: "grid",
-                        placeItems: "center",
-                        mb: 2.5,
-
-                        "& svg": {
-                          fontSize: 34,
-                        },
-                      }}
-                    >
-                      {item.icon}
-                    </MotionBox>
-
-                    <Typography
-                      variant="h5"
-                      component="h3"
-                      fontWeight={950}
-                      sx={{ mb: 1 }}
-                    >
-                      {item.title}
-                    </Typography>
-
-                    <Typography
-                      color="#64748b"
-                      lineHeight={1.8}
-                      sx={{ mb: 3 }}
-                    >
-                      {item.desc}
-                    </Typography>
-
-                    <Box sx={{ mt: "auto" }}>
-                      <Button
-                        component={RouterLink}
-                        to={item.to}
-                        variant="outlined"
-                        endIcon={<ArrowForwardIcon />}
-                        sx={{
-                          borderRadius: 3,
-                          fontWeight: 900,
-                          color: "#0f172a",
-                          borderColor: "#cbd5e1",
-
-                          "&:hover": {
-                            borderColor: "#94a3b8",
-                            bgcolor: "#f8fafc",
-                          },
-                        }}
-                      >
-                        {item.cta}
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </MotionCard>
-              </Grid>
-            ))}
-          </Grid>
-        </MotionBox>
-      </Container>
+                <Box component="h3" sx={{ ...type.h3, fontSize: "1.125rem", m: 0 }}>{item.title}</Box>
+                <Box component="p" sx={{ ...type.body, m: 0, color: color.ink2, gridColumn: { xs: "1 / -1", md: "auto" }, gridRow: { xs: 2, md: "auto" } }}>
+                  {item.desc}
+                </Box>
+                <Box sx={{ ...type.label, color: color.ink3, display: { xs: "none", md: "block" } }}>{item.to}</Box>
+                <Box className="arrow" aria-hidden sx={{ fontFamily: font.mono, color: color.ink3, transition: `color ${motion.fast}s ease` }}>→</Box>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Frame>
     </Box>
   );
 }
