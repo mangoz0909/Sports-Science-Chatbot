@@ -98,10 +98,18 @@ export async function getLast7CheckIns() {
 
   if (!user) return [];
 
+  // The last seven calendar days, not the last seven rows. Every caller labels
+  // this "this week" or "7-day history", but an athlete who checks in twice a
+  // week was getting a month of data under that label — and the AI prompts
+  // reasoned about it as one week of training load.
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+
   const { data, error } = await supabase
     .from("daily_checkins")
     .select("*")
     .eq("user_id", user.id)
+    .gte("checkin_date", localDateString(weekStart))
     .order("checkin_date", { ascending: false })
     .limit(7);
 

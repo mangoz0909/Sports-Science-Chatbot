@@ -12,7 +12,7 @@ const Home: React.FC = () => (
   <Box sx={{ bgcolor: color.paper, color: color.ink, fontFamily: font.body, overflow: "hidden" }}>
     <Seo
       title="SportLab AI — Sports Science Platform for Athletes"
-      description="All-in-one sports science platform. Track readiness, recovery, and training load. Get AI coaching, mental health support, and personalized sport matching."
+      description="Track readiness, recovery and training load, get AI coaching for training, nutrition and mental performance, and find the sport that fits you."
       path="/"
     />
     <HeroSection />

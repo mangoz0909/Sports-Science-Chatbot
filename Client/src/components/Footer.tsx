@@ -44,7 +44,7 @@ const Footer: React.FC = () => {
                 <Typography sx={{ "&&": { fontFamily: font.display }, fontWeight: 700, fontSize: "1.4rem", lineHeight: 1.1, textTransform: "uppercase", letterSpacing: "0.01em" }}>
                   SportLab AI
                 </Typography>
-                <Typography fontSize={11} sx={{ ...label, "&&": { fontFamily: font.mono }, color: "rgba(255,255,255,0.45)" }}>
+                <Typography fontSize={12} sx={{ ...label, "&&": { fontFamily: font.mono }, color: "rgba(255,255,255,0.45)" }}>
                   Sports Science Platform
                 </Typography>
               </Box>
@@ -74,6 +74,9 @@ const Footer: React.FC = () => {
                   sx={{
                     color: "rgba(255,255,255,0.55)",
                     fontSize: 14,
+                    // Padded to a 24px+ tap target (WCAG 2.2); the bare text line was 20px.
+                    display: "inline-block",
+                    py: 0.5,
                     textDecoration: "none",
                     fontWeight: 500,
                     transition: "color 0.15s",
@@ -106,6 +109,9 @@ const Footer: React.FC = () => {
                   sx={{
                     color: "rgba(255,255,255,0.55)",
                     fontSize: 14,
+                    // Padded to a 24px+ tap target (WCAG 2.2); the bare text line was 20px.
+                    display: "inline-block",
+                    py: 0.5,
                     textDecoration: "none",
                     fontWeight: 500,
                     transition: "color 0.15s",

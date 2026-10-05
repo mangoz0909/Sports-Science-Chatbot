@@ -4,6 +4,7 @@ import {
   Navigate,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 
 import {
@@ -85,6 +86,17 @@ const MyWorkoutPlan = React.lazy(
 const PrivacyPage = React.lazy(
   () => import("./pages/PrivacyPage")
 );
+
+/*
+ * Page-level boundary. The outer one in App wraps the header and footer too,
+ * so any page crash — including a lazy chunk that 404s after a deploy —
+ * replaced the whole app and took the navigation with it. This one keeps the
+ * shell alive and clears itself when the route changes.
+ */
+function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+}
 
 const App: React.FC = () => {
   return (
@@ -208,6 +220,7 @@ const App: React.FC = () => {
                   outline: "none",
                 }}
               >
+                <RouteErrorBoundary>
                 <Suspense
                   fallback={
                     <PageLoader
@@ -378,6 +391,7 @@ const App: React.FC = () => {
                     />
                   </Routes>
                 </Suspense>
+                </RouteErrorBoundary>
               </Box>
 
               <Footer />

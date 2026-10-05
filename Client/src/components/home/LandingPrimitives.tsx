@@ -120,7 +120,7 @@ export function Meter({ value, max = 10, invert = false, label }: { value: numbe
   );
 }
 
-const MotionBox = fm(Box);
+const MotionBox = fm.create(Box);
 
 /**
  * The only entrance animation on the landing page: fade + 12px rise, once.

@@ -569,7 +569,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   <Box sx={{ position: "absolute", top: 0, left: 0, width: 4, bottom: 0, bgcolor: "#2563eb", borderRadius: "4px 0 0 4px" }} />
                   <Box sx={{ pl: "8px" }}>
                     <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.75 }}>
-                      <Typography fontSize={11} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb">
+                      <Typography fontSize={12} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb">
                         Coach Tip
                       </Typography>
                     </Stack>
@@ -722,7 +722,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   </Box>
                 </Stack>
                 <Typography color="#1e40af" fontSize={14} lineHeight={1.8}>
-                  Get a full AI-generated weekly training plan tailored to your sport, fitness level, fatigue, and recovery data.
+                  Get today's AI-generated workout, tailored to your sport, fitness level, fatigue, and recovery, alongside your training week.
                 </Typography>
                 <Button
                   component={RouterLink}

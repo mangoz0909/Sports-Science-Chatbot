@@ -5,9 +5,19 @@ import AiChatHome from "../components/AiChatHome";
 import Seo, { breadcrumbs } from "../components/Seo";
 import { getUserPreferences } from "../services/preferencesService";
 import { getLatestCheckIn, isCheckInFromToday } from "../services/checkinService";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function UnifiedAIHome() {
-  const [dataStatus, setDataStatus] = React.useState<"loading" | "full" | "profile-only" | "none">("loading");
+  const { session, loading: authLoading } = useAuth();
+  const userId = session?.user?.id ?? null;
+
+  // "guest" and "error" show no chip. Both used to fall into "none", which
+  // told a signed-out visitor to "complete your profile" and linked them to a
+  // login-only page; a failed fetch said the same to an athlete whose profile
+  // was complete.
+  const [dataStatus, setDataStatus] = React.useState<
+    "loading" | "guest" | "error" | "full" | "profile-only" | "none"
+  >("loading");
 
   // The assistant reads the athlete's records itself: the profile is injected
   // into the system prompt by the ai-chat function, and check-ins come from its
@@ -15,6 +25,15 @@ export default function UnifiedAIHome() {
   // a snapshot into the prompt meant the model saw data frozen at page load,
   // with no dates on the trend numbers.
   React.useEffect(() => {
+    if (authLoading) return;
+
+    if (!userId) {
+      setDataStatus("guest");
+      return;
+    }
+
+    let cancelled = false;
+
     async function loadDataStatus() {
       try {
         const [prefs, latest] = await Promise.all([
@@ -25,21 +44,33 @@ export default function UnifiedAIHome() {
         // getLatestCheckIn returns the most recent row at ANY date, so the
         // chip claimed "today's check-in" for an athlete whose last entry was
         // weeks old. "profile-only" is the honest state until they file one.
+        // A profiles row exists from sign-up with only a name and email in it;
+        // that is not a profile the assistant can use.
+        const hasProfile = Boolean(
+          prefs?.primary_sport || prefs?.main_goal || prefs?.experience_level
+        );
+
+        if (cancelled) return;
+
         setDataStatus(
-          prefs && isCheckInFromToday(latest)
+          hasProfile && isCheckInFromToday(latest)
             ? "full"
-            : prefs
+            : hasProfile
               ? "profile-only"
               : "none"
         );
       } catch (err) {
         console.error("Failed to load athlete profile:", err);
-        setDataStatus("none");
+        if (!cancelled) setDataStatus("error");
       }
     }
 
     loadDataStatus();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, userId]);
 
   const statusChip = dataStatus === "loading" ? null : dataStatus === "full" ? (
     <Chip

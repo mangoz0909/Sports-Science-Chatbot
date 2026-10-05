@@ -477,7 +477,7 @@ Keep it concise, practical, and student-friendly.
                           </Typography>
                           <Typography
                             color="#64748b"
-                            fontSize={{ xs: 11.5, md: 13 }}
+                            fontSize={{ xs: 12, md: 13 }}
                           >
                             {question.description}
                           </Typography>

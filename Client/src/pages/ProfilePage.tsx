@@ -296,11 +296,15 @@ export default function ProfilePage() {
       // and what syncGoogleProfile re-derives from on the next OAuth sign-in;
       // profiles.name is what the dashboard greeting reads. Writing one and
       // not the other is what left the two showing different names.
-      await supabase.auth.updateUser({
+      // supabase-js reports failure in `error` rather than by throwing, so an
+      // unchecked call let the save carry on and announce success.
+      const { error: authUpdateError } = await supabase.auth.updateUser({
         data: {
           full_name: cleanName,
         },
       });
+
+      if (authUpdateError) throw authUpdateError;
 
       await saveMyName(cleanName);
 

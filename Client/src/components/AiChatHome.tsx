@@ -265,7 +265,7 @@ export default function AiChatHome({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const pageRef = useRef<HTMLElement | null>(null);
+  const pageRef = useRef<HTMLDivElement | null>(null);
 
   /*
    * Publishes how much vertical space actually sits above the chat so the card
@@ -356,6 +356,7 @@ export default function AiChatHome({
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+    ta.style.overflowY = ta.scrollHeight > 120 ? "auto" : "hidden";
   }, [message]);
 
   useEffect(() => {
@@ -367,8 +368,10 @@ export default function AiChatHome({
     recognition.interimResults = false;
     recognition.onstart = () => { setIsRecording(true); setError(""); };
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
-      const transcript = event.results[0]?.[0]?.transcript || "";
-      setMessage(transcript);
+      const transcript = (event.results[0]?.[0]?.transcript || "").trim();
+      if (!transcript) return;
+      // Added to whatever is already typed rather than replacing it.
+      setMessage((prev) => (prev.trim() ? `${prev.trimEnd()} ${transcript}` : transcript));
     };
     recognition.onerror = () => { setIsRecording(false); setError("Voice input failed. Please type instead."); };
     recognition.onend = () => setIsRecording(false);
@@ -379,7 +382,14 @@ export default function AiChatHome({
   const handleMicClick = () => {
     setError("");
     if (!recognitionRef.current) { setError("Voice input is not supported in this browser."); return; }
-    recognitionRef.current.start();
+    // A real toggle: start() while already listening throws InvalidStateError.
+    if (isRecording) { recognitionRef.current.stop(); return; }
+    try {
+      recognitionRef.current.start();
+    } catch (err) {
+      console.error("Voice input could not start:", err);
+      setError("Voice input could not start. Please try again.");
+    }
   };
 
   /**
@@ -574,6 +584,8 @@ export default function AiChatHome({
 
   const clearConversation = async () => {
     if (isLoading || historyLoading || clearing) return;
+    // Deleting the saved conversation can't be undone, so ask first.
+    if (messages.length > 0 && !window.confirm("Clear this conversation? This deletes it permanently.")) return;
     setClearing(true);
     try {
       if (chatType) await clearChatHistory(chatType, session?.user.id);
@@ -588,7 +600,9 @@ export default function AiChatHome({
   };
 
   return (
-    <main className="ai-page" ref={pageRef}>
+    // Not <main>: App already wraps every page in one, and two nested main
+    // landmarks confuse screen-reader navigation.
+    <div className="ai-page" ref={pageRef}>
       <section className="ai-shell">
         {/* ── Main Chat Card ── */}
         <section className="chat-card">
@@ -889,6 +903,6 @@ export default function AiChatHome({
           </button>
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -750,7 +750,7 @@ Do not include any extra text.
                 />
 
                 <Typography
-                  fontSize={11}
+                  fontSize={12}
                   fontWeight={800}
                   letterSpacing="0.08em"
                   textTransform="uppercase"

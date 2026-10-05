@@ -94,7 +94,7 @@
 
 .eyebrow {
   margin: 0 0 2px;
-  font-size: 10px;
+  font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -248,7 +248,7 @@
 .avatar.user-avatar {
   background: #1d4ed8;
   color: white;
-  font-size: 11px;
+  font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
   font-weight: 700;
 }
 
@@ -303,7 +303,7 @@
 
 .message-meta {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
   color: #98a2b3;
 }
 
@@ -686,7 +686,25 @@
   min-height: 26px;
   max-height: 120px;
   line-height: 1.55;
-  overflow-y: auto;
+  /* Scrolls only once the text passes the 120px cap — the auto-grow effect
+     switches it on. With "auto" here, a placeholder that wrapped on a narrow
+     phone made the empty box show a scrollbar. */
+  overflow-y: hidden;
+}
+
+/* One line, ellipsised: a wrapped placeholder was taller than the one-row box
+   and got cut off mid-sentence ("Ask SportLab AI"). */
+.input-container textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* iOS Safari zooms the page into any field under 16px when it is tapped. */
+@media (max-width: 600px) {
+  .input-container textarea {
+    font-size: 16px;
+  }
 }
 
 .input-container textarea::placeholder {
@@ -762,7 +780,7 @@
   display: flex;
   justify-content: flex-end;
   padding: 0 16px 9px;
-  font-size: 11px;
+  font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
   /* #94a3b8 on the #f8fafc pill is ~2.6:1 — below the 4.5:1 AA floor. */
   color: #667085;
 }
@@ -823,7 +841,7 @@
 
 .attachment-size {
   flex-shrink: 0;
-  font-size: 11.5px;
+  font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
   color: #667085;
 }
 
@@ -837,7 +855,7 @@
   border-radius: 6px;
   background: #eef2f6;
   color: #475467;
-  font-size: 11px;
+  font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
   cursor: pointer;
 }
 
@@ -1153,7 +1171,7 @@
   }
 
   .input-hint {
-    font-size: 10px;
+    font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
     justify-content: center;
     padding-top: 4px;
   }

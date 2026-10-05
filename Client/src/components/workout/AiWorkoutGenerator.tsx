@@ -541,7 +541,7 @@ Requirements:
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
                     <AutoAwesomeIcon sx={{ fontSize: 17, color: "#2563eb" }} />
                     <Typography
-                      fontSize={11}
+                      fontSize={12}
                       fontWeight={900}
                       letterSpacing="0.08em"
                       textTransform="uppercase"

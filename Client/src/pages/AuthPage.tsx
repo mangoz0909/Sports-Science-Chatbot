@@ -93,6 +93,7 @@ const AuthPage: React.FC = () => {
     setError(null);
     setSuccessMsg(null);
     setPassword("");
+    setInvalidField(null);
   };
   const [email, setEmail] = useState(() => {
     if (initialMode === "login") return readStored(REMEMBERED_EMAIL_KEY) || "";
@@ -149,14 +150,23 @@ const AuthPage: React.FC = () => {
       ? "Log in to access your sports science workspace."
       : "Create an account to start using SportLab AI.";
 
-  const validate = () => {
-    if (!email || !email.includes("@")) return "Please enter a valid email.";
+  // Fields are checked in the order they appear, and the first bad one gets
+  // focus and an error outline. Email used to be checked first, so an empty
+  // sign-up form complained about the second field and left focus on the
+  // button.
+  const nameRef = React.useRef<HTMLInputElement | null>(null);
+  const emailRef = React.useRef<HTMLInputElement | null>(null);
+  const passwordRef = React.useRef<HTMLInputElement | null>(null);
+  const [invalidField, setInvalidField] = useState<"name" | "email" | "password" | null>(null);
 
+  const validate = (): { field: "name" | "email" | "password"; message: string } | null => {
     if (mode === "signup" && name.trim().length < 2) {
-      return "Please enter your full name.";
+      return { field: "name", message: "Please enter your full name." };
     }
 
-    if (password.length < 6) return "Password must be at least 6 characters.";
+    if (!email || !email.includes("@")) return { field: "email", message: "Please enter a valid email." };
+
+    if (password.length < 6) return { field: "password", message: "Password must be at least 6 characters." };
 
     return null;
   };
@@ -205,9 +215,13 @@ const AuthPage: React.FC = () => {
     const validationError = validate();
 
     if (validationError) {
-      setError(validationError);
+      setError(validationError.message);
+      setInvalidField(validationError.field);
+      ({ name: nameRef, email: emailRef, password: passwordRef })[validationError.field].current?.focus();
       return;
     }
+
+    setInvalidField(null);
 
     setSubmitting(true);
 
@@ -517,7 +531,9 @@ const AuthPage: React.FC = () => {
                     label="Full Name"
                     autoComplete="name"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    inputRef={nameRef}
+                    error={invalidField === "name"}
+                    onChange={(event) => { setName(event.target.value); if (invalidField === "name") setInvalidField(null); }}
                   />
                 )}
 
@@ -527,7 +543,9 @@ const AuthPage: React.FC = () => {
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  inputRef={emailRef}
+                  error={invalidField === "email"}
+                  onChange={(event) => { setEmail(event.target.value); if (invalidField === "email") setInvalidField(null); }}
                 />
 
                 <TextField
@@ -536,7 +554,9 @@ const AuthPage: React.FC = () => {
                   type={showPw ? "text" : "password"}
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  inputRef={passwordRef}
+                  error={invalidField === "password"}
+                  onChange={(event) => { setPassword(event.target.value); if (invalidField === "password") setInvalidField(null); }}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">

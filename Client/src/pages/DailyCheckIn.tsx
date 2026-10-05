@@ -65,7 +65,9 @@ const sections = [
     icon: <HotelIcon />,
     color: "#8b5cf6",
     fields: [
-      { key: "sleepHours", label: "Sleep Hours", min: 1, max: 10 },
+      // Hours, not a 1-10 score: 0 and 11-12 are real nights. No score formula
+      // reads this value, so the wider range changes no calculation.
+      { key: "sleepHours", label: "Sleep Hours", min: 0, max: 12 },
       { key: "sleepQuality", label: "Sleep Quality", min: 1, max: 10 },
       { key: "energy", label: "Energy Level", min: 1, max: 10 },
       { key: "soreness", label: "Muscle Soreness", min: 1, max: 10 },
@@ -189,14 +191,23 @@ export default function DailyCheckIn() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = React.useState(false);
+  // Whether today's existing check-in has been looked up. Until it has,
+  // saving could silently replace it with the defaults (the save is an upsert).
+  const [loadState, setLoadState] = React.useState<"loading" | "ready" | "error">("loading");
+  // Set once the athlete moves anything, so a slow fetch landing afterwards
+  // doesn't snap their sliders back to the stored values.
+  const editedRef = React.useRef(false);
 
   React.useEffect(() => {
     let mounted = true;
     getLatestCheckIn().then((latest) => {
-      if (!mounted || !latest) return;
+      if (!mounted) return;
+      setLoadState("ready");
+      if (!latest) return;
       const today = localDateString();
       if (latest.checkin_date === today) {
         setAlreadyCheckedIn(true);
+        if (editedRef.current) return;
         setData({
           sleepHours: latest.sleep_hours ?? defaultData.sleepHours,
           sleepQuality: latest.sleep_quality ?? defaultData.sleepQuality,
@@ -212,7 +223,10 @@ export default function DailyCheckIn() {
           notes: latest.notes ?? "",
         });
       }
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error("Could not load today's check-in:", err);
+      if (mounted) setLoadState("error");
+    });
     return () => { mounted = false; };
   }, []);
 
@@ -221,6 +235,7 @@ export default function DailyCheckIn() {
   const recovery = calculateRecovery(data);
 
   const updateValue = (key: keyof CheckInData, value: number | string) => {
+    editedRef.current = true;
     setData((prev) => ({
       ...prev,
       [key]: value,
@@ -516,7 +531,7 @@ export default function DailyCheckIn() {
                   >
                     <Box sx={{ position: "absolute", top: 0, left: 0, width: 4, bottom: 0, bgcolor: "#2563eb", borderRadius: "4px 0 0 4px" }} />
                     <Box sx={{ pl: "8px" }}>
-                      <Typography fontSize={11} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb" sx={{ mb: 0.75 }}>
+                      <Typography fontSize={12} fontWeight={800} letterSpacing="0.08em" textTransform="uppercase" color="#2563eb" sx={{ mb: 0.75 }}>
                         Coach Tip
                       </Typography>
                       <Typography color="#1e3a5f" fontSize={14} lineHeight={1.8}>
@@ -535,14 +550,21 @@ export default function DailyCheckIn() {
 
                   <Typography color="#64748b" lineHeight={1.8} sx={{ mb: 2 }}>
                     This will save your readiness, recovery, injury risk, and input data
-                    to your Supabase database.
+                    to your account.
                   </Typography>
+
+                  {loadState === "error" && (
+                    <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+                      We couldn't check whether you've already checked in today. Saving
+                      will replace today's check-in if there is one.
+                    </Alert>
+                  )}
 
                   <Button
                     fullWidth
                     variant="contained"
                     onClick={handleSubmit}
-                    disabled={saving}
+                    disabled={saving || loadState === "loading"}
                     sx={{
                       borderRadius: 3,
                       bgcolor: "#0f172a",
@@ -555,7 +577,13 @@ export default function DailyCheckIn() {
                       },
                     }}
                   >
-                    {saving ? "Saving..." : "Save Daily Check-In"}
+                    {saving
+                      ? "Saving..."
+                      : loadState === "loading"
+                      ? "Loading today's check-in…"
+                      : alreadyCheckedIn
+                      ? "Update Today's Check-In"
+                      : "Save Daily Check-In"}
                   </Button>
                 </CardContent>
               </Card>
