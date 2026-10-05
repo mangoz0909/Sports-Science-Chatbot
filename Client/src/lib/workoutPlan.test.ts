@@ -199,6 +199,12 @@ describe("weight suggestion", () => {
 });
 
 describe("storage", () => {
+  it("keeps an intentionally empty workout list after reloading", () => {
+    savePlan(KEY, { types: [], days: {} });
+
+    expect(loadPlan(KEY)).toEqual({ types: [], days: {} });
+  });
+
   it("returns a fresh plan when nothing is saved", () => {
     expect(loadPlan(KEY).days).toEqual({});
     expect(loadPlan(KEY).types.length).toBeGreaterThan(0);

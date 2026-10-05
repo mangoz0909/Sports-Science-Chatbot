@@ -20,18 +20,17 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 
 import { Link as RouterLink } from "react-router-dom";
-import { getUserPreferences } from "../services/preferencesService";
+import { getUserPreferences } from "../../services/preferencesService";
 import {
   getLatestCheckIn,
   getLast7CheckIns,
   isCheckInFromToday,
-} from "../services/checkinService";
-import { supabase } from "../lib/supabaseClient";
-import { useAuth } from "../contexts/AuthContext";
-import Seo, { breadcrumbs } from "../components/Seo";
-import { cleanJsonResponse } from "../lib/aiJson";
-import { functionErrorMessage } from "../lib/functionError";
-import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
+} from "../../services/checkinService";
+import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../../contexts/AuthContext";
+import { cleanJsonResponse } from "../../lib/aiJson";
+import { functionErrorMessage } from "../../lib/functionError";
+import { loadTodaysPlan, saveTodaysPlan } from "../../services/planService";
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
 
@@ -154,7 +153,7 @@ function normalizePlan(value: unknown): DailyWorkoutPlan {
   };
 }
 
-export default function WorkoutPage() {
+export default function AiWorkoutGenerator() {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
 
@@ -394,17 +393,6 @@ Requirements:
 
   return (
     <Box>
-      <Seo
-        title="Today's AI Workout"
-        description="Get one detailed workout for today based on your athlete profile, readiness, recovery, and recent training trends."
-        path="/health/workout"
-        jsonLd={breadcrumbs([
-          { name: "Home", path: "/" },
-          { name: "Health & Performance", path: "/health" },
-          { name: "Workout Plan", path: "/health/workout" },
-        ])}
-      />
-
       <Stack spacing={2} sx={{ mb: 3 }}>
         <Box>
           <Typography variant="h5" fontWeight={950} color="#0f172a">

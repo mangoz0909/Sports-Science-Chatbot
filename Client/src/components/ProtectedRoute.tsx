@@ -25,5 +25,5 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/auth?mode=login" replace />;
   }
 
-  return <>{children}</>;
+  return <React.Fragment key={session.user.id}>{children}</React.Fragment>;
 }

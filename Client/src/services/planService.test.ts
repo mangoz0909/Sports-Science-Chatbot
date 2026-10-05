@@ -50,6 +50,22 @@ afterEach(() => {
 });
 
 describe("loadTodaysPlan", () => {
+  it("reuses the device plan after a failed sync left no server row", async () => {
+    mockUpsert.mockResolvedValue({ error: { message: "offline" } });
+    await saveTodaysPlan<Plan>("workout", USER, LOCAL_PLAN);
+    // The connection is back, but the earlier failed write never created a row.
+    await expect(loadTodaysPlan<Plan>("workout", USER)).resolves.toEqual(LOCAL_PLAN);
+  });
+
+  it("does not cache another account's server plan under the requested user", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "athlete-2" } }, error: null });
+    mockMaybeSingle.mockResolvedValue({ data: { plan: SERVER_PLAN }, error: null });
+
+    await expect(loadTodaysPlan<Plan>("workout", USER)).resolves.toBeNull();
+    expect(readCachedPlan<Plan>("workout", USER)).toBeNull();
+    expect(mockMaybeSingle).not.toHaveBeenCalled();
+  });
+
   it("returns the plan saved on the athlete's account", async () => {
     mockMaybeSingle.mockResolvedValue({
       data: { plan: SERVER_PLAN },
@@ -103,6 +119,16 @@ describe("loadTodaysPlan", () => {
 });
 
 describe("saveTodaysPlan", () => {
+  it("never syncs an in-flight plan into the newly signed-in account", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "athlete-2" } }, error: null });
+
+    await saveTodaysPlan<Plan>("workout", USER, LOCAL_PLAN);
+
+    expect(mockUpsert).not.toHaveBeenCalled();
+    expect(readCachedPlan<Plan>("workout", USER)).toEqual(LOCAL_PLAN);
+    expect(readCachedPlan<Plan>("workout", "athlete-2")).toBeNull();
+  });
+
   it("stores the plan on the account and on this device", async () => {
     await saveTodaysPlan<Plan>("nutrition", USER, SERVER_PLAN);
 

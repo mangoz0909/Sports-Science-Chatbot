@@ -52,6 +52,14 @@ export default function CustomizeTypesDialog({
 
   // Reopening the dialog should show what is saved now, not the last draft.
   const [syncedFrom, setSyncedFrom] = useState(types);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setDraft(types);
+      setNewTypeName("");
+    }
+  }
   if (open && syncedFrom !== types) {
     setSyncedFrom(types);
     setDraft(types);

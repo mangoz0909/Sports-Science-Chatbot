@@ -97,7 +97,6 @@ export default function NutritionPage() {
   async function generatePlan() {
     setLoading(true);
     setError(null);
-    setPlan(null);
 
     try {
       const [prefs, checkIn, last7CheckIns] =

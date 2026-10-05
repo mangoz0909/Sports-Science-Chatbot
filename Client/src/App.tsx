@@ -66,10 +66,6 @@ const HealthPage = React.lazy(
   () => import("./pages/HealthPage")
 );
 
-const WorkoutPage = React.lazy(
-  () => import("./pages/WorkoutPage")
-);
-
 const NutritionPage = React.lazy(
   () => import("./pages/NutritionPage")
 );
@@ -341,7 +337,7 @@ const App: React.FC = () => {
                         index
                         element={
                           <Navigate
-                            to="/health/workout"
+                            to="/health/nutrition"
                             replace
                           />
                         }
@@ -349,7 +345,7 @@ const App: React.FC = () => {
 
                       <Route
                         path="workout"
-                        element={<WorkoutPage />}
+                        element={<Navigate to="/my-workout-plan?tab=ai" replace />}
                       />
 
                       <Route

@@ -9,7 +9,7 @@ const workspaces = [
   { title: "Sports Health AI", desc: "Ask about training, recovery, performance, injury prevention, nutrition, stress, focus, and confidence.", to: "/sports" },
   { title: "Athlete Dashboard", desc: "Track readiness, recovery, workload, fatigue, sleep, hydration, injury risk, and weekly trends.", to: "/dashboard" },
   { title: "My Workout Plan", desc: "Build your own workouts, record sets, reps, and weights, and get progression suggestions for your next session.", to: "/my-workout-plan" },
-  { title: "AI Workout Planner", desc: "Generate training plans based on your sport, goals, schedule, and athlete profile.", to: "/health/workout" },
+  { title: "AI Workout Planner", desc: "Generate training plans based on your sport, goals, schedule, and athlete profile.", to: "/my-workout-plan?tab=ai" },
   { title: "Sports Match", desc: "Find sports that match your interests, movement style, intensity, and athletic profile.", to: "/sports-list" },
   { title: "Nutrition Planner", desc: "Get nutrition guidance based on your sport, goals, dietary needs, and training demands.", to: "/health/nutrition" },
 ];

@@ -20,9 +20,14 @@ const PLANS_TABLE = "daily_plans";
 /** Today's saved plan straight from Supabase, or null if none exists yet. */
 export async function fetchTodaysPlan<T>(
   kind: PlanKind,
-  today: string = localDateString()
+  today: string = localDateString(),
+  expectedUserId?: string
 ): Promise<T | null> {
   const user = await getCurrentUser();
+
+  if (expectedUserId && user?.id !== expectedUserId) {
+    throw new Error("The signed-in account changed while loading this plan.");
+  }
 
   if (!user) return null;
 
@@ -43,9 +48,14 @@ export async function fetchTodaysPlan<T>(
 export async function storeTodaysPlan<T>(
   kind: PlanKind,
   plan: T,
-  today: string = localDateString()
+  today: string = localDateString(),
+  expectedUserId?: string
 ): Promise<void> {
   const user = await requireCurrentUser("You must be logged in to save a plan.");
+
+  if (expectedUserId && user.id !== expectedUserId) {
+    throw new Error("The signed-in account changed while saving this plan.");
+  }
 
   const { error } = await supabase.from(PLANS_TABLE).upsert(
     {
@@ -72,7 +82,7 @@ export async function loadTodaysPlan<T>(
   userId: string
 ): Promise<T | null> {
   try {
-    const saved = await fetchTodaysPlan<T>(kind);
+    const saved = await fetchTodaysPlan<T>(kind, localDateString(), userId);
 
     if (saved) {
       // Mirror it locally so a later visit still works without a connection.
@@ -81,7 +91,8 @@ export async function loadTodaysPlan<T>(
       return saved;
     }
 
-    return null;
+    // A generation can be cached even if its server sync failed.
+    return readCachedPlan<T>(kind, userId);
   } catch (err) {
     console.error(`Could not load the saved ${kind} plan:`, err);
 
@@ -98,7 +109,7 @@ export async function saveTodaysPlan<T>(
   writeCachedPlan<T>(kind, userId, plan);
 
   try {
-    await storeTodaysPlan<T>(kind, plan);
+    await storeTodaysPlan<T>(kind, plan, localDateString(), userId);
   } catch (err) {
     // The plan is already on screen and stored locally, so a failed sync is
     // not worth interrupting the athlete for. It just will not reach their

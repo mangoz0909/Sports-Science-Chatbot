@@ -7,9 +7,14 @@ import {
   LinearProgress,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
+
+import { useSearchParams } from "react-router-dom";
+import AiWorkoutGenerator from "../components/workout/AiWorkoutGenerator";
 
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -49,6 +54,8 @@ import {
  */
 export default function MyWorkoutPlan() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "ai" ? "ai" : "planner";
 
   const storageKey = user ? storageKeyFor(user.id) : null;
 
@@ -65,18 +72,21 @@ export default function MyWorkoutPlan() {
   // must not be written into a real account, and one account's plan must not
   // linger into another's.
   const loadedKey = useRef(storageKey);
+  const [planOwnerKey, setPlanOwnerKey] = useState(storageKey);
   useEffect(() => {
     if (loadedKey.current === storageKey) return;
     loadedKey.current = storageKey;
     setPlan(storageKey ? loadPlan(storageKey) : demoPlan());
+    setPlanOwnerKey(storageKey);
   }, [storageKey]);
 
   // Nothing is persisted for signed-out visitors — the demo plan is scratch
   // data, and saving it would leak into their first signed-in session.
   useEffect(() => {
-    if (!storageKey || loadedKey.current !== storageKey) return;
+    // Effects from the account-change render still capture the old plan.
+    if (!storageKey || planOwnerKey !== storageKey) return;
     savePlan(storageKey, plan);
-  }, [plan, storageKey]);
+  }, [plan, storageKey, planOwnerKey]);
 
   const selectedDate = useMemo(() => fromISODate(selectedISO), [selectedISO]);
   const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
@@ -210,11 +220,16 @@ export default function MyWorkoutPlan() {
             </Stack>
 
             <Typography color="text.secondary" mt={1}>
-              Plan your week, train what is recovered, and log every set.
+              Plan your week, generate a personalised AI workout, and log every set.
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1.5}
+            alignItems="center"
+            sx={{ display: activeTab === "planner" ? "flex" : "none" }}
+          >
             {session && (
               <Chip label={`${completed} / ${total} sets`} variant="outlined" />
             )}
@@ -238,6 +253,28 @@ export default function MyWorkoutPlan() {
           </Stack>
         </Stack>
 
+        <Tabs
+          value={activeTab}
+          onChange={(_, value: string) => {
+            const next = new URLSearchParams(searchParams);
+            if (value === "ai") next.set("tab", "ai");
+            else next.delete("tab");
+            setSearchParams(next);
+          }}
+          aria-label="Workout plan sections"
+          sx={{ mb: 3, borderBottom: "1px solid #e2e8f0" }}
+        >
+          <Tab value="planner" label="Weekly Planner" id="workout-tab-planner" aria-controls="workout-panel-planner" sx={{ textTransform: "none", fontWeight: 800 }} />
+          <Tab value="ai" label="AI Workout" id="workout-tab-ai" aria-controls="workout-panel-ai" sx={{ textTransform: "none", fontWeight: 800 }} />
+        </Tabs>
+
+        {activeTab === "ai" && (
+          <Box role="tabpanel" id="workout-panel-ai" aria-labelledby="workout-tab-ai">
+            <AiWorkoutGenerator />
+          </Box>
+        )}
+
+        <Box hidden={activeTab !== "planner"} role="tabpanel" id="workout-panel-planner" aria-labelledby="workout-tab-planner">
         {/* WEEK */}
         <Paper
           elevation={0}
@@ -532,6 +569,7 @@ export default function MyWorkoutPlan() {
             ? "Your plan is saved on this device. Recovery percentages and load suggestions are simple estimates — adjust training based on technique, fatigue, recovery, and coaching guidance."
             : "Sign in to save your own plan. Recovery percentages and load suggestions are simple estimates — adjust training based on technique, fatigue, recovery, and coaching guidance."}
         </Typography>
+        </Box>
       </Container>
 
       <CustomizeTypesDialog

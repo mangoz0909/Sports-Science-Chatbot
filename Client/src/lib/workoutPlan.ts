@@ -411,7 +411,7 @@ export function loadPlan(storageKey: string): Plan {
     const parsed = JSON.parse(raw) as Partial<Plan>;
     if (!parsed || typeof parsed !== "object") return emptyPlan();
 
-    const types = Array.isArray(parsed.types) && parsed.types.length
+    const types = Array.isArray(parsed.types)
       ? parsed.types.map((type, index) => ({
           id: String(type?.id ?? `type-${index}`),
           name: String(type?.name ?? "Workout"),

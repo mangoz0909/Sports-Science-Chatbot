@@ -102,7 +102,7 @@ Order matters — Render applies the first match, so the catch-all goes last:
 |---|---|---|
 | `/sports` | `/sports/index.html` | Rewrite |
 | `/sports-list` | `/sports-list/index.html` | Rewrite |
-| `/health/workout` | `/health/workout/index.html` | Rewrite |
+| `/health/workout` | `/my-workout-plan?tab=ai` | Redirect (301) |
 | `/health/nutrition` | `/health/nutrition/index.html` | Rewrite |
 | `/privacy` | `/privacy/index.html` | Rewrite |
 | `/*` | `/index.html` | Rewrite |
