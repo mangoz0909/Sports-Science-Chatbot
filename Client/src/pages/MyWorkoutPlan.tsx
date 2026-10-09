@@ -270,7 +270,12 @@ export default function MyWorkoutPlan() {
 
         {activeTab === "ai" && (
           <Box role="tabpanel" id="workout-panel-ai" aria-labelledby="workout-tab-ai">
-            <AiWorkoutGenerator />
+            <AiWorkoutGenerator workoutTypes={plan.types} onSaveWorkout={(workout) => {
+              if (!storageKey || planOwnerKey !== storageKey) throw new Error("Sign in to save a workout.");
+              const updated = { ...plan, types: [...plan.types, workout] };
+              savePlan(storageKey, updated);
+              setPlan(updated);
+            }} />
           </Box>
         )}
 
@@ -324,8 +329,8 @@ export default function MyWorkoutPlan() {
                 </Typography>
 
                 <Typography color="text.secondary" mt={1} mb={2}>
-                  Add your first workout type — push, pull, legs, or whatever
-                  you split your week into.
+                  Create any workout under Customize, or save an AI workout
+                  to choose it here.
                 </Typography>
 
                 <Button

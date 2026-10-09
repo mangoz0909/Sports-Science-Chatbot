@@ -3,13 +3,17 @@ import { createRoot, type Root } from "react-dom/client";
 import { vi } from "vitest";
 import CustomizeTypesDialog from "./CustomizeTypesDialog";
 import MyWorkoutPlan from "../../pages/MyWorkoutPlan";
-import { defaultTypes, savePlan, storageKeyFor } from "../../lib/workoutPlan";
+import { defaultTypes, loadPlan, recommendWorkouts, savePlan, sessionFromType, storageKeyFor, type WorkoutType } from "../../lib/workoutPlan";
 
 const auth = vi.hoisted(() => ({ user: { id: "athlete-1" } as { id: string } | null }));
 vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: auth.user }) }));
-vi.mock("react-router-dom", () => ({ useSearchParams: () => [new URLSearchParams(), vi.fn()] }));
+vi.mock("react-router-dom", () => ({ useSearchParams: () => [new URLSearchParams("tab=ai"), vi.fn()] }));
 vi.mock("../Seo", () => ({ default: () => null }));
-vi.mock("./AiWorkoutGenerator", () => ({ default: () => null }));
+vi.mock("./AiWorkoutGenerator", () => ({ default: ({ onSaveWorkout }: { onSaveWorkout: (type: WorkoutType) => void }) => (
+  <button onClick={() => onSaveWorkout({ id: "ai-conditioning", name: "Match Conditioning", color: "#a855f7", exercises: [
+    { name: "Shuttle runs", sets: 4, targetReps: 0, cues: ["30 sec; rest 60 sec"] },
+  ] })}>Save AI workout</button>
+) }));
 vi.mock("./WeekStrip", () => ({ default: () => null }));
 vi.mock("./RecommendationCards", () => ({ default: () => null }));
 vi.mock("./ExerciseCard", () => ({ default: () => null }));
@@ -77,4 +81,17 @@ it("never writes the previous account's plan into the next account's storage", (
   for (const [, value] of nextAccountWrites) {
     expect(JSON.parse(value).types).toEqual([]);
   }
+});
+
+it("saves AI workouts as reusable planner options without replacing the user's workouts", () => {
+  act(() => root.render(<MyWorkoutPlan />));
+  act(() => Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Save AI workout")!.click());
+  const saved = loadPlan(storageKeyFor("athlete-1"));
+  expect(saved.types.map((type) => type.name)).toEqual(["Push", "Pull", "Legs", "Match Conditioning"]);
+  const option = recommendWorkouts(saved, "2026-10-09").find((entry) => entry.type.id === "ai-conditioning")!;
+  const session = sessionFromType(option.type);
+  expect(session.exercises[0].sets).toHaveLength(4);
+  expect(session.exercises[0].targetReps).toBe(0);
+  expect(session.exercises[0].cues).toEqual(["30 sec; rest 60 sec"]);
+  expect(session.exercises[0].sets.every((set) => !set.completed)).toBe(true);
 });

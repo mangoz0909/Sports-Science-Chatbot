@@ -419,7 +419,7 @@ export function loadPlan(storageKey: string): Plan {
           exercises: (Array.isArray(type?.exercises) ? type.exercises : []).map(
             (exercise) => ({
               name: String(exercise?.name ?? "Exercise"),
-              targetReps: Number(exercise?.targetReps) || 8,
+              targetReps: Number.isFinite(exercise?.targetReps) ? Number(exercise.targetReps) : 8,
               sets: Number(exercise?.sets) || 3,
               cues: Array.isArray(exercise?.cues)
                 ? exercise.cues.map(String)
@@ -442,7 +442,7 @@ export function loadPlan(storageKey: string): Plan {
           (exercise) => ({
             id: nextId(),
             name: String(exercise?.name ?? "Exercise"),
-            targetReps: Number(exercise?.targetReps) || 8,
+            targetReps: Number.isFinite(exercise?.targetReps) ? Number(exercise.targetReps) : 8,
             cues: Array.isArray(exercise?.cues) ? exercise.cues.map(String) : [],
             sets: (Array.isArray(exercise?.sets) ? exercise.sets : []).map(
               (set) => ({
