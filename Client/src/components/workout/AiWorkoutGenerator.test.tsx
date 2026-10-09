@@ -1,7 +1,7 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { vi } from "vitest";
-import AiWorkoutGenerator from "./AiWorkoutGenerator";
+import AiWorkoutGenerator, { summarizeWorkouts } from "./AiWorkoutGenerator";
 import ExerciseCard from "./ExerciseCard";
 import { sessionFromType, type WorkoutType } from "../../lib/workoutPlan";
 
@@ -68,4 +68,15 @@ it("provides a duration input without a weight or reps input for timed exercises
   expect(host.querySelector('input[aria-label$="weight in pounds"]')).toBeNull();
   expect(host.querySelector('input[aria-label$=" reps"]')).toBeNull();
   expect(host.textContent).toContain("Rest 60 sec");
+});
+
+describe("summarizeWorkouts", () => {
+  it("lists names only and stays under the cap", () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({ id: `t${i}`, name: `Workout ${i}`, color: "#000",
+      exercises: [{ name: "Squat", targetReps: 5, sets: 3, cues: ["x".repeat(500)] }] }));
+    const summary = summarizeWorkouts(many);
+    expect(summary.length).toBeLessThanOrEqual(1500);
+    expect(summary).not.toContain("xxx");
+    expect(summarizeWorkouts([])).toBe("None yet.");
+  });
 });

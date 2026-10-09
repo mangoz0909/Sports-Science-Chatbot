@@ -7,6 +7,7 @@ import {
   emptyPlan,
   loadPlan,
   recommendWorkouts,
+  trainingGroups,
   savePlan,
   sessionFromType,
   sessionProgress,
@@ -332,5 +333,18 @@ describe("reusable AI workouts", () => {
     expect(restored.types[0].exercises[0].cues).toEqual(["Smooth turns."]);
     expect(restored.days[TODAY].guidance!.warmup).toEqual(["Easy jog"]);
     expect(restored.days[TODAY].exercises[0].cues).toEqual(["Smooth turns."]);
+  });
+});
+
+describe("trainingGroups", () => {
+  const groups = (name: string) => [...trainingGroups([{ name }])].filter((group) => !group.startsWith("exercise:")).sort();
+  it("matches whole words only", () => {
+    expect(groups("Crunches")).toEqual(["core"]);
+    expect(groups("Medicine ball throw")).toEqual([]);
+    expect(groups("Leg curl")).toEqual(["lower"]);
+    expect(groups("Leg press")).toEqual(["lower"]);
+    expect(groups("Barbell row")).toEqual(["pull"]);
+    expect(groups("Overhead press")).toEqual(["push"]);
+    expect(groups("Running")).toEqual(["lower"]);
   });
 });

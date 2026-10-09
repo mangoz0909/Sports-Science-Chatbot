@@ -339,15 +339,17 @@ export function isAIWorkoutSaved(types: WorkoutType[], plan: AIWorkout): boolean
 }
 
 /** Muscle overlap is an estimate from exercise names, including custom types. */
-function trainingGroups(exercises: { name: string }[]): Set<string> {
+export function trainingGroups(exercises: { name: string }[]): Set<string> {
   const groups = new Set<string>();
   for (const exercise of exercises) {
     const name = exercise.name.toLowerCase();
     groups.add(`exercise:${name.replace(/[^a-z0-9]/g, "")}`);
-    if (/squat|lunge|leg press|deadlift|hamstring|calf|step.?up|hip thrust|run|sprint|jump|bike|cycling/.test(name)) groups.add("lower");
-    if (/bench|chest|push.?up|press|tricep|dip/.test(name)) groups.add("push");
-    if (/row|pull.?up|pull.?down|pulldown|chin.?up|bicep|curl|face pull/.test(name)) groups.add("pull");
-    if (/plank|crunch|sit.?up|core|abdominal/.test(name)) groups.add("core");
+    // Whole words only: "crunch" must not match "run", "throw" not "row".
+    if (/\bleg (?:curl|extension)s?\b|\bhamstring curls?\b/.test(name)) { groups.add("lower"); continue; }
+    if (/\b(?:squats?|lunges?|leg press(?:es)?|deadlifts?|hamstrings?|calf|calves|step.?ups?|hip thrusts?|run|running|runs|sprints?|sprinting|jumps?|jumping|bike|biking|cycling)\b/.test(name)) groups.add("lower");
+    if (!/\bleg press/.test(name) && /\b(?:bench|chest|push.?ups?|press(?:es)?|triceps?|dips?)\b/.test(name)) groups.add("push");
+    if (/\b(?:rows?|rowing|pull.?ups?|pull.?downs?|pulldowns?|chin.?ups?|biceps?|curls?|face pulls?)\b/.test(name)) groups.add("pull");
+    if (/\b(?:planks?|crunch(?:es)?|sit.?ups?|core|abdominals?|abs)\b/.test(name)) groups.add("core");
   }
   return groups;
 }

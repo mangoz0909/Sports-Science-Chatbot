@@ -234,6 +234,10 @@ export default function CustomizeTypesDialog({
                     direction="row"
                     spacing={1.5}
                     alignItems="center"
+                    // Wrap on phones so the name keeps a full row instead of
+                    // being squeezed to nothing by the fixed-width fields.
+                    useFlexGap
+                    flexWrap={{ xs: "wrap", sm: "nowrap" }}
                   >
                     <TextField
                       size="small"
@@ -242,7 +246,7 @@ export default function CustomizeTypesDialog({
                       onChange={(e) =>
                         updateExercise(type.id, index, { name: e.target.value })
                       }
-                      sx={{ flex: 1 }}
+                      sx={{ flex: { xs: "1 1 100%", sm: "1 1 0" }, minWidth: { sm: 140 } }}
                     />
 
                     <TextField

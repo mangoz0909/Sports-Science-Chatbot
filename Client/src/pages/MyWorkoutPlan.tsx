@@ -437,11 +437,15 @@ export default function MyWorkoutPlan() {
               <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 3 }}>
                 <Typography fontWeight={800}>{session.guidance.intensity} intensity · {session.guidance.duration}</Typography>
                 <Typography mt={1}>{session.guidance.coachNote}</Typography>
-                <Typography fontWeight={800} mt={2}>Warm-up</Typography>
-                {session.guidance.warmup.map((item, index) => <Typography key={index}>{item}</Typography>)}
-                <Typography fontWeight={800} mt={2}>Cooldown</Typography>
-                {session.guidance.cooldown.map((item, index) => <Typography key={index}>{item}</Typography>)}
-                <Typography mt={2}>{session.guidance.recoveryNote}</Typography>
+                {session.guidance.warmup.length > 0 && <>
+                  <Typography fontWeight={800} mt={2}>Warm-up</Typography>
+                  {session.guidance.warmup.map((item, index) => <Typography key={index}>{item}</Typography>)}
+                </>}
+                {session.guidance.cooldown.length > 0 && <>
+                  <Typography fontWeight={800} mt={2}>Cooldown</Typography>
+                  {session.guidance.cooldown.map((item, index) => <Typography key={index}>{item}</Typography>)}
+                </>}
+                {session.guidance.recoveryNote && <Typography mt={2}>{session.guidance.recoveryNote}</Typography>}
               </Paper>
             )}
             {/* EXERCISES */}

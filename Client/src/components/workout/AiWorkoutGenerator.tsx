@@ -154,6 +154,20 @@ function normalizePlan(value: unknown): DailyWorkoutPlan {
   };
 }
 
+// ai-complete truncates prompts at 12,000 chars; keep the library summary
+// small so it can never push the Requirements off the end.
+const MAX_WORKOUTS_SUMMARY = 1500;
+export function summarizeWorkouts(types: WorkoutType[]): string {
+  let summary = "";
+  for (const type of types) {
+    const line = `- ${type.name}: ${type.exercises.map((exercise) => exercise.name).join(", ")}
+`;
+    if (summary.length + line.length > MAX_WORKOUTS_SUMMARY) break;
+    summary += line;
+  }
+  return summary.trim() || "None yet.";
+}
+
 export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }: { onSaveWorkout?: (workout: WorkoutType) => void; workoutTypes?: WorkoutType[] }) {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
@@ -275,7 +289,7 @@ MOST RECENT CHECK-IN:
 ${checkInText}
 
 EXISTING USER WORKOUTS:
-${JSON.stringify(workoutTypes.map(({ name, exercises }) => ({ name, exercises })))}
+${summarizeWorkouts(workoutTypes)}
 Use these as examples of the user's preferred exercises and session structure, adapting to readiness and requests. Any workout focus is allowed, including full body, conditioning, mobility, and sport-specific training.
 
 RECENT 7-DAY HISTORY:
@@ -527,8 +541,10 @@ Requirements:
                     onClick={() => {
                       try {
                         onSaveWorkout(workoutTypeFromAI(plan, workoutName));
-                      } catch {
-                        setError("Could not save this workout. Please try again.");
+                      } catch (saveError) {
+                        setError(saveError instanceof Error && saveError.message
+                          ? `Could not save this workout: ${saveError.message}`
+                          : "Could not save this workout. Please try again.");
                       }
                     }}>
                     {savedToLibrary ? "Saved to My Workouts" : "Save to My Workouts"}
