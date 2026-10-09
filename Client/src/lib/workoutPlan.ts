@@ -258,7 +258,7 @@ export function sessionFromType(type: WorkoutType): DaySession {
       cues: exercise.cues,
       sets: Array.from({ length: Math.max(1, exercise.sets) }, () => ({
         id: nextId(),
-        reps: String(exercise.targetReps),
+        reps: exercise.targetReps > 0 ? String(exercise.targetReps) : "",
         weight: "0",
         completed: false,
       })),
@@ -491,6 +491,8 @@ export function sessionProgress(session: DaySession | undefined) {
 
 /** Next-session load advice for one exercise, from the sets ticked off today. */
 export function weightSuggestion(exercise: PlannedExercise): string {
+  if (exercise.targetReps === 0) return "Follow the prescribed duration and rest in the coaching cues.";
+
   const completed = exercise.sets.filter((set) => set.completed);
 
   if (completed.length === 0) {

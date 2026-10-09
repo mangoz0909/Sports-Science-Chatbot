@@ -76,7 +76,7 @@ export default function ExerciseCard({
             </Typography>
 
             <Typography variant="body2" color="text.secondary">
-              Exercise {index + 1} • Target {exercise.targetReps} reps
+              Exercise {index + 1} • {exercise.targetReps > 0 ? `Target ${exercise.targetReps} reps` : "Follow the timed prescription in the coaching cues"}
             </Typography>
           </Box>
 

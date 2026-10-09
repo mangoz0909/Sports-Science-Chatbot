@@ -274,6 +274,9 @@ export default function MyWorkoutPlan() {
               if (!storageKey || planOwnerKey !== storageKey) throw new Error("Sign in to save a workout.");
               const updated = { ...plan, types: [...plan.types, workout] };
               savePlan(storageKey, updated);
+              if (window.localStorage.getItem(storageKey) !== JSON.stringify(updated)) {
+                throw new Error("Workout storage is unavailable.");
+              }
               setPlan(updated);
             }} />
           </Box>
