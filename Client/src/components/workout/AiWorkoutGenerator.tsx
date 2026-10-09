@@ -30,7 +30,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../contexts/AuthContext";
 import { cleanJsonResponse } from "../../lib/aiJson";
 import { functionErrorMessage } from "../../lib/functionError";
-import { nextId, type WorkoutType } from "../../lib/workoutPlan";
+import { isAIWorkoutSaved, workoutTypeFromAI, type WorkoutType } from "../../lib/workoutPlan";
 import { loadTodaysPlan, saveTodaysPlan } from "../../services/planService";
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
@@ -165,7 +165,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
   // only one of them should put "Generating…" on the button.
   const [restoring, setRestoring] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [savedToLibrary, setSavedToLibrary] = React.useState(false);
+  const savedToLibrary = Boolean(plan && isAIWorkoutSaved(workoutTypes, plan));
   const [workoutName, setWorkoutName] = React.useState("");
   const [userInstructions, setUserInstructions] = React.useState("");
 
@@ -193,7 +193,6 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
   // the previous athlete's plan on screen under the demo banner.
   React.useEffect(() => {
     setPlan(null);
-    setSavedToLibrary(false);
     setWorkoutName("");
     setError(null);
   }, [userId]);
@@ -351,7 +350,6 @@ Requirements:
 
       setPlan(normalizedPlan);
       setWorkoutName(normalizedPlan.focus);
-      setSavedToLibrary(false);
 
       if (userId) {
         // Caches locally, then syncs to Supabase. A failed sync is logged and
@@ -528,25 +526,7 @@ Requirements:
                     sx={{ minWidth: 190, textTransform: "none" }}
                     onClick={() => {
                       try {
-                        onSaveWorkout({
-                          id: `ai-${Date.now()}-${nextId()}`,
-                          name: workoutName.trim(), color: "#a855f7",
-                          exercises: plan.exercises.map((exercise, index) => ({
-                            name: exercise.name,
-                            sets: Math.min(10, Math.max(1, Number.parseInt(exercise.sets, 10) || 1)),
-                            targetReps: /^\d+(?:\s*[-–]\s*\d+)?$/.test(exercise.reps.trim()) ? Number.parseInt(exercise.reps, 10) : 0,
-                            cues: [
-                              `Prescription: ${exercise.sets} sets × ${exercise.reps}; rest ${exercise.rest}.`,
-                              exercise.notes,
-                              ...(index === 0 ? [
-                                `${plan.intensity} intensity · ${plan.totalDuration}`, plan.coachNote,
-                                `Warm-up: ${plan.warmup.join("; ")}`,
-                                `Cooldown: ${plan.cooldown.join("; ")}`, plan.recoveryNote,
-                              ] : []),
-                            ].filter(Boolean),
-                          })),
-                        });
-                        setSavedToLibrary(true);
+                        onSaveWorkout(workoutTypeFromAI(plan, workoutName));
                       } catch {
                         setError("Could not save this workout. Please try again.");
                       }

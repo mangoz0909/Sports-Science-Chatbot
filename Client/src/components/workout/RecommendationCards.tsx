@@ -36,7 +36,7 @@ export default function RecommendationCards({
       </Typography>
 
       <Typography color="text.secondary" mt={0.5} mb={2.5}>
-        Ranked by how long each muscle group has had to recover.
+        Ranked using time since this workout or overlapping exercises were planned. Muscle overlap is estimated from exercise names.
       </Typography>
 
       <Grid container spacing={2}>

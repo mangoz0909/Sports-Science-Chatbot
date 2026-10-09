@@ -51,6 +51,9 @@ export default function ExerciseCard({
   // lift and are noise once you are not.
   const [showCues, setShowCues] = useState(false);
 
+  const timed = exercise.prescription?.kind === "duration";
+  const columns = timed ? "44px 1fr 52px 44px" : COLUMNS;
+
   return (
     <Card
       elevation={0}
@@ -76,7 +79,7 @@ export default function ExerciseCard({
             </Typography>
 
             <Typography variant="body2" color="text.secondary">
-              Exercise {index + 1} • {exercise.targetReps > 0 ? `Target ${exercise.targetReps} reps` : "Follow the timed prescription in the coaching cues"}
+              Exercise {index + 1} • {exercise.prescription ? `Target ${exercise.prescription.target}${timed ? "" : " reps"} · Rest ${exercise.prescription.rest}` : exercise.targetReps > 0 ? `Target ${exercise.targetReps} reps` : "Follow the prescription in the coaching cues"}
             </Typography>
           </Box>
 
@@ -130,7 +133,7 @@ export default function ExerciseCard({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: COLUMNS,
+            gridTemplateColumns: columns,
             gap: 1.5,
             px: 1,
             mb: 1,
@@ -141,12 +144,12 @@ export default function ExerciseCard({
             SET
           </Typography>
 
-          <Typography variant="caption" color="text.secondary">
+          {!timed && <Typography variant="caption" color="text.secondary">
             WEIGHT (LB)
-          </Typography>
+          </Typography>}
 
           <Typography variant="caption" color="text.secondary">
-            REPS
+            {timed ? "DURATION" : "REPS"}
           </Typography>
 
           <Typography variant="caption" color="text.secondary">
@@ -162,7 +165,7 @@ export default function ExerciseCard({
               key={set.id}
               sx={{
                 display: "grid",
-                gridTemplateColumns: COLUMNS,
+                gridTemplateColumns: columns,
                 gap: 1.5,
                 alignItems: "center",
                 p: 1,
@@ -172,7 +175,7 @@ export default function ExerciseCard({
             >
               <Typography fontWeight={700}>{setIndex + 1}</Typography>
 
-              <TextField
+              {!timed && <TextField
                 type="number"
                 size="small"
                 value={set.weight}
@@ -185,16 +188,16 @@ export default function ExerciseCard({
                 }}
                 onChange={(e) => onUpdateSet(set.id, "weight", e.target.value)}
                 onBlur={() => onNormaliseSet(set.id, "weight")}
-              />
+              />}
 
               <TextField
-                type="number"
+                type={timed ? "text" : "number"}
                 size="small"
                 value={set.reps}
                 inputProps={{
                   min: 0,
                   step: 1,
-                  "aria-label": `${exercise.name} set ${setIndex + 1} reps`,
+                  "aria-label": `${exercise.name} set ${setIndex + 1} ${timed ? "duration" : "reps"}`,
                 }}
                 onChange={(e) => onUpdateSet(set.id, "reps", e.target.value)}
                 onBlur={() => onNormaliseSet(set.id, "reps")}

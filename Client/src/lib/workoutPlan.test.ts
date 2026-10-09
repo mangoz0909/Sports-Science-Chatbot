@@ -1,5 +1,9 @@
 import {
   defaultTypes,
+  workoutTypeFromAI,
+  isAIWorkoutSaved,
+  replaceWorkoutTypes,
+  type AIWorkout,
   emptyPlan,
   loadPlan,
   recommendWorkouts,
@@ -261,5 +265,72 @@ describe("storage", () => {
 
     expect(loaded.days[TODAY]).toBeUndefined();
     expect(loaded.types[0].exercises).toEqual([]);
+  });
+});
+
+const aiSession: AIWorkout = {
+  focus: "Strength and conditioning", intensity: "Medium", totalDuration: "45 min",
+  coachNote: "Keep effort controlled.", warmup: ["Easy jog"], cooldown: ["Walk"], recoveryNote: "Hydrate.",
+  exercises: [
+    { name: "Goblet squat", sets: "3", reps: "6-8", rest: "90 sec", notes: "Brace your core." },
+    { name: "Shuttle runs", sets: "4", reps: "30 sec", rest: "60 sec", notes: "Smooth turns." },
+  ],
+};
+
+describe("reusable AI workouts", () => {
+  it("keeps prescriptions and session guidance separate through edits, removal, and reload", () => {
+    const type = workoutTypeFromAI(aiSession, "My training");
+    type.exercises[0].sets = 5;
+    type.exercises[0].targetReps = 10;
+    type.exercises[0].prescription!.target = "10";
+    expect(type.exercises[0].cues).toEqual(["Brace your core."]);
+    const session = sessionFromType(type);
+    expect(session.exercises[0].sets).toHaveLength(5);
+    expect(session.exercises[0].prescription!.target).toBe("10");
+    session.exercises.shift();
+    savePlan(KEY, { types: [type], days: { [TODAY]: session } });
+    const restored = loadPlan(KEY);
+    expect(restored.days[TODAY].guidance!.warmup).toEqual(["Easy jog"]);
+    expect(restored.days[TODAY].guidance!.recoveryNote).toBe("Hydrate.");
+    expect(restored.days[TODAY].exercises[0].prescription!.kind).toBe("duration");
+    expect(restored.days[TODAY].exercises[0].sets[0].reps).toBe("30 sec");
+    expect(isAIWorkoutSaved(restored.types, aiSession)).toBe(true);
+  });
+
+  it("reduces recovery ranking for a newly saved AI workout overlapping yesterday's legs", () => {
+    const types = [...defaultTypes(), workoutTypeFromAI(aiSession, "AI squat session")];
+    const plan = { types, days: { "2026-09-16": sessionFromType(types[2]) } };
+    const ranked = recommendWorkouts(plan, TODAY);
+    const ai = ranked.find((entry) => entry.type.id === types[3].id)!;
+    expect(ai.daysSince).toBe(1);
+    expect(ai.percent).toBeLessThan(ranked.find((entry) => entry.type.id === "push")!.percent);
+  });
+
+  it("preserves deleted workout identity and guidance without retaining the library option", () => {
+    const type = workoutTypeFromAI(aiSession, "Deleted workout");
+    const session = sessionFromType(type);
+    const plan = replaceWorkoutTypes({ types: [type], days: { [TODAY]: session } }, []);
+    savePlan(KEY, plan);
+    const restored = loadPlan(KEY);
+    expect(restored.types).toEqual([]);
+    expect(restored.days[TODAY].name).toBe("Deleted workout");
+    expect(restored.days[TODAY].color).toBe(type.color);
+    expect(restored.days[TODAY].guidance).toEqual(type.guidance);
+    expect(restored.days[TODAY].exercises).toHaveLength(2);
+  });
+
+  it("migrates old AI imports without losing their session guidance", () => {
+    const legacy = { id: "ai-old", name: "Old AI", color: "#a855f7", exercises: [
+      { name: "Shuttle runs", sets: 4, targetReps: 0, cues: [
+        "Prescription: 4 sets × 30 sec; rest 60 sec.", "Smooth turns.",
+        "Medium intensity · 45 min", "Keep effort controlled.", "Warm-up: Easy jog", "Cooldown: Walk", "Hydrate.",
+      ] },
+    ] };
+    savePlan(KEY, { types: [legacy], days: { [TODAY]: sessionFromType(legacy) } });
+    const restored = loadPlan(KEY);
+    expect(restored.types[0].exercises[0].prescription).toEqual({ kind: "duration", target: "30 sec", rest: "60 sec" });
+    expect(restored.types[0].exercises[0].cues).toEqual(["Smooth turns."]);
+    expect(restored.days[TODAY].guidance!.warmup).toEqual(["Easy jog"]);
+    expect(restored.days[TODAY].exercises[0].cues).toEqual(["Smooth turns."]);
   });
 });

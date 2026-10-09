@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { vi } from "vitest";
 import CustomizeTypesDialog from "./CustomizeTypesDialog";
 import MyWorkoutPlan from "../../pages/MyWorkoutPlan";
-import { defaultTypes, loadPlan, recommendWorkouts, savePlan, sessionFromType, storageKeyFor, type WorkoutType } from "../../lib/workoutPlan";
+import { defaultTypes, workoutTypeFromAI, loadPlan, recommendWorkouts, savePlan, sessionFromType, storageKeyFor, type WorkoutType } from "../../lib/workoutPlan";
 
 const auth = vi.hoisted(() => ({ user: { id: "athlete-1" } as { id: string } | null }));
 vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: auth.user }) }));
@@ -94,4 +94,20 @@ it("saves AI workouts as reusable planner options without replacing the user's w
   expect(session.exercises[0].targetReps).toBe(0);
   expect(session.exercises[0].cues).toEqual(["30 sec; rest 60 sec"]);
   expect(session.exercises[0].sets.every((set) => !set.completed)).toBe(true);
+});
+
+it("edits a timed prescription without converting it to reps", () => {
+  const type = workoutTypeFromAI({ focus: "Conditioning", intensity: "Low", totalDuration: "20 min",
+    coachNote: "Easy effort", warmup: [], cooldown: [], recoveryNote: "Rest",
+    exercises: [{ name: "Run", sets: "3", reps: "30 sec", rest: "60 sec", notes: "Relax" }],
+  }, "Conditioning");
+  const onSave = vi.fn();
+  act(() => root.render(<CustomizeTypesDialog open types={[type]} onClose={() => {}} onSave={onSave} />));
+  const duration = host.querySelector<HTMLInputElement>('input[aria-label="Duration"]')!;
+  act(() => { duration.value = "45 sec"; duration.dispatchEvent(new Event("input", { bubbles: true })); });
+  act(() => Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Save")!.click());
+  const exercise = onSave.mock.calls[0][0][0].exercises[0];
+  expect(exercise.targetReps).toBe(0);
+  expect(exercise.prescription).toEqual({ kind: "duration", target: "45 sec", rest: "60 sec" });
+  expect(exercise.cues).toEqual(["Relax"]);
 });

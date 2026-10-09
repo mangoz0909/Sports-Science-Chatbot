@@ -34,6 +34,7 @@ import {
   loadPlan,
   nextId,
   recommendWorkouts,
+  replaceWorkoutTypes,
   savePlan,
   sessionFromType,
   sessionProgress,
@@ -99,7 +100,7 @@ export default function MyWorkoutPlan() {
   );
 
   const activeType = session ? typeById.get(session.typeId) : undefined;
-  const accent = activeType?.color ?? "#0f172a";
+  const accent = session?.color ?? activeType?.color ?? "#0f172a";
 
   const recommendations = useMemo(
     () => recommendWorkouts(plan, selectedISO),
@@ -272,6 +273,7 @@ export default function MyWorkoutPlan() {
           <Box role="tabpanel" id="workout-panel-ai" aria-labelledby="workout-tab-ai">
             <AiWorkoutGenerator workoutTypes={plan.types} onSaveWorkout={(workout) => {
               if (!storageKey || planOwnerKey !== storageKey) throw new Error("Sign in to save a workout.");
+              if (workout.sourceKey && plan.types.some((type) => type.sourceKey === workout.sourceKey)) return;
               const updated = { ...plan, types: [...plan.types, workout] };
               savePlan(storageKey, updated);
               if (window.localStorage.getItem(storageKey) !== JSON.stringify(updated)) {
@@ -384,7 +386,7 @@ export default function MyWorkoutPlan() {
                     </Typography>
 
                     <Typography variant="h5" fontWeight={800} mt={0.5}>
-                      {activeType?.name ?? "Workout"}
+                      {session?.name ?? activeType?.name ?? "Workout"}
                     </Typography>
 
                     <Button
@@ -431,6 +433,17 @@ export default function MyWorkoutPlan() {
               </Box>
             </Paper>
 
+            {session.guidance && (
+              <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+                <Typography fontWeight={800}>{session.guidance.intensity} intensity · {session.guidance.duration}</Typography>
+                <Typography mt={1}>{session.guidance.coachNote}</Typography>
+                <Typography fontWeight={800} mt={2}>Warm-up</Typography>
+                {session.guidance.warmup.map((item, index) => <Typography key={index}>{item}</Typography>)}
+                <Typography fontWeight={800} mt={2}>Cooldown</Typography>
+                {session.guidance.cooldown.map((item, index) => <Typography key={index}>{item}</Typography>)}
+                <Typography mt={2}>{session.guidance.recoveryNote}</Typography>
+              </Paper>
+            )}
             {/* EXERCISES */}
             <Stack spacing={3}>
               {session.exercises.map((exercise, index) => (
@@ -446,7 +459,7 @@ export default function MyWorkoutPlan() {
                     }))
                   }
                   onNormaliseSet={(setId, field) =>
-                    mapSet(exercise.id, setId, (set) => ({
+                    (field === "reps" && exercise.prescription?.kind === "duration") ? undefined : mapSet(exercise.id, setId, (set) => ({
                       ...set,
                       [field]: String(toNumber(set[field])),
                     }))
@@ -470,7 +483,7 @@ export default function MyWorkoutPlan() {
                             ...entry.sets,
                             {
                               id: nextId(),
-                              reps: last?.reps ?? String(entry.targetReps),
+                              reps: last?.reps ?? entry.prescription?.target ?? String(entry.targetReps),
                               weight: last?.weight ?? "0",
                               completed: false,
                             },
@@ -585,7 +598,7 @@ export default function MyWorkoutPlan() {
         types={plan.types}
         onClose={() => setCustomizeOpen(false)}
         onSave={(types) => {
-          setPlan((current) => ({ ...current, types }));
+          setPlan((current) => replaceWorkoutTypes(current, types));
           setCustomizeOpen(false);
         }}
       />

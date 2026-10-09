@@ -253,7 +253,7 @@ export default function CustomizeTypesDialog({
                       inputProps={{ min: 1, max: 10 }}
                       onChange={(e) =>
                         updateExercise(type.id, index, {
-                          sets: Math.max(1, Number(e.target.value) || 1),
+                          sets: Math.min(10, Math.max(1, Math.floor(Number(e.target.value)) || 1)),
                         })
                       }
                       sx={{ width: 90 }}
@@ -261,18 +261,22 @@ export default function CustomizeTypesDialog({
 
                     <TextField
                       size="small"
-                      label="Reps"
-                      type="number"
-                      value={exercise.targetReps}
+                      type={exercise.prescription ? "text" : "number"}
+                      label={exercise.prescription?.kind === "duration" ? "Duration" : "Reps"}
+                      value={exercise.prescription?.target ?? exercise.targetReps}
                       inputProps={{ min: 1, max: 100 }}
                       onChange={(e) =>
                         updateExercise(type.id, index, {
-                          targetReps: Math.max(1, Number(e.target.value) || 1),
+                          targetReps: exercise.prescription?.kind === "duration" ? 0 : Math.max(1, Number.parseInt(e.target.value.match(/[-–]\s*(\d+)/)?.[1] ?? e.target.value, 10) || 1),
+                          ...(exercise.prescription ? { prescription: { ...exercise.prescription, target: e.target.value } } : {}),
                         })
                       }
                       sx={{ width: 90 }}
                     />
 
+                    {exercise.prescription && <TextField size="small" label="Rest" value={exercise.prescription.rest}
+                      onChange={(event) => updateExercise(type.id, index, { prescription: { ...exercise.prescription!, rest: event.target.value } })}
+                      sx={{ width: 100 }} />}
                     <IconButton
                       size="small"
                       aria-label={`Remove ${exercise.name} from ${type.name}`}
