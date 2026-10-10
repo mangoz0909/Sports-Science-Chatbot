@@ -9,11 +9,17 @@ const auth = vi.hoisted(() => ({ user: { id: "athlete-1" } as { id: string } | n
 vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: auth.user }) }));
 vi.mock("react-router-dom", () => ({ useSearchParams: () => [new URLSearchParams("tab=ai"), vi.fn()] }));
 vi.mock("../Seo", () => ({ default: () => null }));
-vi.mock("./AiWorkoutGenerator", () => ({ default: ({ onSaveWorkout }: { onSaveWorkout: (type: WorkoutType) => void }) => (
-  <button onClick={() => onSaveWorkout({ id: "ai-conditioning", name: "Match Conditioning", color: "#a855f7", exercises: [
+vi.mock("./AiWorkoutGenerator", () => {
+  const workout = (): WorkoutType => ({ id: "ai-conditioning", name: "Match Conditioning", color: "#a855f7", sourceKey: "ai-1", exercises: [
     { name: "Shuttle runs", sets: 4, targetReps: 0, cues: ["30 sec; rest 60 sec"] },
-  ] })}>Save AI workout</button>
-) }));
+  ] });
+  return { default: ({ onSaveWorkout }: { onSaveWorkout: (type: WorkoutType, options: { startToday: boolean }) => void }) => (
+    <>
+      <button onClick={() => onSaveWorkout(workout(), { startToday: false })}>Save AI workout</button>
+      <button onClick={() => onSaveWorkout(workout(), { startToday: true })}>Train AI workout today</button>
+    </>
+  ) };
+});
 vi.mock("./WeekStrip", () => ({ default: () => null }));
 vi.mock("./RecommendationCards", () => ({ default: () => null }));
 vi.mock("./ExerciseCard", () => ({ default: () => null }));
@@ -25,7 +31,7 @@ vi.mock("@mui/material", () => {
   const Button = ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => <button onClick={onClick}>{children}</button>;
   return {
     Box: Group, Container: Group, Paper: Group, Stack: Group, Typography: Group,
-    Chip: () => null, Divider: () => null, LinearProgress: () => null,
+    Chip: () => null, Divider: () => null, LinearProgress: () => null, Collapse: Group, ButtonBase: Button,
     Tab: () => null, Tabs: Group, Tooltip: Group,
     Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) => open ? <div>{children}</div> : null,
     DialogActions: Group, DialogContent: Group, DialogTitle: Group,
@@ -111,4 +117,17 @@ it("edits a timed prescription without converting it to reps", () => {
   expect(exercise.targetReps).toBe(0);
   expect(exercise.prescription).toEqual({ kind: "duration", target: "45 sec", rest: "60 sec" });
   expect(exercise.cues).toEqual(["Relax"]);
+});
+
+it("puts an AI workout on today's plan in one click, once", () => {
+  act(() => root.render(<MyWorkoutPlan />));
+  const train = () => Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Train AI workout today")!;
+  act(() => train().click());
+  act(() => train().click());
+  const saved = loadPlan(storageKeyFor("athlete-1"));
+  expect(saved.types.filter((type) => type.sourceKey === "ai-1")).toHaveLength(1);
+  const today = Object.values(saved.days);
+  expect(today).toHaveLength(1);
+  expect(today[0].typeId).toBe("ai-conditioning");
+  expect(today[0].exercises[0].sets).toHaveLength(4);
 });

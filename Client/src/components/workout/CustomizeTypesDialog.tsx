@@ -25,6 +25,7 @@ import {
   TYPE_COLORS,
   type WorkoutType,
 } from "../../lib/workoutPlan";
+import { INK, LINE, MUTED, captionSx, fieldSx } from "./ui";
 
 type Props = {
   open: boolean;
@@ -33,17 +34,10 @@ type Props = {
   onSave: (types: WorkoutType[]) => void;
 };
 
-// Same slate palette as the rest of the workout page.
-const INK = "#0f172a";
-const MUTED = "#64748b";
-const LINE = "#e2e8f0";
 const COLOR_NAMES = ["Red", "Green", "Blue", "Amber", "Purple", "Teal"];
 
 const ROW_COLUMNS = "28px minmax(0, 1fr) 76px 96px 40px";
 const ROW_COLUMNS_REST = "28px minmax(0, 1fr) 76px 96px 96px 40px";
-
-const captionSx = { fontSize: 12, fontWeight: 800, color: MUTED, letterSpacing: "0.04em", textTransform: "uppercase" } as const;
-const fieldSx = { "& .MuiOutlinedInput-root": { borderRadius: 2, bgcolor: "#fff" } } as const;
 
 const slugify = (name: string) =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");

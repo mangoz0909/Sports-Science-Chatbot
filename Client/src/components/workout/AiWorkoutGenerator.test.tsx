@@ -79,14 +79,14 @@ it("uses the actual save conversion and prevents duplicate saves after remountin
   const onSave = vi.fn((type: WorkoutType) => { types = [...types, type]; });
   const render = () => root.render(<AiWorkoutGenerator workoutTypes={types} onSaveWorkout={onSave} />);
   await act(async () => { render(); });
-  const save = Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Save to My Workouts")!;
+  const save = Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Save for later")!;
   act(() => save.click());
   expect(onSave).toHaveBeenCalledTimes(1);
   expect(types[0].exercises[0].prescription).toEqual({ kind: "duration", target: "30 sec", rest: "60 sec" });
   expect(types[0].guidance!.warmup).toEqual(["Easy jog"]);
   act(() => root.render(null));
   await act(async () => { render(); });
-  const saved = Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Saved to My Workouts")!;
+  const saved = Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Saved")!;
   expect(saved.disabled).toBe(true);
   act(() => saved.click());
   expect(onSave).toHaveBeenCalledTimes(1);
@@ -94,7 +94,7 @@ it("uses the actual save conversion and prevents duplicate saves after remountin
 
 it("reports a failed save and leaves the save button available for retry", async () => {
   await act(async () => root.render(<AiWorkoutGenerator onSaveWorkout={() => { throw new Error("Storage unavailable"); }} />));
-  const save = Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Save to My Workouts")!;
+  const save = Array.from(host.querySelectorAll("button")).find((button) => button.textContent === "Save for later")!;
   act(() => save.click());
   expect(host.textContent).toContain("Could not save this workout");
   expect(save.disabled).toBe(false);

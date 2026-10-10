@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
@@ -8,6 +8,7 @@ import {
   type Plan,
   type WorkoutType,
 } from "../../lib/workoutPlan";
+import { INK, LINE, MUTED, textButtonSx } from "./ui";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -51,9 +52,14 @@ export default function WeekStrip({
         justifyContent="space-between"
         mb={1.5}
       >
-        <Typography fontWeight={800}>{monthLabel}</Typography>
+        <Typography fontWeight={900} color={INK}>{monthLabel}</Typography>
 
-        <Stack direction="row" spacing={0.5}>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {selectedISO !== todayISO && (
+            <Button size="small" onClick={() => onSelect(todayISO)} sx={{ ...textButtonSx, minWidth: 0, px: 1.25 }}>
+              Today
+            </Button>
+          )}
           <IconButton
             size="small"
             aria-label="Previous week"
@@ -83,6 +89,10 @@ export default function WeekStrip({
           const iso = toISODate(day);
           const session = plan.days[iso];
           const type = session ? typeById.get(session.typeId) : undefined;
+          // Days keep their own name and colour, so removing a type from the
+          // library does not blank out the history.
+          const label = session?.name ?? type?.name;
+          const color = session?.color ?? type?.color;
           const isSelected = iso === selectedISO;
           const isToday = iso === todayISO;
 
@@ -96,7 +106,7 @@ export default function WeekStrip({
                 weekday: "long",
                 day: "numeric",
                 month: "long",
-              })}${type ? ` — ${type.name}` : ""}`}
+              })}${isToday ? ", today" : ""}${label ? ` — ${label}` : ""}`}
               aria-pressed={isSelected}
               sx={{
                 cursor: "pointer",
@@ -108,27 +118,34 @@ export default function WeekStrip({
                 // The selected day is outlined rather than filled so the type
                 // colour underneath stays readable.
                 border: "2px solid",
-                borderColor: isSelected ? "#0f172a" : "divider",
+                borderColor: isSelected ? INK : LINE,
                 bgcolor: isSelected ? "#f1f5f9" : "#fff",
                 transition: "border-color 150ms ease, background-color 150ms ease",
 
                 "&:hover": {
-                  borderColor: isSelected ? "#0f172a" : "#94a3b8",
+                  borderColor: isSelected ? INK : "#94a3b8",
                 },
               }}
             >
               <Typography
                 variant="caption"
-                fontWeight={700}
-                color={isToday ? "primary.main" : "text.secondary"}
+                fontWeight={isToday ? 900 : 700}
+                color={isToday ? INK : MUTED}
                 display="block"
               >
-                {WEEKDAYS[index]}
+                {isToday ? (
+                  <>
+                    {/* "Today" does not fit a phone-width square. */}
+                    <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>Today</Box>
+                    <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>{WEEKDAYS[index]}</Box>
+                  </>
+                ) : WEEKDAYS[index]}
               </Typography>
 
               <Typography
                 fontWeight={800}
                 fontSize={{ xs: 15, sm: 18 }}
+                color={INK}
                 lineHeight={1.4}
               >
                 {day.getDate()}
@@ -141,9 +158,9 @@ export default function WeekStrip({
                   height: 6,
                   mt: 0.5,
                   mx: "auto",
-                  width: type ? { xs: 16, sm: 22 } : 6,
+                  width: color ? { xs: 16, sm: 22 } : 6,
                   borderRadius: 3,
-                  bgcolor: type ? type.color : "transparent",
+                  bgcolor: color ?? "transparent",
                 }}
               />
             </Box>

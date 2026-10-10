@@ -2,27 +2,27 @@ import React, { useState } from "react";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Collapse,
-  Divider,
   IconButton,
-  Paper,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 
 import { weightSuggestion, type PlannedExercise } from "../../lib/workoutPlan";
+import { BODY, INK, LINE, MUTED, SURFACE, captionSx, cardSx, fieldSx, removeIconSx, textButtonSx } from "./ui";
 
-const COLUMNS = "44px 1fr 1fr 52px 44px";
+const COLUMNS = "32px minmax(0, 1fr) minmax(0, 1fr) 44px 36px";
+const TIMED_COLUMNS = "32px minmax(0, 1fr) 44px 36px";
 
 type Props = {
   exercise: PlannedExercise;
@@ -52,213 +52,202 @@ export default function ExerciseCard({
   const [showCues, setShowCues] = useState(false);
 
   const timed = exercise.prescription?.kind === "duration";
-  const columns = timed ? "44px 1fr 52px 44px" : COLUMNS;
+  const columns = timed ? TIMED_COLUMNS : COLUMNS;
+  const doneSets = exercise.sets.filter((set) => set.completed).length;
+  const allDone = exercise.sets.length > 0 && doneSets === exercise.sets.length;
+
+  const target = exercise.prescription
+    ? `${exercise.prescription.target}${timed ? "" : " reps"} · Rest ${exercise.prescription.rest}`
+    : exercise.targetReps > 0
+      ? `Target ${exercise.targetReps} reps`
+      : null;
 
   return (
-    <Card
-      elevation={0}
-      sx={{
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 3,
-        overflow: "hidden",
-      }}
-    >
-      <Box sx={{ height: 4, bgcolor: accent }} />
-
-      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="flex-start"
-          mb={2}
-        >
-          <Box>
-            <Typography variant="h6" fontWeight={800}>
-              {exercise.name}
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary">
-              Exercise {index + 1} • {exercise.prescription ? `Target ${exercise.prescription.target}${timed ? "" : " reps"} · Rest ${exercise.prescription.rest}` : exercise.targetReps > 0 ? `Target ${exercise.targetReps} reps` : "Follow the prescription in the coaching cues"}
-            </Typography>
-          </Box>
-
-          <IconButton
-            color="error"
-            aria-label={`Remove ${exercise.name}`}
-            onClick={onRemove}
-          >
-            <DeleteOutlineIcon />
-          </IconButton>
-        </Stack>
-
-        {exercise.cues.length > 0 && (
-          <Box mb={1.5}>
-            <Button
-              size="small"
-              onClick={() => setShowCues((open) => !open)}
-              endIcon={
-                <ExpandMoreIcon
-                  sx={{
-                    transform: showCues ? "rotate(180deg)" : "none",
-                    transition: "transform 150ms ease",
-                  }}
-                />
-              }
-              sx={{ textTransform: "none", fontWeight: 700, px: 0 }}
-            >
-              {showCues ? "Hide form guide" : "How to do this"}
-            </Button>
-
-            <Collapse in={showCues}>
-              <Box component="ol" sx={{ m: 0, mt: 1, pl: 2.5 }}>
-                {exercise.cues.map((cue) => (
-                  <Typography
-                    key={cue}
-                    component="li"
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 0.5 }}
-                  >
-                    {cue}
-                  </Typography>
-                ))}
-              </Box>
-            </Collapse>
-          </Box>
-        )}
-
-        <Divider sx={{ mb: 2 }} />
-
+    <Box component="section" aria-label={exercise.name} sx={{ ...cardSx, p: { xs: 2, md: 2.5 } }}>
+      <Stack direction="row" spacing={1.5} alignItems="flex-start">
         <Box
+          aria-hidden
           sx={{
+            flexShrink: 0,
+            width: 32,
+            height: 32,
+            mt: 0.25,
+            borderRadius: "50%",
             display: "grid",
-            gridTemplateColumns: columns,
-            gap: 1.5,
-            px: 1,
-            mb: 1,
-            alignItems: "center",
+            placeItems: "center",
+            fontSize: 14,
+            fontWeight: 900,
+            bgcolor: allDone ? accent : "#f1f5f9",
+            color: allDone ? "#fff" : MUTED,
           }}
         >
-          <Typography variant="caption" color="text.secondary">
-            SET
-          </Typography>
-
-          {!timed && <Typography variant="caption" color="text.secondary">
-            WEIGHT (LB)
-          </Typography>}
-
-          <Typography variant="caption" color="text.secondary">
-            {timed ? "DURATION" : "REPS"}
-          </Typography>
-
-          <Typography variant="caption" color="text.secondary">
-            DONE
-          </Typography>
-
-          <Box />
+          {allDone ? <CheckCircleIcon sx={{ fontSize: 20 }} /> : index + 1}
         </Box>
 
-        <Stack spacing={1}>
-          {exercise.sets.map((set, setIndex) => (
-            <Box
-              key={set.id}
-              sx={{
-                display: "grid",
-                gridTemplateColumns: columns,
-                gap: 1.5,
-                alignItems: "center",
-                p: 1,
-                borderRadius: 2,
-                bgcolor: set.completed ? "action.selected" : "transparent",
-              }}
-            >
-              <Typography fontWeight={700}>{setIndex + 1}</Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography component="h3" fontWeight={900} fontSize={17} color={INK} lineHeight={1.3}>
+            {exercise.name}
+          </Typography>
 
-              {!timed && <TextField
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Typography variant="body2" color={MUTED}>
+              {target ? `${target} · ` : ""}{doneSets}/{exercise.sets.length} sets
+            </Typography>
+
+            {exercise.cues.length > 0 && (
+              <Button
+                size="small"
+                onClick={() => setShowCues((open) => !open)}
+                aria-expanded={showCues}
+                endIcon={
+                  <ExpandMoreIcon
+                    sx={{
+                      transform: showCues ? "rotate(180deg)" : "none",
+                      transition: "transform 150ms ease",
+                      "@media (prefers-reduced-motion: reduce)": { transition: "none" },
+                    }}
+                  />
+                }
+                sx={{ ...textButtonSx, px: 0, minWidth: 0, fontSize: 13, color: MUTED, "&:hover": { color: INK, bgcolor: "transparent" } }}
+              >
+                Form tips
+              </Button>
+            )}
+          </Stack>
+        </Box>
+
+        <Tooltip title="Remove exercise">
+          <IconButton size="small" aria-label={`Remove ${exercise.name}`} onClick={onRemove} sx={removeIconSx}>
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+
+      <Collapse in={showCues}>
+        <Box component="ul" sx={{ m: 0, mt: 1.5, p: 1.5, pl: 4, borderRadius: 2, bgcolor: SURFACE }}>
+          {exercise.cues.map((cue) => (
+            <Typography key={cue} component="li" variant="body2" color={BODY} sx={{ mb: 0.25 }}>
+              {cue}
+            </Typography>
+          ))}
+        </Box>
+      </Collapse>
+
+      {/* SET TABLE */}
+      <Box
+        aria-hidden
+        sx={{ display: "grid", gridTemplateColumns: columns, gap: 1, px: 0.5, mt: 2, mb: 0.5 }}
+      >
+        <Typography sx={captionSx}>Set</Typography>
+        {!timed && <Typography sx={captionSx}>Lb</Typography>}
+        <Typography sx={captionSx}>{timed ? "Time" : "Reps"}</Typography>
+        <Typography sx={{ ...captionSx, textAlign: "center" }}>Done</Typography>
+        <span />
+      </Box>
+
+      <Stack spacing={0.5}>
+        {exercise.sets.map((set, setIndex) => (
+          <Box
+            key={set.id}
+            sx={{
+              display: "grid",
+              gridTemplateColumns: columns,
+              gap: 1,
+              alignItems: "center",
+              px: 0.5,
+              py: 0.5,
+              borderRadius: 2,
+              bgcolor: set.completed ? `${accent}14` : "transparent",
+              transition: "background-color 150ms ease",
+            }}
+          >
+            <Typography fontWeight={800} color={set.completed ? INK : MUTED} textAlign="center">
+              {setIndex + 1}
+            </Typography>
+
+            {!timed && (
+              <TextField
                 type="number"
                 size="small"
                 value={set.weight}
                 inputProps={{
                   min: 0,
                   step: "any",
-                  "aria-label": `${exercise.name} set ${
-                    setIndex + 1
-                  } weight in pounds`,
+                  inputMode: "decimal",
+                  "aria-label": `${exercise.name} set ${setIndex + 1} weight in pounds`,
                 }}
                 onChange={(e) => onUpdateSet(set.id, "weight", e.target.value)}
                 onBlur={() => onNormaliseSet(set.id, "weight")}
-              />}
-
-              <TextField
-                type={timed ? "text" : "number"}
-                size="small"
-                value={set.reps}
-                inputProps={{
-                  min: 0,
-                  step: 1,
-                  "aria-label": `${exercise.name} set ${setIndex + 1} ${timed ? "duration" : "reps"}`,
-                }}
-                onChange={(e) => onUpdateSet(set.id, "reps", e.target.value)}
-                onBlur={() => onNormaliseSet(set.id, "reps")}
+                sx={fieldSx}
               />
+            )}
 
-              <IconButton
-                aria-label={`Mark ${exercise.name} set ${setIndex + 1} ${
-                  set.completed ? "incomplete" : "complete"
-                }`}
-                onClick={() => onToggleSet(set.id)}
-              >
-                {set.completed ? (
-                  <CheckCircleIcon sx={{ color: accent }} />
-                ) : (
-                  <RadioButtonUncheckedIcon />
-                )}
-              </IconButton>
+            <TextField
+              type={timed ? "text" : "number"}
+              size="small"
+              value={set.reps}
+              inputProps={{
+                min: 0,
+                step: 1,
+                inputMode: timed ? "text" : "numeric",
+                "aria-label": `${exercise.name} set ${setIndex + 1} ${timed ? "duration" : "reps"}`,
+              }}
+              onChange={(e) => onUpdateSet(set.id, "reps", e.target.value)}
+              onBlur={() => onNormaliseSet(set.id, "reps")}
+              sx={fieldSx}
+            />
 
-              <IconButton
-                size="small"
-                aria-label={`Remove ${exercise.name} set ${setIndex + 1}`}
-                onClick={() => onRemoveSet(set.id)}
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          ))}
-        </Stack>
+            <IconButton
+              aria-label={`Mark ${exercise.name} set ${setIndex + 1} ${set.completed ? "incomplete" : "complete"}`}
+              aria-pressed={set.completed}
+              onClick={() => onToggleSet(set.id)}
+              sx={{ justifySelf: "center" }}
+            >
+              {set.completed ? (
+                <CheckCircleIcon sx={{ color: accent }} />
+              ) : (
+                <RadioButtonUncheckedIcon sx={{ color: "#94a3b8" }} />
+              )}
+            </IconButton>
 
-        <Button
-          startIcon={<AddIcon />}
-          onClick={onAddSet}
-          sx={{ mt: 2, textTransform: "none", fontWeight: 700 }}
-        >
-          Add Set
+            <IconButton
+              size="small"
+              aria-label={`Remove ${exercise.name} set ${setIndex + 1}`}
+              onClick={() => onRemoveSet(set.id)}
+              sx={{ ...removeIconSx, color: "#94a3b8" }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        ))}
+      </Stack>
+
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1}
+        alignItems={{ sm: "center" }}
+        justifyContent="space-between"
+        sx={{ mt: 1 }}
+      >
+        <Button size="small" startIcon={<AddIcon />} onClick={onAddSet} sx={{ ...textButtonSx, alignSelf: "flex-start" }}>
+          Add set
         </Button>
 
-        <Paper
-          elevation={0}
-          sx={{
-            mt: 2,
-            p: 2,
-            bgcolor: "action.hover",
-            borderRadius: 2,
-          }}
-        >
-          <Stack direction="row" spacing={1.5}>
-            <LightbulbOutlinedIcon />
-
-            <Box>
-              <Typography variant="body2" fontWeight={700}>
-                Next-session suggestion
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary" mt={0.5}>
-                {weightSuggestion(exercise)}
-              </Typography>
-            </Box>
+        {/* The next-session tip only means something once a set is logged. */}
+        {doneSets > 0 && (
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ px: 1.5, py: 0.75, borderRadius: 2, bgcolor: SURFACE, border: `1px solid ${LINE}` }}
+          >
+            <LightbulbOutlinedIcon sx={{ fontSize: 18, color: MUTED }} />
+            <Typography variant="body2" color={BODY}>
+              {weightSuggestion(exercise)}
+            </Typography>
           </Stack>
-        </Paper>
-      </CardContent>
-    </Card>
+        )}
+      </Stack>
+    </Box>
   );
 }

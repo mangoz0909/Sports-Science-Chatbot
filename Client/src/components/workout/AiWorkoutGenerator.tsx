@@ -3,11 +3,8 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
-  Divider,
   Skeleton,
   Stack,
   TextField,
@@ -15,7 +12,9 @@ import {
 } from "@mui/material";
 
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import BookmarkAddOutlinedIcon from "@mui/icons-material/BookmarkAddOutlined";
+import CheckIcon from "@mui/icons-material/Check";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 
@@ -32,6 +31,19 @@ import { cleanJsonResponse } from "../../lib/aiJson";
 import { functionErrorMessage } from "../../lib/functionError";
 import { isAIWorkoutSaved, summarizeWorkouts, workoutTypeFromAI, type WorkoutType } from "../../lib/workoutPlan";
 import { loadTodaysPlan, saveTodaysPlan } from "../../services/planService";
+import {
+  BODY,
+  INK,
+  LINE,
+  LINE_STRONG,
+  MUTED,
+  captionSx,
+  cardSx,
+  fieldSx,
+  primaryButtonSx,
+  secondaryButtonSx,
+  textButtonSx,
+} from "./ui";
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
 
@@ -155,7 +167,13 @@ function normalizePlan(value: unknown): DailyWorkoutPlan {
   };
 }
 
-export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }: { onSaveWorkout?: (workout: WorkoutType) => void; workoutTypes?: WorkoutType[] }) {
+export type SaveWorkoutOptions = { startToday: boolean };
+
+export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }: {
+  /** Adds the workout to the library; with startToday it also becomes today's session. */
+  onSaveWorkout?: (workout: WorkoutType, options: SaveWorkoutOptions) => void;
+  workoutTypes?: WorkoutType[];
+}) {
   const { session, loading: authLoading } = useAuth();
   const isLoggedIn = Boolean(session);
 
@@ -167,7 +185,6 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
   const [restoring, setRestoring] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const savedToLibrary = Boolean(plan && isAIWorkoutSaved(workoutTypes, plan));
-  const [workoutName, setWorkoutName] = React.useState("");
   const [userInstructions, setUserInstructions] = React.useState("");
 
   const todayName = new Date().toLocaleDateString(undefined, { weekday: "long" });
@@ -194,7 +211,6 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
   // the previous athlete's plan on screen under the demo banner.
   React.useEffect(() => {
     setPlan(null);
-    setWorkoutName("");
     setError(null);
   }, [userId]);
   const busy = loading || restoring;
@@ -356,7 +372,6 @@ Requirements:
       if (activeUserRef.current !== requestUserId) return;
 
       setPlan(normalizedPlan);
-      setWorkoutName(normalizedPlan.focus);
 
       if (userId) {
         // Caches locally, then syncs to Supabase. A failed sync is logged and
@@ -394,7 +409,6 @@ Requirements:
           try {
             const restored = normalizePlan(saved);
             setPlan(restored);
-            setWorkoutName(restored.focus);
             return;
           } catch (error) {
             // Ignore an incompatible saved plan so the athlete can request
@@ -422,270 +436,243 @@ Requirements:
     ? intensityColor(plan.intensity)
     : intensityColor("Low");
 
+  const save = (startToday: boolean) => {
+    if (!plan || !onSaveWorkout) return;
+    try {
+      setError(null);
+      onSaveWorkout(workoutTypeFromAI(plan, plan.focus), { startToday });
+    } catch (saveError) {
+      setError(saveError instanceof Error && saveError.message
+        ? `Could not save this workout: ${saveError.message}`
+        : "Could not save this workout. Please try again.");
+    }
+  };
+
   return (
     <Box>
-      <Stack spacing={2} sx={{ mb: 3 }}>
-        <Box>
-          <Typography variant="h5" fontWeight={950} color="#0f172a">
-            Today's Training Plan
-          </Typography>
-          <Typography color="#64748b" fontSize={14}>
-            One detailed session for {todayName}, personalised using your profile,
-            today's check-in, and recent training trends.
-          </Typography>
-        </Box>
+      {/* ASK */}
+      <Box sx={{ ...cardSx, p: { xs: 2, md: 2.5 }, mb: 2.5 }}>
+        <Typography component="h2" fontWeight={950} fontSize={20} color={INK}>
+          Today's AI workout
+        </Typography>
+        <Typography color={MUTED} fontSize={14} mt={0.25}>
+          One session for {todayName}, built from your profile, latest check-in
+          and recent training.
+        </Typography>
 
-        {isLoggedIn && (
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems="stretch">
+        {isLoggedIn ? (
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems="stretch" mt={2}>
             <TextField
               fullWidth
               value={userInstructions}
               onChange={(e) => setUserInstructions(e.target.value)}
-              placeholder="Tell the AI what changed today... e.g. I only have 30 minutes, my legs are sore, I have a match tomorrow, or I want more speed work."
+              placeholder="Anything different today? e.g. only 30 minutes, sore legs, match tomorrow"
+              inputProps={{ "aria-label": "Anything different today" }}
               multiline
-              minRows={2}
+              minRows={1}
+              maxRows={4}
               disabled={busy}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 3,
-                  bgcolor: "#fff",
-                },
-              }}
+              sx={fieldSx}
             />
 
             <Button
               variant="contained"
-              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : plan ? <RefreshIcon /> : <AutoAwesomeIcon />}
               disabled={busy}
               onClick={() => void generatePlan()}
-              sx={{
-                minWidth: { md: 190 },
-                borderRadius: 3,
-                fontWeight: 800,
-                textTransform: "none",
-                bgcolor: "#0f172a",
-                "&:hover": { bgcolor: "#1e293b" },
-              }}
+              sx={{ ...primaryButtonSx, minWidth: { md: 190 }, py: 1.25 }}
             >
-              {loading ? "Generating…" : plan ? "Regenerate Today" : "Generate Workout"}
+              {loading ? "Generating…" : plan ? "Regenerate" : "Generate Workout"}
             </Button>
           </Stack>
+        ) : !authLoading && (
+          <Alert
+            severity="info"
+            sx={{ mt: 2, borderRadius: 3 }}
+            action={
+              <Button component={RouterLink} to="/auth?mode=login" size="small" sx={textButtonSx}>
+                Sign in
+              </Button>
+            }
+          >
+            Sign in to generate today's personalised workout.
+          </Alert>
         )}
-      </Stack>
-
-      {!authLoading && !isLoggedIn && (
-        <Alert
-          severity="info"
-          sx={{ mb: 3, borderRadius: 3 }}
-          action={
-            <Button
-              component={RouterLink}
-              to="/auth?mode=login"
-              size="small"
-              sx={{ fontWeight: 800, textTransform: "none" }}
-            >
-              Sign in
-            </Button>
-          }
-        >
-          Sign in to generate today's personalised workout.
-        </Alert>
-      )}
+      </Box>
 
       {error && isLoggedIn && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: 3 }}>
           {error}
         </Alert>
       )}
 
       {busy && !plan && (
-        <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
-          <CardContent sx={{ p: 3 }}>
-            <Skeleton variant="text" width="35%" height={32} />
-            <Skeleton variant="text" width="60%" />
-            <Skeleton variant="rounded" height={72} sx={{ my: 2 }} />
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} variant="rounded" height={82} sx={{ mb: 1.5 }} />
-            ))}
-          </CardContent>
-        </Card>
+        <Box sx={{ ...cardSx, p: 3 }}>
+          <Skeleton variant="text" width="35%" height={32} />
+          <Skeleton variant="text" width="60%" />
+          <Skeleton variant="rounded" height={72} sx={{ my: 2 }} />
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton key={index} variant="rounded" height={56} sx={{ mb: 1 }} />
+          ))}
+        </Box>
       )}
 
       {plan && (
-        <Stack spacing={2.5}>
-          {isLoggedIn && onSaveWorkout && (
-            <Card variant="outlined" sx={{ borderRadius: 3 }}>
-              <CardContent>
-                <Typography fontWeight={800} mb={1}>Save as a reusable workout</Typography>
-                <Typography color="text.secondary" mb={2}>
-                  Choose this workout for any day in the Weekly Planner, or edit it under Customize.
+        <Box component="article" aria-label={plan.focus} sx={{ ...cardSx, overflow: "hidden" }}>
+          {/* SUMMARY + ACTIONS */}
+          <Box sx={{ p: { xs: 2, md: 3 }, borderBottom: `1px solid ${LINE}` }}>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              justifyContent="space-between"
+              alignItems={{ xs: "flex-start", md: "center" }}
+              spacing={2}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={captionSx}>
+                  {plan.day} · {plan.date}
                 </Typography>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <TextField label="Workout name" value={workoutName} fullWidth
-                    disabled={busy || savedToLibrary}
-                    onChange={(event) => setWorkoutName(event.target.value)} />
-                  <Button variant="contained" disabled={busy || savedToLibrary || !workoutName.trim()}
-                    sx={{ minWidth: 190, textTransform: "none" }}
-                    onClick={() => {
-                      try {
-                        onSaveWorkout(workoutTypeFromAI(plan, workoutName));
-                      } catch (saveError) {
-                        setError(saveError instanceof Error && saveError.message
-                          ? `Could not save this workout: ${saveError.message}`
-                          : "Could not save this workout. Please try again.");
-                      }
-                    }}>
-                    {savedToLibrary ? "Saved to My Workouts" : "Save to My Workouts"}
-                  </Button>
-                </Stack>
-                {savedToLibrary && <Alert severity="success" sx={{ mt: 2 }}>
-                  Saved on this device. Open the Weekly Planner and choose this workout for a day.
-                </Alert>}
-              </CardContent>
-            </Card>
-          )}
-          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
-            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                justifyContent="space-between"
-                alignItems={{ xs: "flex-start", sm: "center" }}
-                spacing={1.5}
-                sx={{ mb: 2 }}
-              >
-                <Box>
-                  <Typography fontSize={12} color="#64748b" fontWeight={800}>
-                    {plan.day} • {plan.date}
-                  </Typography>
-                  <Typography variant="h5" fontWeight={950} color="#0f172a" sx={{ mt: 0.25 }}>
-                    {plan.focus}
-                  </Typography>
-                </Box>
-
-                <Stack direction="row" spacing={1}>
+                <Typography component="h3" fontWeight={950} fontSize={{ xs: 22, md: 26 }} color={INK} lineHeight={1.2} mt={0.5}>
+                  {plan.focus}
+                </Typography>
+                <Stack direction="row" spacing={1} mt={1.25}>
                   <Chip
-                    label={plan.intensity}
-                    sx={{
-                      bgcolor: intensityStyle.bg,
-                      color: intensityStyle.color,
-                      fontWeight: 900,
-                    }}
+                    size="small"
+                    label={`${plan.intensity} intensity`}
+                    sx={{ bgcolor: intensityStyle.bg, color: intensityStyle.color, fontWeight: 900 }}
                   />
                   <Chip
+                    size="small"
                     icon={<TimerOutlinedIcon />}
                     label={plan.totalDuration}
                     variant="outlined"
-                    sx={{ fontWeight: 800 }}
+                    sx={{ fontWeight: 800, borderColor: LINE_STRONG }}
+                  />
+                  <Chip
+                    size="small"
+                    label={`${plan.exercises.length} exercises`}
+                    variant="outlined"
+                    sx={{ fontWeight: 800, borderColor: LINE_STRONG }}
                   />
                 </Stack>
-              </Stack>
+              </Box>
 
-              {plan.coachNote && (
-                <Box sx={{ p: 2, borderRadius: 3, bgcolor: "#eff6ff", border: "1px solid #bfdbfe" }}>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-                    <AutoAwesomeIcon sx={{ fontSize: 17, color: "#2563eb" }} />
-                    <Typography
-                      fontSize={12}
-                      fontWeight={900}
-                      letterSpacing="0.08em"
-                      textTransform="uppercase"
-                      color="#2563eb"
-                    >
-                      AI Coach Note
-                    </Typography>
-                  </Stack>
-                  <Typography color="#1e3a5f" fontSize={14} lineHeight={1.75}>
-                    {plan.coachNote}
-                  </Typography>
-                </Box>
+              {isLoggedIn && onSaveWorkout && (
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ width: { xs: "100%", md: "auto" }, flexShrink: 0 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<PlayArrowRoundedIcon />}
+                    disabled={busy}
+                    onClick={() => save(true)}
+                    sx={{ ...primaryButtonSx, px: 2.5, py: 1.1 }}
+                  >
+                    Train this today
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={savedToLibrary ? <CheckIcon /> : <BookmarkAddOutlinedIcon />}
+                    disabled={busy || savedToLibrary}
+                    onClick={() => save(false)}
+                    sx={{ ...secondaryButtonSx, px: 2.5, py: 1.1 }}
+                  >
+                    {savedToLibrary ? "Saved" : "Save for later"}
+                  </Button>
+                </Stack>
               )}
-            </CardContent>
-          </Card>
+            </Stack>
 
-          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
-            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-              <Typography fontWeight={950} color="#0f172a" sx={{ mb: 1.5 }}>
-                Warm-up
-              </Typography>
-              <Stack spacing={0.8}>
-                {plan.warmup.map((item, index) => (
-                  <Typography key={index} color="#475569" fontSize={14}>
-                    {index + 1}. {item}
-                  </Typography>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
-            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                <FitnessCenterIcon sx={{ color: "#2563eb" }} />
-                <Typography fontWeight={950} color="#0f172a">
-                  Main Workout
+            {plan.coachNote && (
+              <Stack direction="row" spacing={1.25} sx={{ mt: 2.5, p: 2, borderRadius: 2.5, bgcolor: "#eff6ff", border: "1px solid #bfdbfe" }}>
+                <AutoAwesomeIcon sx={{ fontSize: 18, color: "#2563eb", mt: 0.25 }} />
+                <Typography color="#1e3a5f" fontSize={14} lineHeight={1.7}>
+                  {plan.coachNote}
                 </Typography>
               </Stack>
+            )}
+          </Box>
 
-              <Stack spacing={2}>
-                {plan.exercises.map((exercise, index) => (
-                  <Box key={`${exercise.name}-${index}`}>
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      justifyContent="space-between"
-                      spacing={1}
+          {/* SESSION */}
+          <Box sx={{ p: { xs: 2, md: 3 } }}>
+            {plan.warmup.length > 0 && (
+              <GuideList title="Warm-up" items={plan.warmup} />
+            )}
+
+            <Typography sx={{ ...captionSx, mt: plan.warmup.length > 0 ? 3 : 0, mb: 1 }}>
+              Main workout
+            </Typography>
+            <Stack divider={<Box sx={{ borderTop: `1px solid ${LINE}` }} />}>
+              {plan.exercises.map((exercise, index) => (
+                <Stack
+                  key={`${exercise.name}-${index}`}
+                  direction={{ xs: "column", sm: "row" }}
+                  justifyContent="space-between"
+                  spacing={{ xs: 1, sm: 2 }}
+                  sx={{ py: 1.5 }}
+                >
+                  <Stack direction="row" spacing={1.5} sx={{ minWidth: 0 }}>
+                    <Box
+                      aria-hidden
+                      sx={{ flexShrink: 0, width: 26, height: 26, mt: 0.1, borderRadius: "50%", display: "grid", placeItems: "center", bgcolor: "#f1f5f9", color: MUTED, fontSize: 13, fontWeight: 900 }}
                     >
-                      <Box>
-                        <Typography fontWeight={900} color="#0f172a">
-                          {index + 1}. {exercise.name}
+                      {index + 1}
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography fontWeight={900} color={INK}>
+                        {exercise.name}
+                      </Typography>
+                      {exercise.notes && (
+                        <Typography color={MUTED} fontSize={13} lineHeight={1.6} sx={{ mt: 0.25 }}>
+                          {exercise.notes}
                         </Typography>
-                        {exercise.notes && (
-                          <Typography color="#64748b" fontSize={13} lineHeight={1.6} sx={{ mt: 0.5 }}>
-                            {exercise.notes}
-                          </Typography>
-                        )}
-                      </Box>
+                      )}
+                    </Box>
+                  </Stack>
 
-                      <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-                        <Chip size="small" label={`${exercise.sets} sets`} variant="outlined" />
-                        <Chip size="small" label={`${exercise.reps} reps`} variant="outlined" />
-                        <Chip size="small" label={`Rest ${exercise.rest}`} variant="outlined" />
-                      </Stack>
-                    </Stack>
-
-                    {index < plan.exercises.length - 1 && <Divider sx={{ mt: 2 }} />}
-                  </Box>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
-            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-              <Typography fontWeight={950} color="#0f172a" sx={{ mb: 1.5 }}>
-                Cooldown
-              </Typography>
-              <Stack spacing={0.8}>
-                {plan.cooldown.map((item, index) => (
-                  <Typography key={index} color="#475569" fontSize={14}>
-                    {index + 1}. {item}
+                  <Typography
+                    fontSize={14}
+                    fontWeight={800}
+                    color={BODY}
+                    sx={{ flexShrink: 0, pl: { xs: 4.75, sm: 0 }, whiteSpace: { sm: "nowrap" } }}
+                  >
+                    {exercise.sets} × {exercise.reps} · rest {exercise.rest}
                   </Typography>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
+                </Stack>
+              ))}
+            </Stack>
 
-          {plan.recoveryNote && (
-            <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: "#ecfdf5", border: "1px solid #bbf7d0" }}>
-              <Typography fontWeight={950} color="#047857" sx={{ mb: 0.5 }}>
-                Recovery for Today
-              </Typography>
-              <Typography color="#065f46" fontSize={14} lineHeight={1.75}>
-                {plan.recoveryNote}
-              </Typography>
-            </Box>
-          )}
-        </Stack>
+            {plan.cooldown.length > 0 && (
+              <Box mt={3}>
+                <GuideList title="Cooldown" items={plan.cooldown} />
+              </Box>
+            )}
+
+            {plan.recoveryNote && (
+              <Box sx={{ mt: 3, p: 2, borderRadius: 2.5, bgcolor: "#ecfdf5", border: "1px solid #bbf7d0" }}>
+                <Typography fontWeight={900} color="#047857" fontSize={14}>
+                  Recovery
+                </Typography>
+                <Typography color="#065f46" fontSize={14} lineHeight={1.7} mt={0.25}>
+                  {plan.recoveryNote}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Box>
       )}
+    </Box>
+  );
+}
+
+function GuideList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <Box>
+      <Typography sx={{ ...captionSx, mb: 1 }}>{title}</Typography>
+      <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+        {items.map((item, index) => (
+          <Typography key={index} component="li" color={BODY} fontSize={14} sx={{ mb: 0.5 }}>
+            {item}
+          </Typography>
+        ))}
+      </Box>
     </Box>
   );
 }
