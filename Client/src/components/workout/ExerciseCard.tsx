@@ -94,6 +94,12 @@ export default function ExerciseCard({
               {target ? `${target} · ` : ""}{doneSets}/{exercise.sets.length} sets
             </Typography>
 
+            {!timed && exercise.lastWeight ? (
+              <Typography variant="caption" color={MUTED}>
+                Last time: {exercise.lastWeight} lb
+              </Typography>
+            ) : null}
+
             {exercise.cues.length > 0 && (
               <Button
                 size="small"

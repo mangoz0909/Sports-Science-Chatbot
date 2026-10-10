@@ -116,3 +116,31 @@ export async function getLast7CheckIns() {
   if (error) throw error;
   return [...(data || [])].reverse();
 }
+
+/**
+ * Check-ins for the last `days` calendar days (today included), oldest first.
+ *
+ * Read-only sibling of getLast7CheckIns for the dashboard range filter. The
+ * ai-chat edge function caps its own history at 90 rows, so the dashboard
+ * offers at most 90 days; the limit here matches.
+ */
+export async function getCheckInsForRange(days: number) {
+  const user = await getCurrentUser();
+
+  if (!user) return [];
+
+  const span = Math.min(Math.max(Math.floor(days) || 7, 1), 90);
+  const start = new Date();
+  start.setDate(start.getDate() - (span - 1));
+
+  const { data, error } = await supabase
+    .from("daily_checkins")
+    .select("*")
+    .eq("user_id", user.id)
+    .gte("checkin_date", localDateString(start))
+    .order("checkin_date", { ascending: false })
+    .limit(span);
+
+  if (error) throw error;
+  return [...(data || [])].reverse();
+}

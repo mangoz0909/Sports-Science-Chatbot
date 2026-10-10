@@ -3,11 +3,16 @@ import { createRoot, type Root } from "react-dom/client";
 import { vi } from "vitest";
 import CustomizeTypesDialog from "./CustomizeTypesDialog";
 import MyWorkoutPlan from "../../pages/MyWorkoutPlan";
-import { defaultTypes, workoutTypeFromAI, loadPlan, recommendWorkouts, savePlan, sessionFromType, storageKeyFor, type WorkoutType } from "../../lib/workoutPlan";
+import { defaultTypes, workoutTypeFromAI, loadPlan, recommendWorkouts, savePlan, sessionFromType, storageKeyFor, toISODate, type WorkoutType } from "../../lib/workoutPlan";
 
 const auth = vi.hoisted(() => ({ user: { id: "athlete-1" } as { id: string } | null }));
 vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: auth.user }) }));
-vi.mock("react-router-dom", () => ({ useSearchParams: () => [new URLSearchParams("tab=ai"), vi.fn()] }));
+vi.mock("react-router-dom", () => ({
+  useSearchParams: () => [new URLSearchParams("tab=ai"), vi.fn()],
+  Link: ({ to, children }: { to: string; children?: React.ReactNode }) => <a href={to}>{children}</a>,
+}));
+const planService = vi.hoisted(() => ({ loadTodaysPlan: vi.fn() }));
+vi.mock("../../services/planService", () => planService);
 vi.mock("../Seo", () => ({ default: () => null }));
 vi.mock("./AiWorkoutGenerator", () => {
   const workout = (): WorkoutType => ({ id: "ai-conditioning", name: "Match Conditioning", color: "#a855f7", sourceKey: "ai-1", exercises: [
@@ -48,6 +53,8 @@ let root: Root;
 beforeEach(() => {
   window.localStorage.clear();
   auth.user = { id: "athlete-1" };
+  planService.loadTodaysPlan.mockReset();
+  planService.loadTodaysPlan.mockResolvedValue(null);
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
@@ -130,4 +137,44 @@ it("puts an AI workout on today's plan in one click, once", () => {
   expect(today).toHaveLength(1);
   expect(today[0].typeId).toBe("ai-conditioning");
   expect(today[0].exercises[0].sets).toHaveLength(4);
+});
+
+describe("fuel for this session", () => {
+  const today = toISODate(new Date());
+  const seed = () => savePlan(storageKeyFor("athlete-1"), { types: defaultTypes(), days: { [today]: sessionFromType(defaultTypes()[0]) } });
+  const render = async () => { await act(async () => { root.render(<MyWorkoutPlan />); }); };
+
+  it("shows pre and post workout food from today's nutrition plan", async () => {
+    seed();
+    planService.loadTodaysPlan.mockResolvedValue({ meals: [
+      { meal: "Breakfast", foods: "Eggs", timing: "8am" },
+      { meal: "Pre-workout snack", foods: "Banana", timing: "45 min before" },
+      { meal: "Post-workout", foods: "Chicken and rice", timing: "within an hour" },
+    ] });
+    await render();
+    expect(host.textContent).toContain("Banana");
+    expect(host.textContent).toContain("Chicken and rice");
+    expect(host.textContent).not.toContain("Eggs");
+    expect(host.textContent?.split("Full nutrition plan").length).toBe(3);
+  });
+
+  it("offers to generate a plan when none exists, and never crashes on odd shapes", async () => {
+    seed();
+    await render();
+    expect(host.textContent).toContain("Generate today's nutrition plan");
+    planService.loadTodaysPlan.mockResolvedValue({ meals: "nope" });
+    await render();
+    act(() => root.unmount());
+    root = createRoot(host);
+    planService.loadTodaysPlan.mockResolvedValue({ meals: [{ meal: "Lunch", foods: "Soup" }] });
+    await render();
+    expect(host.textContent).not.toContain("Soup");
+  });
+
+  it("hides fuel when signed out", async () => {
+    auth.user = null;
+    await render();
+    expect(planService.loadTodaysPlan).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain("nutrition plan");
+  });
 });

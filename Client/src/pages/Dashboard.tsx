@@ -12,6 +12,7 @@ import {
   Skeleton,
   Snackbar,
   Stack,
+  Tooltip as MuiTooltip,
   Typography,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
@@ -29,12 +30,21 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import {
   getLatestCheckIn,
-  getLast7CheckIns,
+  getCheckInsForRange,
   localDateString,
 } from "../services/checkinService";
 import { getMyProfile } from "../services/profileService";
 import { useAuth } from "../contexts/AuthContext";
 import Seo from "../components/Seo";
+import RangeFilter from "../components/dashboard/RangeFilter";
+import {
+  DEFAULT_RANGE,
+  buildDemoTrend,
+  buildTrendData,
+  rangeLabel,
+  type RangeDays,
+} from "../components/dashboard/trendRange";
+import { LINE, MUTED } from "../components/workout/ui";
 import {
   Area,
   AreaChart,
@@ -58,16 +68,9 @@ const colors = {
   purple: "#8b5cf6",
   cyan: "#06b6d4",
 };
-const DEMO_WEEKLY = [
-  { day: "Mon", readiness: 72, recovery: 68, load: 60, sleep: 7,   fatigue: 35 },
-  { day: "Tue", readiness: 78, recovery: 74, load: 75, sleep: 7.5, fatigue: 28 },
-  { day: "Wed", readiness: 65, recovery: 60, load: 85, sleep: 6.5, fatigue: 45 },
-  { day: "Thu", readiness: 80, recovery: 76, load: 55, sleep: 8,   fatigue: 22 },
-  { day: "Fri", readiness: 84, recovery: 78, load: 69, sleep: 7.5, fatigue: 30 },
-  { day: "Sat", readiness: 70, recovery: 65, load: 90, sleep: 7,   fatigue: 40 },
-  { day: "Sun", readiness: 75, recovery: 72, load: 40, sleep: 8.5, fatigue: 20 },
-];
-
+function trendTooltipLabel(label: unknown, payload: ReadonlyArray<{ payload?: { full?: string } }>) {
+  return payload?.[0]?.payload?.full ?? String(label ?? "");
+}
 
 function riskColor(value: number) {
   if (value < 35) return colors.green;
@@ -140,6 +143,8 @@ export default function Dashboard() {
   const [weeklyCheckIns, setWeeklyCheckIns] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [profile, setProfile] = React.useState<any>(null);
+  const [rangeDays, setRangeDays] = React.useState<RangeDays>(DEFAULT_RANGE);
+  const [rangeLoading, setRangeLoading] = React.useState(false);
   const [snackError, setSnackError] = React.useState<string | null>(null);
 
   const isGuest = !session;
@@ -157,14 +162,12 @@ export default function Dashboard() {
         return;
       }
       try {
-        const [latest, last7, prof] = await Promise.all([
+        const [latest, prof] = await Promise.all([
           getLatestCheckIn(),
-          getLast7CheckIns(),
           getMyProfile(),
         ]);
         if (!mounted) return;
         setLatestCheckIn(latest);
-        setWeeklyCheckIns(last7);
         setProfile(prof);
       } catch (error: any) {
         if (!mounted) return;
@@ -176,6 +179,26 @@ export default function Dashboard() {
     loadDashboard();
     return () => { mounted = false; };
   }, [userId]);
+
+  // Trend rows follow the page-level range. Kept in its own effect so changing
+  // the range refetches only the series, not the profile or latest check-in,
+  // and the previous series stays on screen until the new one lands.
+  React.useEffect(() => {
+    if (!userId) return;
+    let mounted = true;
+    setRangeLoading(true);
+    getCheckInsForRange(rangeDays)
+      .then((rows) => {
+        if (mounted) setWeeklyCheckIns(rows);
+      })
+      .catch((error: any) => {
+        if (mounted) setSnackError(error?.message || "Failed to load trend data.");
+      })
+      .finally(() => {
+        if (mounted) setRangeLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [userId, rangeDays]);
 
 const userProfile = isGuest ? {
   name: "Demo Athlete",
@@ -203,17 +226,10 @@ const userProfile = isGuest ? {
   hydrationGoal: 10,
 };
 
-const weeklyData = isGuest ? DEMO_WEEKLY : weeklyCheckIns.map((item) => ({
-  // Weekday labels repeat once check-ins span more than a week, which collided
-  // as React keys in the heatmap below. The date is unique; the label is not.
-  key: item.checkin_date,
-  day: new Date(item.checkin_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" }),
-  readiness: item.readiness_score ?? 0,
-  recovery: item.recovery_score ?? 0,
-  load: item.training_intensity ? item.training_intensity * 10 : 0,
-  sleep: item.sleep_hours ?? 0,
-  fatigue: item.fatigue ? item.fatigue * 10 : 0,
-}));
+const weeklyData = isGuest ? buildDemoTrend(rangeDays) : buildTrendData(weeklyCheckIns, rangeDays);
+const periodLabel = rangeLabel(rangeDays);
+const sparseTrend = !isGuest && weeklyData.length === 1;
+const singleDot = weeklyData.length <= 1 ? { r: 5 } : false;
 
 if (loading) {
   // Mirrors the real layout below (heading, 6 KPI cards, two chart panels) so
@@ -472,13 +488,29 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   border: "1px solid #e2e8f0",
                 }}
               >
-                <CardContent sx={{ p: 2.5 }}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Typography color="#64748b" fontWeight={850} fontSize={14}>
-                        {item.label}
-                      </Typography>
-                      <Typography variant="h5" component="p" fontWeight={950} sx={{ mt: 0.5 }}>
+                <CardContent sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column", "&:last-child": { pb: 2.5 } }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                    <Box sx={{ minWidth: 0 }}>
+                      {/* Fixed two-line title slot so a wrapped title ("Training Load")
+                          never pushes its number below its neighbours'. */}
+                      <MuiTooltip title={item.label} placement="top-start">
+                        <Typography
+                          color={MUTED}
+                          fontWeight={850}
+                          fontSize={14}
+                          sx={{
+                            lineHeight: "20px",
+                            minHeight: 40,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {item.label}
+                        </Typography>
+                      </MuiTooltip>
+                      <Typography variant="h5" component="p" fontWeight={950} sx={{ mt: 0.5, lineHeight: "32px" }}>
                         {item.value}
                       </Typography>
                     </Box>
@@ -498,11 +530,12 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     </Box>
                   </Stack>
 
+                  <Box sx={{ pt: 2, mt: "auto" }}>
                   <LinearProgress
                     variant="determinate"
                     value={item.progress}
+                    aria-label={item.label}
                     sx={{
-                      mt: 2,
                       height: 8,
                       borderRadius: 999,
                       bgcolor: "#e2e8f0",
@@ -512,45 +545,55 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       },
                     }}
                   />
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
 
+        <RangeFilter value={rangeDays} onChange={setRangeDays} />
+
         <Grid container spacing={2.5}>
           <Grid item xs={12} lg={8}>
           <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" component="h2" fontWeight={950}>
-                  My Weekly Readiness Trend
+                  Readiness trend
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Readiness, recovery, fatigue, and training load over the week.
+                  Readiness, recovery, fatigue, and training load over the {periodLabel}.
                 </Typography>
 
                 <Box sx={{ height: { xs: 210, md: 340 } }}>
-                  {weeklyData.length === 0 ? (
+                  {rangeLoading && weeklyData.length === 0 ? (
+                    <Skeleton variant="rounded" height="100%" sx={{ borderRadius: 3 }} />
+                  ) : weeklyData.length === 0 ? (
                     <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
                       <Box textAlign="center">
-                        <Typography fontWeight={700} color="#94a3b8">No data yet</Typography>
-                        <Typography fontSize={13} color="#cbd5e1" sx={{ mt: 0.5 }}>Complete daily check-ins to see your weekly trends.</Typography>
+                        <Typography fontWeight={700} color="#94a3b8">No data in the {periodLabel}</Typography>
+                        <Typography fontSize={13} color="#94a3b8" sx={{ mt: 0.5 }}>Check in daily to see your trend.</Typography>
                       </Box>
                     </Box>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={LINE} />
+                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} interval="preserveStartEnd" minTickGap={24} />
                         <YAxis stroke="#64748b" domain={[0, 110]} tick={{ fontSize: 12 }} width={44} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="readiness" stroke={colors.green} strokeWidth={3} dot={false} />
-                        <Line type="monotone" dataKey="recovery" stroke={colors.purple} strokeWidth={3} dot={false} />
-                        <Line type="monotone" dataKey="load" stroke={colors.blue} strokeWidth={3} dot={false} />
-                        <Line type="monotone" dataKey="fatigue" stroke={colors.amber} strokeWidth={3} dot={false} />
+                        <Tooltip labelFormatter={trendTooltipLabel} />
+                        <Line type="monotone" dataKey="readiness" stroke={colors.green} strokeWidth={3} dot={singleDot} />
+                        <Line type="monotone" dataKey="recovery" stroke={colors.purple} strokeWidth={3} dot={singleDot} />
+                        <Line type="monotone" dataKey="load" stroke={colors.blue} strokeWidth={3} dot={singleDot} />
+                        <Line type="monotone" dataKey="fatigue" stroke={colors.amber} strokeWidth={3} dot={singleDot} />
                       </LineChart>
                     </ResponsiveContainer>
                   )}
                 </Box>
+                {sparseTrend && (
+                  <Typography fontSize={13} color={MUTED} sx={{ mt: 1.5 }}>
+                    Check in daily to see your trend.
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -623,19 +666,19 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   My Sleep Trend
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Sleep duration across the week.
+                  Sleep duration over the {periodLabel}.
                 </Typography>
 
                 <Box sx={{ height: { xs: 200, md: 230 } }}>
                   {weeklyData.length === 0 ? (
                     <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
-                      <Typography fontWeight={700} color="#94a3b8">No sleep data yet</Typography>
+                      <Typography fontWeight={700} color="#94a3b8">{rangeLoading ? "Loading..." : "No sleep data yet"}</Typography>
                     </Box>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={LINE} />
+                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} interval="preserveStartEnd" minTickGap={24} />
                         {/*
                           Fitted to the data rather than pinned to [4, 10]. The
                           check-in slider allows 1-10 hours, so a fixed floor of
@@ -653,10 +696,11 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                           tick={{ fontSize: 12 }}
                           width={44}
                         />
-                        <Tooltip />
+                        <Tooltip labelFormatter={trendTooltipLabel} />
                         <Area
                           type="monotone"
                           dataKey="sleep"
+                          dot={singleDot}
                           stroke={colors.purple}
                           strokeWidth={3}
                           fill={colors.purple}
@@ -677,21 +721,21 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   My Training Load
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Daily training load for this week.
+                  Daily training load over the {periodLabel}.
                 </Typography>
 
                 <Box sx={{ height: { xs: 200, md: 230 } }}>
                   {weeklyData.length === 0 ? (
                     <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
-                      <Typography fontWeight={700} color="#94a3b8">No training data yet</Typography>
+                      <Typography fontWeight={700} color="#94a3b8">{rangeLoading ? "Loading..." : "No training data yet"}</Typography>
                     </Box>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={LINE} />
+                        <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} interval="preserveStartEnd" minTickGap={24} />
                         <YAxis stroke="#64748b" tick={{ fontSize: 12 }} width={44} />
-                        <Tooltip />
+                        <Tooltip labelFormatter={trendTooltipLabel} />
                         <Bar dataKey="load" fill={colors.blue} radius={[8, 8, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -783,22 +827,20 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
                 {weeklyData.length === 0 ? (
                   <Box sx={{ py: 4, textAlign: "center" }}>
-                    <Typography fontWeight={700} color="#94a3b8">No heatmap data yet — log daily check-ins to see your load distribution.</Typography>
+                    <Typography fontWeight={700} color="#94a3b8">{rangeLoading ? "Loading..." : "No heatmap data yet — log daily check-ins to see your load distribution."}</Typography>
                   </Box>
                 ) : (
                   <Grid container spacing={1}>
                     {weeklyData.map((item) => (
                       <Grid
                         item
-                        xs={6}
-                        sm={4}
-                        md={3}
-                        lg={2}
-                        key={"key" in item ? item.key : item.day}
+                        {...(rangeDays > 7 ? { xs: 4, sm: 3, md: 2, lg: 1 } : { xs: 6, sm: 4, md: 3, lg: 2 })}
+                        key={item.key}
                       >
                         <Box
                           sx={{
-                            height: 72,
+                            height: rangeDays > 7 ? 56 : 72,
+                            px: 0.5,
                             borderRadius: 3,
                             bgcolor: riskColor(item.load),
                             color: "#fff",
@@ -809,8 +851,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                           }}
                         >
                           <Box>
-                            <Typography fontWeight={950}>{item.day}</Typography>
-                            <Typography fontSize={13}>{item.load}</Typography>
+                            <Typography fontWeight={950} fontSize={rangeDays > 7 ? 11 : undefined} noWrap>{item.day}</Typography>
+                            <Typography fontSize={rangeDays > 7 ? 12 : 13}>{item.load}</Typography>
                           </Box>
                         </Box>
                       </Grid>

@@ -26,6 +26,7 @@ import TuneIcon from "@mui/icons-material/Tune";
 import Seo from "../components/Seo";
 import CustomizeTypesDialog from "../components/workout/CustomizeTypesDialog";
 import ExerciseCard from "../components/workout/ExerciseCard";
+import { FuelCard, FuelEmptyHint } from "../components/workout/FuelCard";
 import RecommendationCards from "../components/workout/RecommendationCards";
 import WeekStrip from "../components/workout/WeekStrip";
 import {
@@ -44,11 +45,14 @@ import {
   textButtonSx,
 } from "../components/workout/ui";
 import { useAuth } from "../contexts/AuthContext";
+import { loadTodaysPlan } from "../services/planService";
 
 import {
   addDays,
   demoPlan,
   fromISODate,
+  fuelFromNutritionPlan,
+  lastWeightFor,
   loadPlan,
   nextId,
   recommendWorkouts,
@@ -61,6 +65,7 @@ import {
   toNumber,
   weekDays,
   type DaySession,
+  type Fuel,
   type Plan,
   type PlannedExercise,
   type WorkoutType,
@@ -107,6 +112,21 @@ export default function MyWorkoutPlan() {
     if (!storageKey || planOwnerKey !== storageKey) return;
     savePlan(storageKey, plan);
   }, [plan, storageKey, planOwnerKey]);
+
+  // Today's AI nutrition plan, for the Fuel cards. undefined = still loading;
+  // null = signed in but nothing saved. Hidden entirely for signed-out/demo.
+  const userId = user?.id;
+  const [fuel, setFuel] = useState<Fuel | null | undefined>(undefined);
+  useEffect(() => {
+    setFuel(undefined);
+    if (!userId) return;
+    let cancelled = false;
+    loadTodaysPlan<unknown>("nutrition", userId)
+      .then((raw) => { if (!cancelled) setFuel(fuelFromNutritionPlan(raw)); })
+      .catch(() => { if (!cancelled) setFuel(null); });
+    return () => { cancelled = true; };
+  }, [userId]);
+  const showFuel = Boolean(userId) && selectedISO === todayISO && fuel !== undefined;
 
   const selectedDate = useMemo(() => fromISODate(selectedISO), [selectedISO]);
   const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
@@ -164,7 +184,7 @@ export default function MyWorkoutPlan() {
 
     setPlan((current) => ({
       ...current,
-      days: { ...current.days, [selectedISO]: sessionFromType(type) },
+      days: { ...current.days, [selectedISO]: sessionFromType(type, { plan: current, dateISO: selectedISO }) },
     }));
   };
 
@@ -198,6 +218,7 @@ export default function MyWorkoutPlan() {
     const name = newExerciseName.trim();
     if (!name || !session) return;
 
+    const last = lastWeightFor(plan, name, selectedISO);
     updateExercises((current) => [
       ...current,
       {
@@ -205,7 +226,8 @@ export default function MyWorkoutPlan() {
         name,
         targetReps: 8,
         cues: [],
-        sets: [{ id: nextId(), reps: "8", weight: "0", completed: false }],
+        ...(last !== null ? { lastWeight: last } : {}),
+        sets: [{ id: nextId(), reps: "8", weight: last !== null ? String(last) : "0", completed: false }],
       },
     ]);
 
@@ -240,7 +262,7 @@ export default function MyWorkoutPlan() {
 
     const updated: Plan = {
       types: existing ? plan.types : [...plan.types, workout],
-      days: startToday ? { ...plan.days, [todayISO]: sessionFromType(type) } : plan.days,
+      days: startToday ? { ...plan.days, [todayISO]: sessionFromType(type, { plan, dateISO: todayISO }) } : plan.days,
     };
     savePlan(storageKey, updated);
     if (window.localStorage.getItem(storageKey) !== JSON.stringify(updated)) {
@@ -489,8 +511,11 @@ export default function MyWorkoutPlan() {
                 </Box>
               </Box>
 
+              {showFuel && !fuel && <FuelEmptyHint />}
+              {showFuel && fuel && fuel.pre.length > 0 && <Box sx={{ mb: 1.5, mt: -0.5 }}><FuelCard label="Fuel before" items={fuel.pre} /></Box>}
+
               {/* EXERCISES */}
-              <Stack spacing={1.5}>
+              <Stack spacing={1.5} mt={showFuel && !fuel ? 1.5 : 0}>
                 {session.exercises.map((exercise, index) => (
                   <ExerciseCard
                     key={exercise.id}
@@ -557,6 +582,8 @@ export default function MyWorkoutPlan() {
                   />
                 ))}
               </Stack>
+
+              {showFuel && fuel && <FuelCard label="Fuel after" items={fuel.post} />}
 
               {session.exercises.length === 0 && (
                 <Typography color={MUTED} textAlign="center" sx={{ ...cardSx, p: 3 }}>

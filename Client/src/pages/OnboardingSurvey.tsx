@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -31,6 +32,7 @@ import {
 } from "../services/preferencesService";
 
 import { toFormString } from "../data/profileOptions";
+import { SPORT_OPTIONS, normalizeSport } from "../lib/sports";
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -1007,17 +1009,29 @@ export default function OnboardingSurvey() {
           />
 
           <Stack spacing={3.5}>
-            <TextField
+            <Autocomplete
+              freeSolo
               fullWidth
-              label="Primary sport"
-              placeholder="Tennis, soccer, basketball..."
+              options={SPORT_OPTIONS as string[]}
+              inputValue={form.primary_sport}
               value={form.primary_sport}
-              onChange={(event) =>
+              onInputChange={(_event, next) =>
+                updateField("primary_sport", next)
+              }
+              onBlur={() =>
                 updateField(
                   "primary_sport",
-                  event.target.value
+                  normalizeSport(form.primary_sport)
                 )
               }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Main sport"
+                  placeholder="Search or type your sport"
+                  helperText="Pick from the list, or type your own if it is not listed."
+                />
+              )}
             />
 
             <Box>

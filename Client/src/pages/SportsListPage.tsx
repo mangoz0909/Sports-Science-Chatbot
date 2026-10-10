@@ -9,8 +9,6 @@ import {
   Chip,
   CircularProgress,
   Container,
-  Grid,
-  Slider,
   Stack,
   TextField,
   Typography,
@@ -23,6 +21,12 @@ import { getUserPreferences } from "../services/preferencesService";
 import { supabase } from "../lib/supabaseClient";
 import { functionErrorMessage } from "../lib/functionError";
 import { useAuth } from "../contexts/AuthContext";
+import LevelPicker, {
+  Level,
+  PREFERENCE_SCALES,
+  PreferenceKey,
+  levelToScore,
+} from "../components/sports/LevelPicker";
 
 type SportsFinderProps = {
   compact?: boolean;
@@ -215,14 +219,16 @@ export function resolveSport(typed: string, saved?: string | null): string {
   return typed.trim() || saved?.trim() || "Not provided";
 }
 
-type SurveyKey = "teamwork" | "intensity" | "contact" | "coordination";
-type SurveyAnswers = Record<SurveyKey, number>;
+type SurveyKey = PreferenceKey;
+// Answers are 5 tappable levels; the AI prompt gets levelToScore(level), a
+// 1-10 value (2,4,6,8,10) so it reads like the old slider scale.
+type SurveyAnswers = Record<SurveyKey, Level>;
 
 const defaultAnswers: SurveyAnswers = {
-  teamwork: 5,
-  intensity: 5,
-  contact: 3,
-  coordination: 7,
+  teamwork: 3,
+  intensity: 3,
+  contact: 2,
+  coordination: 4,
 };
 
 const questions = [
@@ -310,11 +316,11 @@ Training priorities: ${prefs?.priorities || "Not provided"}
 Sleep: ${prefs?.sleep_range || "Not provided"}
 Athlete type: ${prefs?.athlete_type || "Not provided"}
 
-Extra preference sliders:
-Team preference: ${answers.teamwork}/10
-Intensity preference: ${answers.intensity}/10
-Contact comfort: ${answers.contact}/10
-Coordination preference: ${answers.coordination}/10
+Extra preferences (1 = lowest, 10 = highest):
+Team preference: ${levelToScore(answers.teamwork)}/10
+Intensity preference: ${levelToScore(answers.intensity)}/10
+Contact comfort: ${levelToScore(answers.contact)}/10
+Coordination preference: ${levelToScore(answers.coordination)}/10
 
 Return:
 1. Top 5 recommended sports
@@ -459,9 +465,10 @@ Keep it concise, practical, and student-friendly.
                 size="small"
               />
 
-              <Grid container spacing={{ xs: 1.5, md: compact ? 1.5 : 2.5 }}>
+              {/* CSS grid, not MUI Grid: Grid's spacing pushed the rows 12px past the card edge. */}
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: compact ? "1fr" : "1fr 1fr" }, gap: { xs: 1.5, md: compact ? 1.5 : 2.5 } }}>
                 {questions.map((question) => (
-                  <Grid item xs={12} md={compact ? 12 : 6} key={question.key}>
+                  <Box key={question.key} sx={{ minWidth: 0 }}>
                     <Stack spacing={{ xs: 0.35, md: 0.7 }}>
                       <Stack
                         direction="row"
@@ -484,91 +491,23 @@ Keep it concise, practical, and student-friendly.
                           </Typography>
                         </Box>
 
-                        <Chip
-                          label={answers[question.key]}
-                          size="small"
-                          sx={{
-                            bgcolor: "#eff6ff",
-                            color: "#1d4ed8",
-                            fontWeight: 950,
-                            minWidth: { xs: 26, md: 34 },
-                            height: { xs: 24, md: 30 },
-                            "& .MuiChip-label": {
-                              fontSize: { xs: 11, md: 13 },
-                              px: { xs: 0.8, md: 1 },
-                            },
-                          }}
-                        />
                       </Stack>
 
-                      <Slider
+                      <LevelPicker
+                        scale={PREFERENCE_SCALES[question.key]}
                         value={answers[question.key]}
-                        // Without this every slider announced as an unnamed
-                        // "5 out of 10"; the visible label is a sibling, not
-                        // a <label>, so it never reached the control.
-                        aria-label={question.label}
-                        valueLabelDisplay="auto"
-                        min={1}
-                        max={10}
-                        step={1}
-                        marks
-                        onChange={(_, value) => {
+                        onChange={(level) => {
                           setAiMatches("");
-
                           setAnswers((prev) => ({
                             ...prev,
-                            [question.key]: value as number,
+                            [question.key]: level,
                           }));
-                        }}
-                        sx={{
-                          width: {
-                            xs: "78%",
-                            md: "100%",
-                          },
-                          mx: "auto",
-                          mt: { xs: 0.5, md: 1 },
-
-                          "& .MuiSlider-thumb": {
-                            width: {
-                              xs: 16,
-                              md: 24,
-                            },
-                            height: {
-                              xs: 16,
-                              md: 24,
-                            },
-                          },
-
-                          "& .MuiSlider-track": {
-                            height: {
-                              xs: 4,
-                              md: 6,
-                            },
-                          },
-
-                          "& .MuiSlider-rail": {
-                            height: {
-                              xs: 4,
-                              md: 6,
-                            },
-                          },
-
-                          "& .MuiSlider-mark": {
-                            width: {
-                              xs: 3,
-                              md: 4,
-                            },
-                            height: {
-                              xs: 3,
-                              md: 4,
-                            },
-                          },
                         }}
                       />
                     </Stack>
-                  </Grid>
+                  </Box>
                 ))}
-              </Grid>
+              </Box>
 
               <Button
                 variant="contained"
@@ -702,7 +641,7 @@ export default function SportsListPage() {
 
           <Typography color="#64748b" maxWidth={760} lineHeight={1.8}>
             SportLab uses AI to recommend sports based on your onboarding
-            survey, goals, preferences, and slider answers.
+            survey, goals, and preferences.
           </Typography>
         </Stack>
 

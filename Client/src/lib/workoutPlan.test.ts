@@ -8,6 +8,8 @@ import {
   loadPlan,
   recommendWorkouts,
   trainingGroups,
+  lastWeightFor,
+  fuelFromNutritionPlan,
   savePlan,
   sessionFromType,
   sessionProgress,
@@ -346,5 +348,52 @@ describe("trainingGroups", () => {
     expect(groups("Barbell row")).toEqual(["pull"]);
     expect(groups("Overhead press")).toEqual(["push"]);
     expect(groups("Running")).toEqual(["lower"]);
+  });
+});
+
+describe("lastWeightFor", () => {
+  const day = (name: string, sets: [string, boolean][]) => ({ typeId: "x", exercises: [{ id: 1, name, targetReps: 8, cues: [], sets: sets.map(([weight, completed], i) => ({ id: i, reps: "8", weight, completed })) }] });
+  const plan = (days: Record<string, ReturnType<typeof day>>) => ({ types: defaultTypes(), days });
+
+  it("uses the heaviest completed set on the most recent earlier day, name-insensitive", () => {
+    const p = plan({
+      "2026-10-01": day("Bench Press", [["100", true]]),
+      "2026-10-05": day("bench-press", [["95", true], ["135", true], ["200", false]]),
+      "2026-10-09": day("Bench Press", [["225", false]]),
+      "2026-10-20": day("Bench Press", [["300", true]]),
+    });
+    expect(lastWeightFor(p, "Bench press!", "2026-10-10")).toBe(135);
+  });
+
+  it("returns null without usable history and ignores the day itself", () => {
+    const p = plan({ "2026-10-10": day("Squat", [["200", true]]) });
+    expect(lastWeightFor(p, "Squat", "2026-10-10")).toBeNull();
+    expect(lastWeightFor(p, "Deadlift", "2026-10-11")).toBeNull();
+  });
+
+  it("pre-fills sessionFromType weights and lastWeight, falling back to 0", () => {
+    const types = defaultTypes();
+    const p = plan({ "2026-10-05": day("Bench Press", [["135", true]]) });
+    const session = sessionFromType(types[0], { plan: p, dateISO: "2026-10-10" });
+    expect(session.exercises[0].sets.map((s) => s.weight)).toEqual(["135", "135", "135"]);
+    expect(session.exercises[0].sets[0].reps).toBe("8");
+    expect(session.exercises[0].lastWeight).toBe(135);
+    expect(session.exercises[1].sets[0].weight).toBe("0");
+    expect(session.exercises[1].lastWeight).toBeUndefined();
+  });
+});
+
+describe("fuelFromNutritionPlan", () => {
+  it("picks pre/post meals and tolerates bad shapes", () => {
+    const fuel = fuelFromNutritionPlan({ meals: [
+      { meal: "Pre-workout snack", foods: ["Banana", "Toast"], timing: "1h before" },
+      { meal: "Post-workout", foods: "Shake" },
+      { meal: "Dinner", foods: "Pasta" },
+    ] });
+    expect(fuel?.pre[0].foods).toBe("Banana, Toast");
+    expect(fuel?.post[0].foods).toBe("Shake");
+    expect(fuelFromNutritionPlan(null)).toBeNull();
+    expect(fuelFromNutritionPlan({ meals: [{ meal: "Dinner", foods: "Pasta" }] })).toBeNull();
+    expect(fuelFromNutritionPlan("x")).toBeNull();
   });
 });

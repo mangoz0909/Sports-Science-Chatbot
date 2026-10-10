@@ -3,10 +3,9 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
   Grid,
+  IconButton,
   Skeleton,
   Stack,
   TextField,
@@ -15,6 +14,7 @@ import {
 
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import CloseIcon from "@mui/icons-material/Close";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
@@ -32,7 +32,20 @@ import Seo, { breadcrumbs } from "../components/Seo";
 import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 import { cleanJsonResponse } from "../lib/aiJson";
 import { functionErrorMessage } from "../lib/functionError";
-import { normalizeNutritionPlan, type NutritionPlan } from "../lib/nutritionPlan";
+import MealCards from "../components/nutrition/MealCards";
+import {
+  dismissKey,
+  localDateKey,
+  normalizeRichPlan,
+  type RichNutritionPlan as NutritionPlan,
+} from "../components/nutrition/mealMacros";
+import {
+  INK,
+  MUTED,
+  cardSx,
+  fieldSx,
+  primaryButtonSx,
+} from "../components/workout/ui";
 
 async function callOpenAI(prompt: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-complete", {
@@ -108,6 +121,30 @@ export default function NutritionPage() {
     setError(null);
   }, [userId]);
   const busy = loading || restoring;
+
+  // The AI note can be closed; remembered per user and day so it stays closed
+  // across re-renders and reloads, and returns with tomorrow's plan.
+  const noteKey = dismissKey(userId, localDateKey());
+  const [noteDismissed, setNoteDismissed] = React.useState(false);
+
+  React.useEffect(() => {
+    let dismissed = false;
+    try {
+      dismissed = window.localStorage.getItem(noteKey) === "1";
+    } catch {
+      // Storage blocked (private mode): fall back to in-memory state only.
+    }
+    setNoteDismissed(dismissed);
+  }, [noteKey]);
+
+  function dismissNote() {
+    setNoteDismissed(true);
+    try {
+      window.localStorage.setItem(noteKey, "1");
+    } catch {
+      // Ignore: dismissal still holds for this page view.
+    }
+  }
 
   async function generatePlan() {
     const requestUserId = userId;
@@ -324,7 +361,11 @@ Required JSON fields:
 - "meals": array of 5 meal objects, each with:
   - "meal": meal name
   - "foods": specific food examples as ONE plain string, comma-separated (not an array)
-  - "timing": when to eat
+  - "calories": calories in this meal, as a number (e.g. 650)
+  - "protein": grams of protein in this meal, as a number (e.g. 40)
+  - "carbs": grams of carbs in this meal, as a number (e.g. 75)
+  - "fat": grams of fat in this meal, as a number (e.g. 18)
+  Do not include meal times. The per-meal numbers should add up to roughly the daily targets.
 
 Example meal names:
 Breakfast
@@ -384,7 +425,7 @@ Do not include any extra text.
       // this function is how a later edit reads the wrong one.
       // Normalised before it is shown or cached: a raw array or object in
       // `foods` crashed the page, and the cached copy crashed it all day.
-      const generated = normalizeNutritionPlan(parsed);
+      const generated = normalizeRichPlan(parsed);
 
       if (!generated) {
         console.error("Unexpected nutrition response:", parsed);
@@ -442,7 +483,7 @@ Do not include any extra text.
 
         // Plans cached before normalisation existed can still hold arrays
         // or objects; an unusable one is regenerated rather than rendered.
-        const restored = normalizeNutritionPlan(saved);
+        const restored = normalizeRichPlan(saved);
 
         if (restored) {
           setPlan(restored);
@@ -531,28 +572,8 @@ Do not include any extra text.
 
       <Stack
         spacing={2}
-        sx={{ mb: 3 }}
+        sx={{ mb: 2 }}
       >
-        <Box>
-          <Typography
-            variant="h5"
-            component="h2"
-            fontWeight={950}
-            color="#0f172a"
-          >
-            Daily Nutrition Plan
-          </Typography>
-
-          <Typography
-            color="#64748b"
-            fontSize={14}
-          >
-            Personalised based on your
-            sport, goals, today's check-in,
-            and recent training trends.
-          </Typography>
-        </Box>
-
         {isLoggedIn && (
           <Stack
             direction={{
@@ -574,13 +595,11 @@ Do not include any extra text.
               multiline
               minRows={2}
               disabled={busy}
-              sx={{
-                "& .MuiOutlinedInput-root":
-                  {
-                    borderRadius: 3,
-                    bgcolor: "#fff",
-                  },
+              inputProps={{
+                "aria-label":
+                  "Tell the AI what changed",
               }}
+              sx={fieldSx}
             />
 
             <Button
@@ -600,17 +619,9 @@ Do not include any extra text.
                 void generatePlan();
               }}
               sx={{
+                ...primaryButtonSx,
                 minWidth: {
                   md: 190,
-                },
-                borderRadius: 3,
-                fontWeight: 800,
-                textTransform:
-                  "none",
-                bgcolor: "#0f172a",
-                "&:hover": {
-                  bgcolor:
-                    "#1e293b",
                 },
               }}
             >
@@ -722,13 +733,11 @@ Do not include any extra text.
         )}
 
       {plan && (
-        <Grid
-          container
-          spacing={2.5}
-        >
+        <Stack spacing={3}>
           {/* AI Summary */}
-          <Grid item xs={12}>
+          {plan.summary && !noteDismissed && (
             <Box
+              role="note"
               sx={{
                 p: "14px 18px",
                 borderRadius: 3,
@@ -745,194 +754,162 @@ Do not include any extra text.
               >
                 <AutoAwesomeIcon
                   sx={{
-                    fontSize: 16,
+                    fontSize: 18,
                     color: "#047857",
                   }}
                 />
 
                 <Typography
-                  fontSize={12}
+                  fontSize={13}
                   fontWeight={800}
                   letterSpacing="0.08em"
                   textTransform="uppercase"
                   color="#047857"
+                  sx={{ flexGrow: 1 }}
                 >
                   AI Nutritionist Note
                 </Typography>
+
+                <IconButton
+                  size="small"
+                  aria-label="Dismiss note"
+                  onClick={dismissNote}
+                  sx={{
+                    color: "#047857",
+                    mr: -0.75,
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
               </Stack>
 
               <Typography
                 color="#064e3b"
-                fontSize={14}
+                fontSize={15}
                 lineHeight={1.75}
               >
                 {plan.summary}
               </Typography>
             </Box>
-          </Grid>
+          )}
 
           {/* Macro targets */}
-          {macros.map(
-            (macro, i) => (
-              <Grid
-                item
-                xs={6}
-                sm={4}
-                md={2.4}
-                key={macro.label}
-              >
-                <Card
-                  elevation={0}
-                  sx={{
-                    borderRadius: 4,
-                    border:
-                      "1px solid #e2e8f0",
-                    height: "100%",
-                    "&:hover": {
-                      borderColor:
-                        "#93c5fd",
-                    },
-                    transition:
-                      "border-color 0.15s ease",
-                  }}
-                >
-                  <CardContent
-                    sx={{
-                      p: 2,
-                      textAlign:
-                        "center",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 2,
-                        bgcolor: `${macroColors[i]}18`,
-                        color:
-                          macroColors[i],
-                        display: "grid",
-                        placeItems:
-                          "center",
-                        mx: "auto",
-                        mb: 1,
-                      }}
-                    >
-                      {i === 4 ? (
-                        <WaterDropIcon
-                          sx={{
-                            fontSize: 18,
-                          }}
-                        />
-                      ) : i === 0 ? (
-                        <LocalFireDepartmentIcon
-                          sx={{
-                            fontSize: 18,
-                          }}
-                        />
-                      ) : (
-                        <RestaurantMenuIcon
-                          sx={{
-                            fontSize: 18,
-                          }}
-                        />
-                      )}
-                    </Box>
+          <Box component="section">
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{
+                position: "absolute",
+                width: 1,
+                height: 1,
+                overflow: "hidden",
+                clip: "rect(0 0 0 0)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Daily targets
+            </Typography>
+            <Grid
+              container
+              spacing={2}
+            >
+              {macros.map(
+                (macro, i) => {
+                  const m = macro.value.match(
+                    /^\s*([\d.,]+)\s*(.*)$/
+                  );
+                  const num = m ? m[1] : macro.value;
+                  const unit = m ? m[2] : "";
+                  const big = i === 0;
 
-                    <Typography
-                      fontWeight={950}
-                      fontSize={15}
-                      color="#0f172a"
+                  return (
+                    <Grid
+                      item
+                      xs={big ? 12 : 6}
+                      sm={4}
+                      md={2.4}
+                      key={macro.label}
                     >
-                      {macro.value}
-                    </Typography>
-
-                    <Typography
-                      color="#64748b"
-                      fontSize={12}
-                      fontWeight={700}
-                    >
-                      {macro.label}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            )
-          )}
-
-          {/* Meal plan */}
-          {plan.meals.map(
-            // Keyed by position as well as name: the model is asked for five
-            // meals and nothing stops it returning two called "Snack", which
-            // collided as React keys and dropped one of the cards.
-            (meal, index) => (
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                key={`${index}-${meal.meal}`}
-              >
-                <Card
-                  elevation={0}
-                  sx={{
-                    borderRadius: 4,
-                    border:
-                      "1px solid #e2e8f0",
-                    height: "100%",
-                    "&:hover": {
-                      borderColor:
-                        "#bbf7d0",
-                    },
-                    transition:
-                      "border-color 0.15s ease",
-                  }}
-                >
-                  <CardContent
-                    sx={{ p: 2.5 }}
-                  >
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="flex-start"
-                    >
-                      <Typography
-                        fontWeight={950}
-                        color="#0f172a"
-                      >
-                        {meal.meal}
-                      </Typography>
-
-                      <Typography
-                        fontSize={12}
-                        color="#94a3b8"
-                        fontWeight={700}
+                      <Box
                         sx={{
-                          flexShrink: 0,
-                          ml: 1,
+                          ...cardSx,
+                          height: "100%",
+                          p: 2,
+                          textAlign: "left",
+                          borderTop: `4px solid ${macroColors[i]}`,
                         }}
                       >
-                        {meal.timing}
-                      </Typography>
-                    </Stack>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          sx={{ mb: 0.5 }}
+                        >
+                          <Box
+                            aria-hidden
+                            sx={{
+                              color: macroColors[i],
+                              display: "grid",
+                            }}
+                          >
+                            {i === 4 ? (
+                              <WaterDropIcon sx={{ fontSize: 20 }} />
+                            ) : i === 0 ? (
+                              <LocalFireDepartmentIcon sx={{ fontSize: 20 }} />
+                            ) : (
+                              <RestaurantMenuIcon sx={{ fontSize: 20 }} />
+                            )}
+                          </Box>
+                          <Typography
+                            color={MUTED}
+                            fontSize={14}
+                            fontWeight={800}
+                          >
+                            {macro.label}
+                          </Typography>
+                        </Stack>
 
-                    <Typography
-                      color="#475569"
-                      fontSize={14}
-                      lineHeight={1.7}
-                      sx={{
-                        mt: 0.5,
-                      }}
-                    >
-                      {meal.foods}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            )
-          )}
+                        <Typography
+                          component="p"
+                          fontWeight={950}
+                          color={INK}
+                          lineHeight={1.1}
+                          sx={{
+                            fontSize: {
+                              xs: big ? 40 : 32,
+                              md: 36,
+                            },
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {num}
+                          {unit && (
+                            <Box
+                              component="span"
+                              sx={{
+                                ml: 0.5,
+                                fontSize: 16,
+                                fontWeight: 800,
+                                color: MUTED,
+                              }}
+                            >
+                              {unit}
+                            </Box>
+                          )}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  );
+                }
+              )}
+            </Grid>
+          </Box>
+
+          {/* Meal plan */}
+          <MealCards meals={plan.meals} />
 
           {/* Tip */}
-          <Grid item xs={12}>
+          {plan.tip && (
             <Box
               sx={{
                 p: {
@@ -946,23 +923,24 @@ Do not include any extra text.
               }}
             >
               <Typography
+                component="h2"
                 fontWeight={950}
                 color="#92400e"
                 sx={{ mb: 0.5 }}
               >
-                💡 Nutrition Tip
+                Nutrition Tip
               </Typography>
 
               <Typography
                 color="#78350f"
-                fontSize={14}
+                fontSize={15}
                 lineHeight={1.75}
               >
                 {plan.tip}
               </Typography>
             </Box>
-          </Grid>
-        </Grid>
+          )}
+        </Stack>
       )}
     </Box>
   );

@@ -7,6 +7,7 @@
  * worth testing without mounting MUI.
  */
 
+import { normalizeNutritionPlan } from "./nutritionPlan";
 import { readStored, writeStored } from "./safeStorage";
 
 export type SetEntry = {
@@ -41,6 +42,8 @@ export type PlannedExercise = {
   /** Short form cues, shown on demand under the exercise. */
   cues: string[];
   sets: SetEntry[];
+  /** Weight (lb) the sets were pre-filled from, shown as "Last time". */
+  lastWeight?: number;
 };
 
 /** A saved default: the exercises a workout type starts from. */
@@ -376,26 +379,63 @@ export function replaceWorkoutTypes(plan: Plan, types: WorkoutType[]): Plan {
   })) };
 }
 
-/** Turns a type's saved defaults into a fresh, untracked session. */
-export function sessionFromType(type: WorkoutType): DaySession {
+/** Case/punctuation-insensitive exercise key: "Bench-Press!" matches "bench press". */
+export const normaliseExerciseName = (name: string) =>
+  name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+/**
+ * What the user last lifted for an exercise: the HEAVIEST completed set
+ * weight (> 0) on the most recent day strictly before `beforeISO` that has
+ * one. Heaviest rather than last-set because warm-up/back-off sets would
+ * otherwise drag the suggestion down. Returns null with no history; future
+ * days and the day itself are ignored.
+ */
+export function lastWeightFor(plan: Plan, exerciseName: string, beforeISO: string): number | null {
+  const key = normaliseExerciseName(exerciseName);
+  if (!key) return null;
+  const days = Object.keys(plan.days).filter((day) => day < beforeISO).sort().reverse();
+  for (const day of days) {
+    let best = 0;
+    for (const exercise of plan.days[day].exercises) {
+      if (normaliseExerciseName(exercise.name) !== key || exercise.prescription?.kind === "duration") continue;
+      for (const set of exercise.sets) {
+        if (set.completed) best = Math.max(best, toNumber(set.weight));
+      }
+    }
+    if (best > 0) return best;
+  }
+  return null;
+}
+
+/**
+ * Turns a type's saved defaults into a fresh, untracked session. With
+ * `history` (the plan and the date being started), rep-based exercises
+ * pre-fill their weight from lastWeightFor.
+ */
+export function sessionFromType(type: WorkoutType, history?: { plan: Plan; dateISO: string }): DaySession {
   return {
     typeId: type.id,
     name: type.name,
     color: type.color,
     guidance: type.guidance,
-    exercises: type.exercises.map((exercise) => ({
-      id: nextId(),
-      name: exercise.name,
-      targetReps: exercise.targetReps,
-      prescription: exercise.prescription,
-      cues: exercise.cues,
-      sets: Array.from({ length: Math.max(1, exercise.sets) }, () => ({
+    exercises: type.exercises.map((exercise) => {
+      const last = history && exercise.prescription?.kind !== "duration"
+        ? lastWeightFor(history.plan, exercise.name, history.dateISO) : null;
+      return {
         id: nextId(),
-        reps: exercise.prescription?.kind === "duration" ? exercise.prescription.target : exercise.targetReps > 0 ? String(exercise.targetReps) : "",
-        weight: "0",
-        completed: false,
-      })),
-    })),
+        name: exercise.name,
+        targetReps: exercise.targetReps,
+        prescription: exercise.prescription,
+        cues: exercise.cues,
+        ...(last !== null ? { lastWeight: last } : {}),
+        sets: Array.from({ length: Math.max(1, exercise.sets) }, () => ({
+          id: nextId(),
+          reps: exercise.prescription?.kind === "duration" ? exercise.prescription.target : exercise.targetReps > 0 ? String(exercise.targetReps) : "",
+          weight: last !== null ? String(last) : "0",
+          completed: false,
+        })),
+      };
+    }),
   };
 }
 
@@ -595,6 +635,7 @@ export function loadPlan(storageKey: string): Plan {
             prescription: exercise?.prescription,
             targetReps: Number.isFinite(exercise?.targetReps) ? Number(exercise.targetReps) : 8,
             cues: Array.isArray(exercise?.cues) ? exercise.cues.map(String) : [],
+            ...(Number.isFinite(exercise?.lastWeight) && Number(exercise.lastWeight) > 0 ? { lastWeight: Number(exercise.lastWeight) } : {}),
             sets: (Array.isArray(exercise?.sets) ? exercise.sets : []).map(
               (set) => ({
                 id: nextId(),
@@ -676,4 +717,23 @@ export function weightSuggestion(exercise: PlannedExercise): string {
   return `Stay around ${Math.round(
     averageWeight
   )} lb next session and aim to complete all ${exercise.targetReps} reps before increasing the load.`;
+}
+
+/* ── fuel (nutrition shown inside a session) ───────────────────────────── */
+
+export type FuelItem = { meal: string; foods: string; timing: string };
+export type Fuel = { pre: FuelItem[]; post: FuelItem[] };
+
+/**
+ * Picks the pre- and post-workout meals out of a stored nutrition plan
+ * (`meals[].meal` names such as "Pre-workout snack" / "Post-workout"). Any
+ * unexpected shape yields null so the caller can hide the card.
+ */
+export function fuelFromNutritionPlan(raw: unknown): Fuel | null {
+  let plan;
+  try { plan = normalizeNutritionPlan(raw); } catch { return null; }
+  if (!plan) return null;
+  const pre = plan.meals.filter((m) => /\bpre[\s-]*(?:workout|training|session)\b|\bbefore (?:the )?(?:workout|training)\b/i.test(m.meal));
+  const post = plan.meals.filter((m) => /\bpost[\s-]*(?:workout|training|session)\b|\bafter (?:the )?(?:workout|training)\b|\brecovery (?:meal|shake|snack)\b/i.test(m.meal));
+  return pre.length || post.length ? { pre, post } : null;
 }

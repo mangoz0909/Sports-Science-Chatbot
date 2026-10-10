@@ -2,6 +2,7 @@ import React from "react";
 import Seo from "../components/Seo";
 import {
   Alert,
+  Autocomplete,
   Avatar,
   Box,
   Button,
@@ -28,6 +29,7 @@ import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import SpeedIcon from "@mui/icons-material/Speed";
 import PsychologyIcon from "@mui/icons-material/Psychology";
+import { SPORT_OPTIONS, normalizeSport } from "../lib/sports";
 import { supabase } from "../lib/supabaseClient";
 import { requireCurrentUser } from "../lib/currentUser";
 import {
@@ -704,12 +706,23 @@ export default function ProfilePage() {
 
                     <TextField fullWidth label="Email" value={email} disabled />
 
-                    <TextField
+                    <Autocomplete
+                      freeSolo
                       fullWidth
-                      label="Primary Sport"
-                      placeholder="Example: Tennis"
+                      options={SPORT_OPTIONS as string[]}
+                      inputValue={form.primary_sport}
                       value={form.primary_sport}
-                      onChange={(e) => updateField("primary_sport", e.target.value)}
+                      onInputChange={(_e, next) => updateField("primary_sport", next)}
+                      onBlur={() =>
+                        updateField("primary_sport", normalizeSport(form.primary_sport))
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Main sport"
+                          placeholder="Search or type your sport"
+                        />
+                      )}
                     />
 
                     <TextField
