@@ -1,9 +1,9 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { vi } from "vitest";
-import AiWorkoutGenerator, { summarizeWorkouts } from "./AiWorkoutGenerator";
+import AiWorkoutGenerator from "./AiWorkoutGenerator";
 import ExerciseCard from "./ExerciseCard";
-import { sessionFromType, type WorkoutType } from "../../lib/workoutPlan";
+import { sessionFromType, summarizeWorkouts, type WorkoutType } from "../../lib/workoutPlan";
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), invoke: vi.fn() }));
 vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ session: { user: { id: "athlete" } }, loading: false }) }));

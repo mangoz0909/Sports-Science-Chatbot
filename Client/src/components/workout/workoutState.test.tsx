@@ -30,9 +30,10 @@ vi.mock("@mui/material", () => {
     Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) => open ? <div>{children}</div> : null,
     DialogActions: Group, DialogContent: Group, DialogTitle: Group,
     Button, IconButton: Button,
-    TextField: ({ label, value, onChange }: { label?: string; value?: string | number; onChange?: (event: React.FormEvent<HTMLInputElement>) => void }) => (
-      <input aria-label={label} value={value ?? ""} onInput={onChange} onChange={() => {}} />
+    TextField: ({ label, value, onChange, inputProps }: { label?: string; value?: string | number; onChange?: (event: React.FormEvent<HTMLInputElement>) => void; inputProps?: { "aria-label"?: string } }) => (
+      <input aria-label={inputProps?.["aria-label"] ?? label} value={value ?? ""} onInput={onChange} onChange={() => {}} />
     ),
+    useTheme: () => ({ breakpoints: { down: () => "" } }), useMediaQuery: () => false,
   };
 });
 

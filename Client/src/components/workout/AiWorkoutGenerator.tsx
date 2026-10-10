@@ -30,7 +30,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../contexts/AuthContext";
 import { cleanJsonResponse } from "../../lib/aiJson";
 import { functionErrorMessage } from "../../lib/functionError";
-import { isAIWorkoutSaved, workoutTypeFromAI, type WorkoutType } from "../../lib/workoutPlan";
+import { isAIWorkoutSaved, summarizeWorkouts, workoutTypeFromAI, type WorkoutType } from "../../lib/workoutPlan";
 import { loadTodaysPlan, saveTodaysPlan } from "../../services/planService";
 
 type WorkoutIntensity = "High" | "Medium" | "Low" | "Recovery";
@@ -152,20 +152,6 @@ function normalizePlan(value: unknown): DailyWorkoutPlan {
     cooldown: normalizeStringArray(record.cooldown),
     recoveryNote: stringValue(record.recoveryNote, ""),
   };
-}
-
-// ai-complete truncates prompts at 12,000 chars; keep the library summary
-// small so it can never push the Requirements off the end.
-const MAX_WORKOUTS_SUMMARY = 1500;
-export function summarizeWorkouts(types: WorkoutType[]): string {
-  let summary = "";
-  for (const type of types) {
-    const line = `- ${type.name}: ${type.exercises.map((exercise) => exercise.name).join(", ")}
-`;
-    if (summary.length + line.length > MAX_WORKOUTS_SUMMARY) break;
-    summary += line;
-  }
-  return summary.trim() || "None yet.";
 }
 
 export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }: { onSaveWorkout?: (workout: WorkoutType) => void; workoutTypes?: WorkoutType[] }) {

@@ -536,6 +536,7 @@ Do not include any extra text.
         <Box>
           <Typography
             variant="h5"
+            component="h2"
             fontWeight={950}
             color="#0f172a"
           >

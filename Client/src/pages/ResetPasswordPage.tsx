@@ -148,7 +148,8 @@ export default function ResetPasswordPage() {
       <Box sx={{ minHeight: "calc(100dvh - var(--app-header-h, 64px))", display: "grid", placeItems: "center", bgcolor: "#f8fafc", px: 2 }}>
         {seo}
         <Box textAlign="center" role="status" aria-live="polite">
-          <Typography component="h1" sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>
+          <Typography component="h1" // Strings, not numbers: in sx, width: 1 means 100%, which pushed the page sideways.
+          sx={{ position: "absolute", width: "1px", height: "1px", m: "-1px", p: 0, border: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>
             Reset your password
           </Typography>
           {linkInvalid ? (

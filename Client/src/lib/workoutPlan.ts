@@ -271,6 +271,20 @@ export type AIWorkout = {
   exercises: { name: string; sets: string; reps: string; rest: string; notes: string }[];
 };
 
+// ai-complete truncates prompts at 12,000 chars; keep the library summary
+// small so it can never push the Requirements off the end.
+const MAX_WORKOUTS_SUMMARY = 1500;
+export function summarizeWorkouts(types: WorkoutType[]): string {
+  let summary = "";
+  for (const type of types) {
+    const line = `- ${type.name}: ${type.exercises.map((exercise) => exercise.name).join(", ")}
+`;
+    if (summary.length + line.length > MAX_WORKOUTS_SUMMARY) break;
+    summary += line;
+  }
+  return summary.trim() || "None yet.";
+}
+
 export function aiWorkoutSourceKey(plan: AIWorkout): string {
   return JSON.stringify(plan);
 }

@@ -377,6 +377,7 @@ Keep it concise, practical, and student-friendly.
           <Box>
             <Typography
               variant={compact ? "h6" : "h4"}
+              component="h2"
               fontWeight={950}
               sx={{
                 fontSize: {

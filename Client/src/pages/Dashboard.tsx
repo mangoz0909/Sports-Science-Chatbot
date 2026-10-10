@@ -478,7 +478,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       <Typography color="#64748b" fontWeight={850} fontSize={14}>
                         {item.label}
                       </Typography>
-                      <Typography variant="h5" fontWeight={950} sx={{ mt: 0.5 }}>
+                      <Typography variant="h5" component="p" fontWeight={950} sx={{ mt: 0.5 }}>
                         {item.value}
                       </Typography>
                     </Box>
@@ -521,7 +521,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
         <Grid container spacing={2.5}>
           <Grid item xs={12} lg={8}>
           <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
-                <Typography variant="h6" fontWeight={950}>
+                <Typography variant="h6" component="h2" fontWeight={950}>
                   My Weekly Readiness Trend
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
@@ -560,7 +560,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <PsychologyIcon sx={{ color: colors.blue }} />
-                  <Typography variant="h6" fontWeight={950}>
+                  <Typography variant="h6" component="h2" fontWeight={950}>
                     My AI Coach
                   </Typography>
                 </Stack>
@@ -619,7 +619,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           <Grid item xs={12} md={6}>
             <Card elevation={0} sx={{ height: "100%", borderRadius: 4, border: "1px solid #e2e8f0" }}>
               <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
-                <Typography variant="h6" fontWeight={950}>
+                <Typography variant="h6" component="h2" fontWeight={950}>
                   My Sleep Trend
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
@@ -673,7 +673,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           <Grid item xs={12} md={6}>
             <Card elevation={0} sx={{ height: "100%", borderRadius: 4, border: "1px solid #e2e8f0" }}>
               <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
-                <Typography variant="h6" fontWeight={950}>
+                <Typography variant="h6" component="h2" fontWeight={950}>
                   My Training Load
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
@@ -717,7 +717,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     <FitnessCenterIcon />
                   </Box>
                   <Box>
-                    <Typography variant="h6" fontWeight={950} color="#1e3a5f">My Workout Plan</Typography>
+                    <Typography variant="h6" component="h2" fontWeight={950} color="#1e3a5f">My Workout Plan</Typography>
                     <Typography fontSize={13} color="#3b82f6">AI-personalised for {userProfile.sport}</Typography>
                   </Box>
                 </Stack>
@@ -752,7 +752,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     <RestaurantMenuIcon />
                   </Box>
                   <Box>
-                    <Typography variant="h6" fontWeight={950} color="#064e3b">My Nutrition Plan</Typography>
+                    <Typography variant="h6" component="h2" fontWeight={950} color="#064e3b">My Nutrition Plan</Typography>
                     <Typography fontSize={13} color="#10b981">AI-personalised for your goals</Typography>
                   </Box>
                 </Stack>
@@ -774,7 +774,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           <Grid item xs={12}>
             <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={950}>
+                <Typography variant="h6" component="h2" fontWeight={950}>
                   My Training Heatmap
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
