@@ -12,7 +12,7 @@ vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ session: { user
 vi.mock("../../lib/supabaseClient", () => ({ supabase: { functions: { invoke: mocks.invoke } } }));
 vi.mock("../../services/planService", () => ({ loadTodaysPlan: mocks.load, saveTodaysPlan: vi.fn() }));
 vi.mock("../../services/preferencesService", () => ({ getUserPreferences: vi.fn() }));
-vi.mock("../../services/checkinService", () => ({ getLatestCheckIn: vi.fn(), getLast7CheckIns: vi.fn(), isCheckInFromToday: vi.fn() }));
+vi.mock("../../services/checkinService", () => ({ getLatestCheckIn: vi.fn().mockResolvedValue(null), getLast7CheckIns: vi.fn().mockResolvedValue([]), isCheckInFromToday: vi.fn() }));
 
 const generated = {
   day: "Friday", date: "October 9, 2026", focus: "Conditioning", intensity: "Medium", totalDuration: "30 min",
