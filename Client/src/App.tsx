@@ -357,15 +357,15 @@ const App: React.FC = () => {
                       />
 
                       <Route
-                        path="workout"
-                        element={<Navigate to="/my-workout-plan?tab=ai" replace />}
-                      />
-
-                      <Route
                         path="nutrition"
                         element={<NutritionPage />}
                       />
                     </Route>
+
+                    <Route
+                      path="/health/workout"
+                      element={<Navigate to="/my-workout-plan?tab=ai" replace />}
+                    />
 
                     {/* OLD MENTAL HEALTH URL */}
                     <Route
