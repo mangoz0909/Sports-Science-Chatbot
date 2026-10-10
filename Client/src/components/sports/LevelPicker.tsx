@@ -178,10 +178,10 @@ export default function LevelPicker({ scale, value, onChange }: LevelPickerProps
 
       {scale.ends && (
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}>
-          <Typography component="span" sx={{ ...captionSx, fontSize: 11 }}>
+          <Typography component="span" sx={{ ...captionSx, fontSize: 12 }}>
             {scale.ends[0]}
           </Typography>
-          <Typography component="span" sx={{ ...captionSx, fontSize: 11 }}>
+          <Typography component="span" sx={{ ...captionSx, fontSize: 12 }}>
             {scale.ends[1]}
           </Typography>
         </Box>
