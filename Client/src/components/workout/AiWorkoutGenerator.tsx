@@ -58,6 +58,7 @@ type DailyWorkoutPlan = {
 
 async function callOpenAI(prompt: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-complete", {
+    timeout: 60_000,
     body: {
       prompt,
       task: "workout",
@@ -205,9 +206,15 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
 
     try {
       const [prefs, checkIn, last7CheckIns] = await Promise.all([
-        getUserPreferences(),
-        getLatestCheckIn(),
-        getLast7CheckIns(),
+        getUserPreferences().catch(() => {
+          throw new Error("Could not load your athlete profile. Please try again before generating a workout.");
+        }),
+        getLatestCheckIn().catch(() => {
+          throw new Error("Could not load your latest check-in. Please try again.");
+        }),
+        getLast7CheckIns().catch(() => {
+          throw new Error("Could not load your recent check-ins. Please try again.");
+        }),
       ]);
 
       const extendedPrefs = prefs as Record<string, unknown> | null;
@@ -358,6 +365,7 @@ Requirements:
         await saveTodaysPlan<DailyWorkoutPlan>("workout", userId, normalizedPlan);
       }
     } catch (err: unknown) {
+      if (activeUserRef.current !== requestUserId) return;
       console.error("Workout plan generation failed:", err);
       setError(
         err instanceof Error
@@ -389,31 +397,25 @@ Requirements:
             setWorkoutName(restored.focus);
             return;
           } catch (error) {
-            // A plan stored by an older version of this page can be valid JSON
-            // in a shape normalizePlan rejects. Generating is the recovery.
+            // Ignore an incompatible saved plan so the athlete can request
+            // a fresh one with their current instructions.
             console.error("Saved workout plan could not be read:", error);
           }
         }
 
-        void generatePlan();
       } catch (error) {
         // loadTodaysPlan handles its own failures, so this should not fire.
-        // It is here because the cost of being wrong is a skeleton that never
-        // resolves — restoring would stay true with nothing left to clear it.
+        // Always clear the skeleton so a fresh generation remains available.
         console.error("Could not restore today's workout:", error);
 
-        if (!cancelled) void generatePlan();
       } finally {
         if (!cancelled) setRestoring(false);
       }
     })();
 
-    // Also stops React 18 StrictMode's double-invoked effect from starting two
-    // generations — and paying for both — on the first visit of the day.
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isLoggedIn, userId]);
 
   const intensityStyle = plan
@@ -465,7 +467,7 @@ Requirements:
                 "&:hover": { bgcolor: "#1e293b" },
               }}
             >
-              {loading ? "Generating…" : "Regenerate Today"}
+              {loading ? "Generating…" : plan ? "Regenerate Today" : "Generate Workout"}
             </Button>
           </Stack>
         )}

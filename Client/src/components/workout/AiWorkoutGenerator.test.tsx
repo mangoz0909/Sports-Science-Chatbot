@@ -4,13 +4,15 @@ import { vi } from "vitest";
 import AiWorkoutGenerator from "./AiWorkoutGenerator";
 import ExerciseCard from "./ExerciseCard";
 import { sessionFromType, summarizeWorkouts, type WorkoutType } from "../../lib/workoutPlan";
+import { getUserPreferences } from "../../services/preferencesService";
+import { saveTodaysPlan } from "../../services/planService";
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), invoke: vi.fn() }));
 vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ session: { user: { id: "athlete" } }, loading: false }) }));
 vi.mock("../../lib/supabaseClient", () => ({ supabase: { functions: { invoke: mocks.invoke } } }));
 vi.mock("../../services/planService", () => ({ loadTodaysPlan: mocks.load, saveTodaysPlan: vi.fn() }));
 vi.mock("../../services/preferencesService", () => ({ getUserPreferences: vi.fn() }));
-vi.mock("../../services/checkinService", () => ({ getLatestCheckIn: vi.fn(), getLast7CheckIns: vi.fn(), isCheckInFromToday: vi.fn() }));
+vi.mock("../../services/checkinService", () => ({ getLatestCheckIn: vi.fn().mockResolvedValue(null), getLast7CheckIns: vi.fn().mockResolvedValue([]), isCheckInFromToday: vi.fn() }));
 
 const generated = {
   day: "Friday", date: "October 9, 2026", focus: "Conditioning", intensity: "Medium", totalDuration: "30 min",
@@ -20,10 +22,51 @@ const generated = {
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
+  vi.mocked(getUserPreferences).mockResolvedValue(null);
   mocks.load.mockResolvedValue(generated);
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
+});
+
+it("waits for an explicit request when no saved workout exists, then generates and caches it", async () => {
+  mocks.load.mockResolvedValue(null);
+  mocks.invoke.mockResolvedValue({ data: { result: JSON.stringify(generated) }, error: null });
+  await act(async () => root.render(<AiWorkoutGenerator />));
+  expect(mocks.invoke).not.toHaveBeenCalled();
+  const button = Array.from(host.querySelectorAll("button")).find((item) => item.textContent === "Generate Workout")!;
+  expect(button.disabled).toBe(false);
+  await act(async () => button.click());
+  expect(mocks.invoke).toHaveBeenCalledWith("ai-complete", expect.objectContaining({
+    timeout: 60_000, body: expect.objectContaining({ task: "workout" }),
+  }));
+  expect(host.textContent).toContain("Shuttle runs");
+  expect(saveTodaysPlan).toHaveBeenCalledWith("workout", "athlete", generated);
+});
+
+it("shows the service error and allows a successful retry", async () => {
+  mocks.load.mockResolvedValue(null);
+  mocks.invoke.mockResolvedValueOnce({ data: null, error: { context: new Response(JSON.stringify({ error: "AI service is busy. Please try again." }), { status: 503 }) } })
+    .mockResolvedValueOnce({ data: { result: JSON.stringify(generated) }, error: null });
+  await act(async () => root.render(<AiWorkoutGenerator />));
+  const button = Array.from(host.querySelectorAll("button")).find((item) => item.textContent === "Generate Workout")!;
+  await act(async () => button.click());
+  expect(host.textContent).toContain("AI service is busy. Please try again.");
+  expect(button.disabled).toBe(false);
+  await act(async () => button.click());
+  expect(host.textContent).toContain("Shuttle runs");
+  expect(host.textContent).not.toContain("AI service is busy");
+});
+
+it("explains a profile loading failure and does not generate without restrictions", async () => {
+  mocks.load.mockResolvedValue(null);
+  vi.mocked(getUserPreferences).mockRejectedValueOnce({ message: "Database unavailable" });
+  await act(async () => root.render(<AiWorkoutGenerator />));
+  const button = Array.from(host.querySelectorAll("button")).find((item) => item.textContent === "Generate Workout")!;
+  await act(async () => button.click());
+  expect(host.textContent).toContain("Could not load your athlete profile");
+  expect(mocks.invoke).not.toHaveBeenCalled();
+  expect(button.disabled).toBe(false);
 });
 afterEach(() => {
   act(() => root.unmount());
