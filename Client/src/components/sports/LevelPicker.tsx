@@ -81,9 +81,9 @@ export const PREFERENCE_SCALES: Record<PreferenceKey, PreferenceScale> = {
   },
 };
 
-/** The AI prompt reads preferences on a 1-10 scale; 5 levels map to 2,4,6,8,10. */
+/** The AI prompt reads preferences on a 1-10 scale (1 = lowest); 5 levels map to 1,3,6,8,10. */
 export function levelToScore(level: number): number {
-  return level * 2;
+  return Math.round(1 + ((level - 1) * 9) / 4);
 }
 
 type LevelPickerProps = {
@@ -97,7 +97,9 @@ export default function LevelPicker({ scale, value, onChange }: LevelPickerProps
 
   const select = (level: number, focus: boolean) => {
     const next = Math.min(5, Math.max(1, level)) as Level;
-    onChange(next);
+    // Re-selecting the current level must not fire onChange: the page clears
+    // its AI matches on every change.
+    if (next !== value) onChange(next);
     if (focus) refs.current[next - 1]?.focus();
   };
 

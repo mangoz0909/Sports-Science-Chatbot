@@ -41,3 +41,21 @@ describe("splitFoods", () => {
     expect(splitFoods("Oats (80g, dry), banana; 2. milk")).toEqual(["Oats (80g, dry)", "banana", "milk"]);
   });
 });
+
+describe("review fixes", () => {
+  it("attaches macros to the right meal when an empty meal is dropped", () => {
+    const plan = normalizeRichPlan({ calories: "2000 kcal", meals: [
+      { meal: "Breakfast", foods: [""], protein: 60 },
+      { meal: "Lunch", foods: "Soup", protein: 20, carbs: 30, fat: 10 },
+    ] });
+    expect(plan?.meals).toHaveLength(1);
+    expect(plan?.meals[0].protein).toBe(20);
+  });
+
+  it("reads thousands separators in string macros", () => {
+    const plan = normalizeRichPlan({ calories: "2000 kcal", meals: [
+      { meal: "Dinner", foods: "Rice", calories: "1,100 kcal" },
+    ] });
+    expect(plan?.meals[0].calories).toBe(1100);
+  });
+});

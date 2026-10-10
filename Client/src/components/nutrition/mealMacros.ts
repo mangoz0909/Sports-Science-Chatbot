@@ -6,7 +6,7 @@
  * before this existed (no macros, with `timing`) still normalise: macros are
  * simply undefined and the donut is hidden.
  */
-import { normalizeNutritionPlan, type MealItem, type NutritionPlan } from "../../lib/nutritionPlan";
+import { mealHasFoods, normalizeNutritionPlan, type MealItem, type NutritionPlan } from "../../lib/nutritionPlan";
 
 export type MealMacros = {
   calories?: number;
@@ -23,19 +23,10 @@ function toNumber(value: unknown): number | undefined {
     return Number.isFinite(value) && value >= 0 ? Math.round(value) : undefined;
   }
   if (typeof value === "string") {
-    const match = value.match(/\d+(?:\.\d+)?/);
+    const match = value.replace(/,/g, "").match(/\d+(?:\.\d+)?/);
     if (match) return Math.round(parseFloat(match[0]));
   }
   return undefined;
-}
-
-function hasFoods(value: unknown): value is Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const foods = (value as Record<string, unknown>).foods;
-  if (foods === null || foods === undefined) return false;
-  if (typeof foods === "string") return foods.trim() !== "";
-  if (Array.isArray(foods)) return foods.length > 0;
-  return true;
 }
 
 /** Normalises a raw or saved plan and keeps any per-meal macros it carries. */
@@ -43,7 +34,7 @@ export function normalizeRichPlan(raw: unknown): RichNutritionPlan | null {
   const base = normalizeNutritionPlan(raw);
   if (!base) return null;
 
-  const rawMeals = (raw as { meals: unknown[] }).meals.filter(hasFoods);
+  const rawMeals = (raw as { meals: unknown[] }).meals.filter(mealHasFoods) as Record<string, unknown>[];
 
   const meals = base.meals.map((meal, i): RichMeal => {
     const source = rawMeals[i];

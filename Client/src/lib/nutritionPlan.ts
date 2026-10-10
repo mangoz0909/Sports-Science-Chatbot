@@ -47,6 +47,12 @@ function toText(value: unknown): string {
   return "";
 }
 
+/** True when a raw meal would survive normalisation (it has non-empty foods). */
+export function mealHasFoods(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return toText((value as Record<string, unknown>).foods) !== "";
+}
+
 function normalizeMeal(value: unknown, index: number): MealItem | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 

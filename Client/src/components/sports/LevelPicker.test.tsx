@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe("LevelPicker", () => {
   it("maps 5 levels onto the 1-10 prompt scale", () => {
-    expect([1, 2, 3, 4, 5].map(levelToScore)).toEqual([2, 4, 6, 8, 10]);
+    expect([1, 2, 3, 4, 5].map(levelToScore)).toEqual([1, 3, 6, 8, 10]);
   });
 
   it("is a labelled radiogroup with one checked radio", () => {
@@ -67,5 +67,17 @@ describe("LevelPicker", () => {
     expect(checked()).toBe(1);
     key("End");
     expect(checked()).toBe(5);
+  });
+
+  it("does not fire onChange when the level does not change", () => {
+    const calls: Level[] = [];
+    act(() => root.render(<LevelPicker scale={PREFERENCE_SCALES.intensity} value={5} onChange={(level) => calls.push(level)} />));
+    act(() => radios()[4]!.click());
+    act(() => {
+      radios()[4]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    });
+    expect(calls).toEqual([]);
+    act(() => radios()[1]!.click());
+    expect(calls).toEqual([2]);
   });
 });

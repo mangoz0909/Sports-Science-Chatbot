@@ -393,7 +393,8 @@ describe("fuelFromNutritionPlan", () => {
     expect(fuel?.pre[0].foods).toBe("Banana, Toast");
     expect(fuel?.post[0].foods).toBe("Shake");
     expect(fuelFromNutritionPlan(null)).toBeNull();
-    expect(fuelFromNutritionPlan({ meals: [{ meal: "Dinner", foods: "Pasta" }] })).toBeNull();
+    // A plan with no pre/post meals is still a plan, not "no plan".
+    expect(fuelFromNutritionPlan({ meals: [{ meal: "Dinner", foods: "Pasta" }] })).toEqual({ pre: [], post: [] });
     expect(fuelFromNutritionPlan("x")).toBeNull();
   });
 });

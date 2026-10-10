@@ -583,7 +583,7 @@ export default function MyWorkoutPlan() {
                 ))}
               </Stack>
 
-              {showFuel && fuel && <FuelCard label="Fuel after" items={fuel.post} />}
+              {showFuel && fuel && fuel.post.length > 0 && <FuelCard label="Fuel after" items={fuel.post} />}
 
               {session.exercises.length === 0 && (
                 <Typography color={MUTED} textAlign="center" sx={{ ...cardSx, p: 3 }}>

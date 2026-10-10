@@ -735,5 +735,7 @@ export function fuelFromNutritionPlan(raw: unknown): Fuel | null {
   if (!plan) return null;
   const pre = plan.meals.filter((m) => /\bpre[\s-]*(?:workout|training|session)\b|\bbefore (?:the )?(?:workout|training)\b/i.test(m.meal));
   const post = plan.meals.filter((m) => /\bpost[\s-]*(?:workout|training|session)\b|\bafter (?:the )?(?:workout|training)\b|\brecovery (?:meal|shake|snack)\b/i.test(m.meal));
-  return pre.length || post.length ? { pre, post } : null;
+  // A plan without pre/post meals (e.g. a rest day) is still a plan: return
+  // empty lists so the page does not claim there is no nutrition plan.
+  return { pre, post };
 }

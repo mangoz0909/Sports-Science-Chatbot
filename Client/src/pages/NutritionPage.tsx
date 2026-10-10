@@ -125,17 +125,19 @@ export default function NutritionPage() {
   // The AI note can be closed; remembered per user and day so it stays closed
   // across re-renders and reloads, and returns with tomorrow's plan.
   const noteKey = dismissKey(userId, localDateKey());
-  const [noteDismissed, setNoteDismissed] = React.useState(false);
-
-  React.useEffect(() => {
-    let dismissed = false;
+  // Read synchronously so a dismissed note does not flash on reload.
+  const readDismissed = (key: string) => {
     try {
-      dismissed = window.localStorage.getItem(noteKey) === "1";
+      return window.localStorage.getItem(key) === "1";
     } catch {
       // Storage blocked (private mode): fall back to in-memory state only.
+      return false;
     }
-    setNoteDismissed(dismissed);
-  }, [noteKey]);
+  };
+  const [dismissedFor, setDismissedFor] = React.useState<Record<string, boolean>>({});
+  const noteDismissed = dismissedFor[noteKey] ?? readDismissed(noteKey);
+  const setNoteDismissed = (value: boolean) =>
+    setDismissedFor((current) => ({ ...current, [noteKey]: value }));
 
   function dismissNote() {
     setNoteDismissed(true);
@@ -799,9 +801,12 @@ Do not include any extra text.
               variant="h6"
               component="h2"
               sx={{
+                // Strings: in sx, width: 1 means 100%, not 1px.
                 position: "absolute",
-                width: 1,
-                height: 1,
+                width: "1px",
+                height: "1px",
+                m: "-1px",
+                p: 0,
                 overflow: "hidden",
                 clip: "rect(0 0 0 0)",
                 whiteSpace: "nowrap",
@@ -818,8 +823,11 @@ Do not include any extra text.
                   const m = macro.value.match(
                     /^\s*([\d.,]+)\s*(.*)$/
                   );
-                  const num = m ? m[1] : macro.value;
-                  const unit = m ? m[2] : "";
+                  // Only split off a plain unit ("g", "kcal", "L"); a range like
+                  // "150-170g" stays whole instead of showing "-170g" as a unit.
+                  const split = m && /^[a-zA-Z%]*$/.test(m[2]);
+                  const num = split ? m[1] : macro.value;
+                  const unit = split ? m[2] : "";
                   const big = i === 0;
 
                   return (
