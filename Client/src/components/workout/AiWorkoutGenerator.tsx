@@ -430,7 +430,6 @@ Requirements:
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isLoggedIn, userId]);
 
   const intensityStyle = plan
