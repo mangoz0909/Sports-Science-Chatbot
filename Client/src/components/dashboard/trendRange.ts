@@ -1,8 +1,9 @@
 import { localDateString } from "../../services/checkinService";
 
-export const RANGE_OPTIONS = [7, 30, 90] as const;
+export const RANGE_OPTIONS = [1, 7, 30, 365] as const;
 export type RangeDays = (typeof RANGE_OPTIONS)[number];
 export const DEFAULT_RANGE: RangeDays = 7;
+export const RANGE_NAMES: Record<RangeDays, string> = { 1: "Day", 7: "Week", 30: "Month", 365: "Year" };
 
 export type TrendPoint = {
   key: string;
@@ -74,5 +75,5 @@ export function buildDemoTrend(days: number, now: Date = new Date()): TrendPoint
 }
 
 export function rangeLabel(days: number) {
-  return `last ${days} days`;
+  return days === 1 ? "current day" : `last ${days} days`;
 }

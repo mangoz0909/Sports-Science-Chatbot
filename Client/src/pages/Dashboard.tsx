@@ -556,7 +556,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
         <Grid container spacing={2.5}>
           <Grid item xs={12} lg={8}>
-          <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
+          <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" component="h2" fontWeight={950}>
                   Readiness trend
                 </Typography>
@@ -564,7 +564,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   Readiness, recovery, fatigue, and training load over the {periodLabel}.
                 </Typography>
 
-                <Box sx={{ height: { xs: 210, md: 340 } }}>
+                <Box aria-busy={rangeLoading} sx={{ height: { xs: 210, md: 340 }, mt: "auto" }}>
                   {rangeLoading && weeklyData.length === 0 ? (
                     <Skeleton variant="rounded" height="100%" sx={{ borderRadius: 3 }} />
                   ) : weeklyData.length === 0 ? (
@@ -599,7 +599,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           </Grid>
 
           <Grid item xs={12} lg={4}>
-          <Box sx={{ position: { lg: "sticky" }, top: { lg: 88 } }}>
+          <Box sx={{ height: "100%" }}>
           <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <PsychologyIcon sx={{ color: colors.blue }} />
@@ -661,7 +661,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
           <Grid item xs={12} md={6}>
             <Card elevation={0} sx={{ height: "100%", borderRadius: 4, border: "1px solid #e2e8f0" }}>
-              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
+              <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" component="h2" fontWeight={950}>
                   My Sleep Trend
                 </Typography>
@@ -669,7 +669,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   Sleep duration over the {periodLabel}.
                 </Typography>
 
-                <Box sx={{ height: { xs: 200, md: 230 } }}>
+                <Box aria-busy={rangeLoading} sx={{ height: { xs: 200, md: 230 }, mt: "auto" }}>
                   {weeklyData.length === 0 ? (
                     <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
                       <Typography fontWeight={700} color="#94a3b8">{rangeLoading ? "Loading..." : "No sleep data yet"}</Typography>
@@ -716,7 +716,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
           <Grid item xs={12} md={6}>
             <Card elevation={0} sx={{ height: "100%", borderRadius: 4, border: "1px solid #e2e8f0" }}>
-              <CardContent sx={{ height: "100%", p: { xs: 2, md: 3 } }}>
+              <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" component="h2" fontWeight={950}>
                   My Training Load
                 </Typography>
@@ -724,7 +724,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   Daily training load over the {periodLabel}.
                 </Typography>
 
-                <Box sx={{ height: { xs: 200, md: 230 } }}>
+                <Box aria-busy={rangeLoading} sx={{ height: { xs: 200, md: 230 }, mt: "auto" }}>
                   {weeklyData.length === 0 ? (
                     <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
                       <Typography fontWeight={700} color="#94a3b8">{rangeLoading ? "Loading..." : "No training data yet"}</Typography>
@@ -755,7 +755,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                 height: "100%",
               }}
             >
-              <CardContent sx={{ p: 3 }}>
+              <CardContent sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
                   <Box sx={{ width: 42, height: 42, borderRadius: 3, bgcolor: "#dbeafe", display: "grid", placeItems: "center", color: "#1d4ed8" }}>
                     <FitnessCenterIcon />
@@ -765,14 +765,14 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     <Typography fontSize={13} color="#3b82f6">AI-personalised for {userProfile.sport}</Typography>
                   </Box>
                 </Stack>
-                <Typography color="#1e40af" fontSize={14} lineHeight={1.8}>
+                <Typography color="#1e40af" fontSize={14} lineHeight={1.8} sx={{ mb: 2.5 }}>
                   Get today's AI-generated workout, tailored to your sport, fitness level, fatigue, and recovery, alongside your training week.
                 </Typography>
                 <Button
                   component={RouterLink}
                   to="/my-workout-plan?tab=ai"
                   variant="contained"
-                  sx={{ mt: 2.5, borderRadius: 3, bgcolor: "#1d4ed8", fontWeight: 800, textTransform: "none", boxShadow: "none", "&:hover": { bgcolor: "#1e40af", boxShadow: "none" } }}
+                  sx={{ mt: "auto", alignSelf: "flex-start", borderRadius: 3, bgcolor: "#1d4ed8", fontWeight: 800, textTransform: "none", boxShadow: "none", "&:hover": { bgcolor: "#1e40af", boxShadow: "none" } }}
                 >
                   View Workout Plan →
                 </Button>
@@ -790,7 +790,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                 height: "100%",
               }}
             >
-              <CardContent sx={{ p: 3 }}>
+              <CardContent sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
                   <Box sx={{ width: 42, height: 42, borderRadius: 3, bgcolor: "#d1fae5", display: "grid", placeItems: "center", color: "#047857" }}>
                     <RestaurantMenuIcon />
@@ -800,14 +800,14 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     <Typography fontSize={13} color="#10b981">AI-personalised for your goals</Typography>
                   </Box>
                 </Stack>
-                <Typography color="#065f46" fontSize={14} lineHeight={1.8}>
+                <Typography color="#065f46" fontSize={14} lineHeight={1.8} sx={{ mb: 2.5 }}>
                   Get an AI-generated nutrition plan with calorie targets, macros, hydration, and meal timing tailored to your training.
                 </Typography>
                 <Button
                   component={RouterLink}
                   to="/health/nutrition"
                   variant="contained"
-                  sx={{ mt: 2.5, borderRadius: 3, bgcolor: "#047857", fontWeight: 800, textTransform: "none", boxShadow: "none", "&:hover": { bgcolor: "#065f46", boxShadow: "none" } }}
+                  sx={{ mt: "auto", alignSelf: "flex-start", borderRadius: 3, bgcolor: "#047857", fontWeight: 800, textTransform: "none", boxShadow: "none", "&:hover": { bgcolor: "#065f46", boxShadow: "none" } }}
                 >
                   View Nutrition Plan →
                 </Button>

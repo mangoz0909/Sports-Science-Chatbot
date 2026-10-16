@@ -5,6 +5,14 @@ import RangeFilter from "./RangeFilter";
 import { buildDemoTrend, buildTrendData } from "./trendRange";
 
 describe("trendRange", () => {
+  it("builds day and year ranges across a year boundary", () => {
+    const now = new Date(2026, 0, 2);
+    expect(buildDemoTrend(1, now).map((p) => p.key)).toEqual(["2026-01-02"]);
+    const year = buildDemoTrend(365, now);
+    expect(year).toHaveLength(365);
+    expect(year[0]!.key).toBe("2025-01-03");
+    expect(year[364]!.key).toBe("2026-01-02");
+  });
   it("builds one demo point per day, ending today with unique keys", () => {
     const now = new Date(2026, 9, 10);
     const data = buildDemoTrend(30, now);
@@ -31,10 +39,14 @@ describe("RangeFilter", () => {
     await act(async () => root.render(<RangeFilter value={7} onChange={onChange} />));
     const btn = (name: string) =>
       Array.from(host.querySelectorAll("button")).find((b) => b.getAttribute("aria-label") === name)!;
-    await act(async () => btn("30 days").click());
+    await act(async () => btn("Month").click());
     expect(onChange).toHaveBeenCalledWith(30);
-    await act(async () => btn("7 days").click());
+    await act(async () => btn("Week").click());
     expect(onChange).toHaveBeenCalledTimes(1);
+    await act(async () => btn("Day").click());
+    expect(onChange).toHaveBeenLastCalledWith(1);
+    await act(async () => btn("Year").click());
+    expect(onChange).toHaveBeenLastCalledWith(365);
     act(() => root.unmount());
     host.remove();
   });
