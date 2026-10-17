@@ -20,6 +20,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import { supabase } from "../lib/supabaseClient";
 import { functionErrorMessage } from "../lib/functionError";
+import { matchResponseToMarkdown } from "../lib/sportsMatch";
 import { useAuth } from "../contexts/AuthContext";
 import LevelPicker, {
   Level,
@@ -322,12 +323,16 @@ Intensity preference: ${levelToScore(answers.intensity)}/10
 Contact comfort: ${levelToScore(answers.contact)}/10
 Coordination preference: ${levelToScore(answers.coordination)}/10
 
-Return:
-1. Top 5 recommended sports
-2. Match percentage for each
-3. Short explanation for each
-4. One surprising sport suggestion
-5. One next step for the user
+Answer in Markdown, never JSON, and not inside a code block. Use exactly this layout, with five numbered sports, best match first:
+
+## Top 5 sports
+1. **Sport name** — NN% match: one short sentence on why it fits.
+
+## Surprise pick
+**Sport name**: one short sentence on why it is worth trying.
+
+## Next step
+One practical next step for the user.
 
 Keep it concise, practical, and student-friendly.
 `;
@@ -347,12 +352,15 @@ Keep it concise, practical, and student-friendly.
         );
       }
 
-      const result = data?.result;
-      if (typeof result !== "string" || !result.trim()) {
+      // The prompt asks for Markdown, but the model still answers in JSON now
+      // and then; that used to land in the card as raw braces.
+      const result =
+        typeof data?.result === "string" ? matchResponseToMarkdown(data.result) : "";
+      if (!result) {
         throw new Error("The AI returned an empty response.");
       }
 
-      setAiMatches(result.trim());
+      setAiMatches(result);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to generate AI matches."
