@@ -10,7 +10,7 @@ export const RANGE_NAMES: Record<RangeDays, string> = { 1: "Day", 7: "Week", 30:
  * every chart an unreadable zig-zag and the heatmap 365 tiles long, so each of
  * the last 12 months becomes one averaged point instead.
  */
-export const YEAR: RangeDays = 365;
+const YEAR: RangeDays = 365;
 const YEAR_MONTHS = 12;
 
 /** What the range filter says is on screen, and each option's tooltip. */
@@ -135,7 +135,7 @@ function round(value: number, digits = 0) {
  * that month's check-ins. Months with no check-in are left out, the same way
  * the daily ranges only plot days that have one. Older points are dropped.
  */
-export function bucketByMonth(points: TrendPoint[], now: Date = new Date()): TrendPoint[] {
+function bucketByMonth(points: TrendPoint[], now: Date = new Date()): TrendPoint[] {
   return lastMonths(now).flatMap((month) => {
     const inMonth = points.filter((point) => point.key.startsWith(`${month.key}-`));
     if (inMonth.length === 0) return [];
