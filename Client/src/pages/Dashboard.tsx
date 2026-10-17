@@ -39,9 +39,9 @@ import Seo from "../components/Seo";
 import RangeFilter from "../components/dashboard/RangeFilter";
 import {
   DEFAULT_RANGE,
-  buildDemoTrend,
-  buildTrendData,
-  rangeLabel,
+  buildDemoSeries,
+  buildSeries,
+  rangePhrase,
   type RangeDays,
 } from "../components/dashboard/trendRange";
 import { LINE, MUTED } from "../components/workout/ui";
@@ -71,6 +71,29 @@ const colors = {
 function trendTooltipLabel(label: unknown, payload: ReadonlyArray<{ payload?: { full?: string } }>) {
   return payload?.[0]?.payload?.full ?? String(label ?? "");
 }
+
+const heatmapColumns = (count: number) => `repeat(${count}, minmax(0, 1fr))`;
+
+/*
+ * Heatmap columns per range, picked so a full range fills whole rows. A week
+ * is one row of seven (MUI Grid wrapped it six-and-one), 30 days split 5×6,
+ * 6×5 or 10×3, and a year's 12 months 4×3, 6×2 or 12×1. Day borrows the
+ * week's columns so its single tile is the size of a weekday.
+ */
+const HEATMAP_COLUMNS: Record<RangeDays, Record<string, string>> = {
+  1: { xs: heatmapColumns(7) },
+  7: { xs: heatmapColumns(7) },
+  30: { xs: heatmapColumns(5), sm: heatmapColumns(6), md: heatmapColumns(10) },
+  365: { xs: heatmapColumns(4), sm: heatmapColumns(6), lg: heatmapColumns(12) },
+};
+
+// A weekday only fits a seventh of a phone at 12px; month dates are densest.
+const HEATMAP_LABEL_SIZE: Record<RangeDays, number | Record<string, number>> = {
+  1: { xs: 12, sm: 16 },
+  7: { xs: 12, sm: 16 },
+  30: 11,
+  365: { xs: 12, sm: 13 },
+};
 
 function riskColor(value: number) {
   if (value < 35) return colors.green;
@@ -226,9 +249,10 @@ const userProfile = isGuest ? {
   hydrationGoal: 10,
 };
 
-const weeklyData = isGuest ? buildDemoTrend(rangeDays) : buildTrendData(weeklyCheckIns, rangeDays);
-const periodLabel = rangeLabel(rangeDays);
-const sparseTrend = !isGuest && weeklyData.length === 1;
+const weeklyData = isGuest ? buildDemoSeries(rangeDays) : buildSeries(weeklyCheckIns, rangeDays);
+const periodPhrase = rangePhrase(rangeDays);
+// One point is the whole Day range, not a sign of missing check-ins.
+const sparseTrend = !isGuest && rangeDays !== 1 && weeklyData.length === 1;
 const singleDot = weeklyData.length <= 1 ? { r: 5 } : false;
 
 if (loading) {
@@ -556,21 +580,29 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
         <Grid container spacing={2.5}>
           <Grid item xs={12} lg={8}>
-          <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>              <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", p: { xs: 2, md: 3 } }}>
+            <Card elevation={0} sx={{ height: "100%", minHeight: { xs: 300, md: 460 }, borderRadius: 4, border: "1px solid #e2e8f0" }}>
+              <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" component="h2" fontWeight={950}>
                   Readiness trend
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Readiness, recovery, fatigue, and training load over the {periodLabel}.
+                  Readiness, recovery, fatigue, and training load {periodPhrase}.
                 </Typography>
 
-                <Box aria-busy={rangeLoading} sx={{ height: { xs: 210, md: 340 }, mt: "auto" }}>
+                {/*
+                  Fills the card instead of keeping a fixed height: the AI Coach
+                  card beside it is taller, and the difference showed as a blank
+                  band under the subtitle. `contain: size` stops the drawn chart
+                  from feeding back into the row height, which otherwise lets the
+                  card grow on resize but never shrink.
+                */}
+                <Box aria-busy={rangeLoading} sx={{ flex: 1, minHeight: { xs: 210, md: 340 }, contain: "size" }}>
                   {rangeLoading && weeklyData.length === 0 ? (
                     <Skeleton variant="rounded" height="100%" sx={{ borderRadius: 3 }} />
                   ) : weeklyData.length === 0 ? (
                     <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>
                       <Box textAlign="center">
-                        <Typography fontWeight={700} color="#94a3b8">No data in the {periodLabel}</Typography>
+                        <Typography fontWeight={700} color="#94a3b8">No data {periodPhrase}</Typography>
                         <Typography fontSize={13} color="#94a3b8" sx={{ mt: 0.5 }}>Check in daily to see your trend.</Typography>
                       </Box>
                     </Box>
@@ -666,7 +698,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   My Sleep Trend
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Sleep duration over the {periodLabel}.
+                  Sleep duration {periodPhrase}.
                 </Typography>
 
                 <Box aria-busy={rangeLoading} sx={{ height: { xs: 200, md: 230 }, mt: "auto" }}>
@@ -721,7 +753,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   My Training Load
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Daily training load over the {periodLabel}.
+                  Training load {periodPhrase}.
                 </Typography>
 
                 <Box aria-busy={rangeLoading} sx={{ height: { xs: 200, md: 230 }, mt: "auto" }}>
@@ -736,7 +768,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                         <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} interval="preserveStartEnd" minTickGap={24} />
                         <YAxis stroke="#64748b" tick={{ fontSize: 12 }} width={44} />
                         <Tooltip labelFormatter={trendTooltipLabel} />
-                        <Bar dataKey="load" fill={colors.blue} radius={[8, 8, 0, 0]} />
+                        {/* Capped so the Day range's one bar is not the width of the chart. */}
+                        <Bar dataKey="load" fill={colors.blue} radius={[8, 8, 0, 0]} maxBarSize={48} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
@@ -817,7 +850,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
           <Grid item xs={12}>
             <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
-              <CardContent sx={{ p: 3 }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" component="h2" fontWeight={950}>
                   My Training Heatmap
                 </Typography>
@@ -830,34 +863,30 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     <Typography fontWeight={700} color="#94a3b8">{rangeLoading ? "Loading..." : "No heatmap data yet — log daily check-ins to see your load distribution."}</Typography>
                   </Box>
                 ) : (
-                  <Grid container spacing={1}>
+                  <Box sx={{ display: "grid", gap: { xs: 0.75, sm: 1 }, gridTemplateColumns: HEATMAP_COLUMNS[rangeDays] }}>
                     {weeklyData.map((item) => (
-                      <Grid
-                        item
-                        {...(rangeDays > 7 ? { xs: 4, sm: 3, md: 2, lg: 1 } : { xs: 6, sm: 4, md: 3, lg: 2 })}
+                      <Box
                         key={item.key}
+                        sx={{
+                          height: rangeDays === 30 ? 56 : { xs: 60, sm: 72 },
+                          minWidth: 0,
+                          px: 0.5,
+                          borderRadius: { xs: 2, sm: 3 },
+                          bgcolor: riskColor(item.load),
+                          color: "#fff",
+                          display: "grid",
+                          placeItems: "center",
+                          textAlign: "center",
+                          fontWeight: 950,
+                        }}
                       >
-                        <Box
-                          sx={{
-                            height: rangeDays > 7 ? 56 : 72,
-                            px: 0.5,
-                            borderRadius: 3,
-                            bgcolor: riskColor(item.load),
-                            color: "#fff",
-                            display: "grid",
-                            placeItems: "center",
-                            textAlign: "center",
-                            fontWeight: 950,
-                          }}
-                        >
-                          <Box>
-                            <Typography fontWeight={950} fontSize={rangeDays > 7 ? 11 : undefined} noWrap>{item.day}</Typography>
-                            <Typography fontSize={rangeDays > 7 ? 12 : 13}>{item.load}</Typography>
-                          </Box>
+                        <Box sx={{ minWidth: 0, maxWidth: "100%" }}>
+                          <Typography fontWeight={950} fontSize={HEATMAP_LABEL_SIZE[rangeDays]} noWrap>{item.day}</Typography>
+                          <Typography fontSize={{ xs: 12, sm: 13 }}>{item.load}</Typography>
                         </Box>
-                      </Grid>
+                      </Box>
                     ))}
-                  </Grid>
+                  </Box>
                 )}
               </CardContent>
             </Card>

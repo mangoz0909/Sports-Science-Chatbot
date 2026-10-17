@@ -1,6 +1,6 @@
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { INK, LINE, MUTED, SURFACE } from "../workout/ui";
-import { RANGE_NAMES, RANGE_OPTIONS, rangeLabel, type RangeDays } from "./trendRange";
+import { RANGE_NAMES, RANGE_OPTIONS, RANGE_SUMMARIES, type RangeDays } from "./trendRange";
 
 type Props = {
   value: RangeDays;
@@ -24,7 +24,7 @@ export default function RangeFilter({ value, onChange }: Props) {
       }}
     >
       <Typography sx={{ color: MUTED, fontSize: 14, fontWeight: 700 }} id="trend-range-label">
-        Trend range · {value === 1 ? "Today" : `Last ${value} days`}
+        Trend range · {RANGE_SUMMARIES[value]}
       </Typography>
       <ToggleButtonGroup
         exclusive
@@ -50,7 +50,7 @@ export default function RangeFilter({ value, onChange }: Props) {
         }}
       >
         {RANGE_OPTIONS.map((d) => (
-          <ToggleButton key={d} value={d} aria-label={RANGE_NAMES[d]} title={rangeLabel(d)}>
+          <ToggleButton key={d} value={d} aria-label={RANGE_NAMES[d]} title={RANGE_SUMMARIES[d]}>
             {RANGE_NAMES[d]}
           </ToggleButton>
         ))}
