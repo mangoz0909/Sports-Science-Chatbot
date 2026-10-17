@@ -95,10 +95,16 @@ const HEATMAP_LABEL_SIZE: Record<RangeDays, number | Record<string, number>> = {
   365: { xs: 12, sm: 13 },
 };
 
-function riskColor(value: number) {
-  if (value < 35) return colors.green;
-  if (value < 65) return colors.amber;
-  return colors.red;
+// The heatmap puts white text on these, and the chart palette was too light
+// for it: 2.14:1 on amber and 3.76:1 on red, under the 4.5:1 its labels need.
+// Same three hues a few shades darker (green-700, amber-700, red-600), each at
+// least 4.8:1 with white.
+const HEATMAP_TILE_COLORS = { green: "#15803d", amber: "#b45309", red: "#dc2626" };
+
+function riskColor(value: number, palette: Pick<typeof colors, "green" | "amber" | "red"> = colors) {
+  if (value < 35) return palette.green;
+  if (value < 65) return palette.amber;
+  return palette.red;
 }
 
 /*
@@ -855,7 +861,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   My Training Heatmap
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Green = light/recovery, yellow = moderate, red = high load.
+                  Green = light/recovery, amber = moderate, red = high load.
                 </Typography>
 
                 {weeklyData.length === 0 ? (
@@ -872,7 +878,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                           minWidth: 0,
                           px: 0.5,
                           borderRadius: { xs: 2, sm: 3 },
-                          bgcolor: riskColor(item.load),
+                          bgcolor: riskColor(item.load, HEATMAP_TILE_COLORS),
                           color: "#fff",
                           display: "grid",
                           placeItems: "center",
