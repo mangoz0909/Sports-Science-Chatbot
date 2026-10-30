@@ -21,6 +21,16 @@ describe("normalizeRichPlan", () => {
   it("returns null for unusable input", () => {
     expect(normalizeRichPlan({ meals: [] })).toBeNull();
   });
+
+  it("preserves the check-in context used to generate a cached plan", () => {
+    const plan = normalizeRichPlan({
+      ...base,
+      checkInContextKey: "[\"2026-10-29\",78]",
+      meals: [{ meal: "Breakfast", foods: "Oats" }],
+    });
+
+    expect(plan?.checkInContextKey).toBe("[\"2026-10-29\",78]");
+  });
 });
 
 describe("groupMeals", () => {

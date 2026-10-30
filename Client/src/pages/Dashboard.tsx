@@ -134,7 +134,7 @@ function fatigueVerdict(value: number) {
  * `hasData` is not optional. With no check-in on file every metric below is 0,
  * which is indistinguishable from a genuine reading of zero: the sleep branch
  * fired on `sleep: 0` and told a brand-new athlete their sleep was low and to
- * hold their training load back. Coaching invented from absent data is worse
+ * hold their training intensity back. Coaching invented from absent data is worse
  * than no coaching, so nothing here runs until there is something to read.
  */
 function getAIRecommendation(
@@ -148,20 +148,20 @@ function getAIRecommendation(
   }
 ) {
   if (!hasData) {
-    return "Log your first daily check-in and your coach tips will start appearing here, based on your own readiness, sleep, and training load.";
+    return "Log your first daily check-in and your coach tips will start appearing here, based on your own readiness, sleep, and self-rated training intensity.";
   }
 
   if (profile.injuryRisk >= 60) {
     return "Your injury risk is high. Reduce high-intensity training and focus on mobility, hydration, and sleep.";
   }
   if (profile.sleep < 7) {
-    return "Your sleep is slightly low. Avoid increasing training load until your sleep improves.";
+    return "Your sleep is slightly low. Avoid increasing training intensity until your sleep improves.";
   }
   if (profile.fatigue >= 60) {
     return "Your fatigue level is elevated. Today should be a low-intensity recovery day.";
   }
   if (profile.load > 80 && profile.recovery < 70) {
-    return "Your training load is high compared to your recovery. Reduce sprint work and add recovery time.";
+    return "You rated today's training intensity high while recovery is low. Reduce sprint work and add recovery time.";
   }
   return "You are in a stable training zone. Continue normal practice, but keep monitoring sleep and hydration.";
 }
@@ -246,10 +246,10 @@ const userProfile = isGuest ? {
   sport: profile?.primary_sport || "Sport",
   readiness: latestCheckIn?.readiness_score ?? 0,
   recovery: latestCheckIn?.recovery_score ?? 0,
-  load: latestCheckIn?.training_intensity ? latestCheckIn.training_intensity * 10 : 0,
+  load: latestCheckIn?.training_intensity != null ? latestCheckIn.training_intensity * 10 : 0,
   sleep: latestCheckIn?.sleep_hours ?? 0,
-  sleepQuality: latestCheckIn?.sleep_quality ? latestCheckIn.sleep_quality * 10 : 0,
-  fatigue: latestCheckIn?.fatigue ? latestCheckIn.fatigue * 10 : 0,
+  sleepQuality: latestCheckIn?.sleep_quality != null ? latestCheckIn.sleep_quality * 10 : 0,
+  fatigue: latestCheckIn?.fatigue != null ? latestCheckIn.fatigue * 10 : 0,
   injuryRisk: latestCheckIn?.injury_risk ?? 0,
   hydration: latestCheckIn?.hydration ?? 0,
   hydrationGoal: 10,
@@ -326,46 +326,47 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
         month: "short",
       })
     : "";
+  const metricDateLabel = staleCheckIn && lastCheckInLabel ? ` · ${lastCheckInLabel}` : "";
   const STALE_ADVICE = `Your last check-in was on ${lastCheckInLabel}. Log today's check-in and today's advice will appear here.`;
 
   const kpis = [
     {
-      label: "My Readiness",
+      label: `Readiness${metricDateLabel}`,
       value: `${userProfile.readiness}%`,
       icon: <MonitorHeartIcon />,
       color: colors.green,
       progress: userProfile.readiness,
     },
     {
-      label: "Training Load",
+      label: `Training Intensity${metricDateLabel}`,
       value: `${userProfile.load}`,
       icon: <FitnessCenterIcon />,
       color: colors.blue,
       progress: userProfile.load,
     },
     {
-      label: "Fatigue",
+      label: `Fatigue${metricDateLabel}`,
       value: `${userProfile.fatigue}%`,
       icon: <LocalFireDepartmentIcon />,
       color: colors.amber,
       progress: userProfile.fatigue,
     },
     {
-      label: "Injury Risk",
+      label: `Injury Risk${metricDateLabel}`,
       value: `${userProfile.injuryRisk}%`,
       icon: <WarningAmberIcon />,
       color: riskColor(userProfile.injuryRisk),
       progress: userProfile.injuryRisk,
     },
     {
-      label: "Sleep Score",
+      label: `Sleep Score${metricDateLabel}`,
       value: `${userProfile.sleepQuality}%`,
       icon: <HotelIcon />,
       color: colors.purple,
       progress: userProfile.sleepQuality,
     },
     {
-      label: "Hydration",
+      label: `Hydration${metricDateLabel}`,
       // Hydration is the 1-10 self-rating from the daily check-in, not a volume.
       // This used to render "7/10L", inventing a litre goal the app never asked for.
       value: `${userProfile.hydration}/${userProfile.hydrationGoal}`,
@@ -379,7 +380,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
     <Box sx={{ bgcolor: "#f8fafc" }}>
       <Seo
         title="My Dashboard"
-        description="View your athlete readiness, recovery, training load, sleep trends, and AI coach insights — all in one place."
+        description="View your athlete readiness, recovery, self-rated training intensity, sleep trends, and AI coach insights — all in one place."
         path="/dashboard"
         noIndex
       />
@@ -592,7 +593,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   Readiness trend
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Readiness, recovery, fatigue, and training load {periodPhrase}.
+                  Readiness, recovery, fatigue, and self-rated training intensity {periodPhrase}.
                 </Typography>
 
                 {/*
@@ -756,10 +757,10 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
             <Card elevation={0} sx={{ height: "100%", borderRadius: 4, border: "1px solid #e2e8f0" }}>
               <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", p: { xs: 2, md: 3 } }}>
                 <Typography variant="h6" component="h2" fontWeight={950}>
-                  My Training Load
+                  My Training Intensity
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Training load {periodPhrase}.
+                  Self-rated training intensity {periodPhrase}.
                 </Typography>
 
                 <Box aria-busy={rangeLoading} sx={{ height: { xs: 200, md: 230 }, mt: "auto" }}>

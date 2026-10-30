@@ -28,6 +28,7 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../contexts/AuthContext";
 import { cleanJsonResponse } from "../../lib/aiJson";
+import { checkInContextKey, matchesCheckInContext } from "../../lib/checkInContext";
 import { functionErrorMessage } from "../../lib/functionError";
 import { isAIWorkoutSaved, summarizeWorkouts, workoutTypeFromAI, type WorkoutType } from "../../lib/workoutPlan";
 import { loadTodaysPlan, saveTodaysPlan } from "../../services/planService";
@@ -66,6 +67,7 @@ type DailyWorkoutPlan = {
   exercises: ExerciseItem[];
   cooldown: string[];
   recoveryNote: string;
+  checkInContextKey?: string;
 };
 
 async function callOpenAI(prompt: string): Promise<string> {
@@ -164,6 +166,9 @@ function normalizePlan(value: unknown): DailyWorkoutPlan {
     exercises,
     cooldown: normalizeStringArray(record.cooldown),
     recoveryNote: stringValue(record.recoveryNote, ""),
+    ...(typeof record.checkInContextKey === "string"
+      ? { checkInContextKey: record.checkInContextKey }
+      : {}),
   };
 }
 
@@ -186,6 +191,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
   const [error, setError] = React.useState<string | null>(null);
   const savedToLibrary = Boolean(plan && isAIWorkoutSaved(workoutTypes, plan));
   const [userInstructions, setUserInstructions] = React.useState("");
+  const [planContextStale, setPlanContextStale] = React.useState(false);
 
   const todayName = new Date().toLocaleDateString(undefined, { weekday: "long" });
   const todayDisplay = new Date().toLocaleDateString(undefined, {
@@ -212,6 +218,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
   React.useEffect(() => {
     setPlan(null);
     setError(null);
+    setPlanContextStale(false);
   }, [userId]);
   const busy = loading || restoring;
 
@@ -265,6 +272,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
       const checkInText = checkIn
         ? `${checkInFreshness}. Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Fatigue: ${checkIn.fatigue != null ? Math.round(checkIn.fatigue * 10) : "N/A"}%, Sleep: ${checkIn.sleep_hours ?? "N/A"}h, Training intensity: ${checkIn.training_intensity ?? "N/A"}/10, Soreness: ${checkIn.soreness ?? "N/A"}/10, Stress: ${checkIn.stress ?? "N/A"}/10, Injury risk: ${checkIn.injury_risk ?? "N/A"}%`
         : "No check-in on file";
+      const currentCheckInContextKey = checkInContextKey(checkIn);
 
       const weeklyTrendText =
         last7CheckIns && last7CheckIns.length > 0
@@ -284,6 +292,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
               )
               .join("\n")
           : "No recent 7-day check-in history available.";
+      const historyCoverage = `${last7CheckIns.length} of the last 7 calendar days have check-ins.`;
 
       const prompt = `
 You are creating ONE detailed workout for TODAY ONLY.
@@ -302,6 +311,7 @@ ${summarizeWorkouts(workoutTypes)}
 Use these as examples of the user's preferred exercises and session structure, adapting to readiness and requests. Any workout focus is allowed, including full body, conditioning, mobility, and sport-specific training.
 
 RECENT 7-DAY HISTORY:
+${historyCoverage}
 ${weeklyTrendText}
 
 USER'S CURRENT REQUEST OR EXTRA INFORMATION:
@@ -345,7 +355,9 @@ Requirements:
 - Include exact sets, reps or time, rest periods, and useful coaching notes.
 - Use the athlete's current sport, goals, equipment, preferred duration, and experience level.
 - Use the most recent check-in heavily when deciding intensity and exercise selection, but only in proportion to how current it is.
-- Use the last 7 check-ins to detect fatigue, recovery, sleep, and workload trends.
+- Use the last 7 calendar days to detect fatigue, recovery, sleep, and training-intensity patterns.
+- Training intensity is a self-rating from 1-10, not measured training volume or total workload. Do not describe it as a measured workload.
+- If fewer than 3 check-ins are available, say the trend evidence is limited and do not claim a sustained pattern.
 - Do not overreact to one unusual check-in if the 7-day pattern suggests otherwise.
 - Respect all injuries and physical restrictions.
 - If fatigue or injury risk is high, reduce intensity and use safer alternatives.
@@ -368,10 +380,14 @@ Requirements:
         throw new Error("The AI returned an invalid plan format. Please regenerate the plan.");
       }
 
-      const normalizedPlan = normalizePlan(parsed);
+      const normalizedPlan = {
+        ...normalizePlan(parsed),
+        checkInContextKey: currentCheckInContextKey,
+      };
       if (activeUserRef.current !== requestUserId) return;
 
       setPlan(normalizedPlan);
+      setPlanContextStale(false);
 
       if (userId) {
         // Caches locally, then syncs to Supabase. A failed sync is logged and
@@ -401,7 +417,13 @@ Requirements:
     (async () => {
       try {
         // Falls back to the browser cache on its own if Supabase fails.
-        const saved = await loadTodaysPlan<DailyWorkoutPlan>("workout", userId);
+        const [saved, latestCheckIn] = await Promise.all([
+          loadTodaysPlan<DailyWorkoutPlan>("workout", userId),
+          getLatestCheckIn().catch((error) => {
+            console.error("Could not verify the workout's check-in context:", error);
+            return undefined;
+          }),
+        ]);
 
         if (cancelled) return;
 
@@ -409,6 +431,9 @@ Requirements:
           try {
             const restored = normalizePlan(saved);
             setPlan(restored);
+            setPlanContextStale(
+              !matchesCheckInContext(restored.checkInContextKey, latestCheckIn)
+            );
             return;
           } catch (error) {
             // Ignore an incompatible saved plan so the athlete can request
@@ -503,6 +528,14 @@ Requirements:
       {error && isLoggedIn && (
         <Alert severity="error" sx={{ mb: 2.5, borderRadius: 3 }}>
           {error}
+        </Alert>
+      )}
+
+      {plan && planContextStale && (
+        <Alert severity="warning" sx={{ mb: 2.5, borderRadius: 3 }}>
+          Your check-in has changed since this workout was generated, or its
+          original check-in context could not be verified. Regenerate to use
+          your latest data.
         </Alert>
       )}
 

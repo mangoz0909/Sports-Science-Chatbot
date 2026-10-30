@@ -16,7 +16,10 @@ export type MealMacros = {
 };
 
 export type RichMeal = MealItem & MealMacros;
-export type RichNutritionPlan = Omit<NutritionPlan, "meals"> & { meals: RichMeal[] };
+export type RichNutritionPlan = Omit<NutritionPlan, "meals"> & {
+  meals: RichMeal[];
+  checkInContextKey?: string;
+};
 
 function toNumber(value: unknown): number | undefined {
   if (typeof value === "number") {
@@ -51,7 +54,16 @@ export function normalizeRichPlan(raw: unknown): RichNutritionPlan | null {
     return rich;
   });
 
-  return { ...base, meals };
+  const record =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+
+  return {
+    ...base,
+    meals,
+    ...(typeof record.checkInContextKey === "string"
+      ? { checkInContextKey: record.checkInContextKey }
+      : {}),
+  };
 }
 
 export type MainKind = "breakfast" | "lunch" | "dinner";

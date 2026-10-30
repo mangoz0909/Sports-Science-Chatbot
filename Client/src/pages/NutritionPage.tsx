@@ -32,6 +32,7 @@ import Seo, { breadcrumbs } from "../components/Seo";
 import { loadTodaysPlan, saveTodaysPlan } from "../services/planService";
 import { cleanJsonResponse } from "../lib/aiJson";
 import { functionErrorMessage } from "../lib/functionError";
+import { checkInContextKey, matchesCheckInContext } from "../lib/checkInContext";
 import MealCards from "../components/nutrition/MealCards";
 import {
   dismissKey,
@@ -100,6 +101,8 @@ export default function NutritionPage() {
 
   const [userInstructions, setUserInstructions] =
     React.useState("");
+  const [planContextStale, setPlanContextStale] =
+    React.useState(false);
 
   // Supabase is the source of truth, with the browser cache as the offline
   // fallback, so today's macros are the same on every device the athlete opens
@@ -119,6 +122,7 @@ export default function NutritionPage() {
   React.useEffect(() => {
     setPlan(null);
     setError(null);
+    setPlanContextStale(false);
   }, [userId]);
   const busy = loading || restoring;
 
@@ -271,6 +275,7 @@ export default function NutritionPage() {
             checkIn.training_intensity ?? "N/A"
           }/10`
         : "No check-in on file";
+      const currentCheckInContextKey = checkInContextKey(checkIn);
 
       const weeklyTrendText =
         last7CheckIns &&
@@ -326,6 +331,7 @@ export default function NutritionPage() {
               })
               .join("\n")
           : "No recent 7-day check-in history available.";
+      const historyCoverage = `${last7CheckIns.length} of the last 7 calendar days have check-ins.`;
 
       const prompt = `
 You are a professional sports nutritionist.
@@ -337,6 +343,7 @@ MOST RECENT CHECK-IN:
 ${checkInText}
 
 RECENT 7-DAY HISTORY:
+${historyCoverage}
 ${weeklyTrendText}
 
 USER'S CURRENT REQUEST OR EXTRA INFORMATION:
@@ -380,9 +387,11 @@ Dinner
 
 Nutrition requirements:
 
-- Consider the athlete's recent 7-day training load, recovery, sleep, fatigue, and hydration trends.
+- Consider the athlete's recent 7-day training-intensity, recovery, sleep, fatigue, and hydration patterns.
+- Training intensity is a self-rating from 1-10, not measured training volume or total workload. Do not describe it as measured workload.
+- If fewer than 3 check-ins are available, say the trend evidence is limited and do not claim a sustained pattern.
 
-- Increase recovery-focused nutrition when training load has been consistently high.
+- Increase recovery-focused nutrition when training intensity has been repeatedly rated high.
 
 - Account for repeated poor hydration instead of looking only at today's hydration.
 
@@ -427,9 +436,9 @@ Do not include any extra text.
       // this function is how a later edit reads the wrong one.
       // Normalised before it is shown or cached: a raw array or object in
       // `foods` crashed the page, and the cached copy crashed it all day.
-      const generated = normalizeRichPlan(parsed);
+      const generatedPlan = normalizeRichPlan(parsed);
 
-      if (!generated) {
+      if (!generatedPlan) {
         console.error("Unexpected nutrition response:", parsed);
 
         throw new Error(
@@ -439,7 +448,12 @@ Do not include any extra text.
 
       if (activeUserRef.current !== requestUserId) return;
 
+      const generated = {
+        ...generatedPlan,
+        checkInContextKey: currentCheckInContextKey,
+      };
       setPlan(generated);
+      setPlanContextStale(false);
 
       if (userId) {
         // Caches locally, then syncs to Supabase. A failed sync is logged and
@@ -475,11 +489,13 @@ Do not include any extra text.
     (async () => {
       try {
         // Falls back to the browser cache on its own if Supabase fails.
-        const saved =
-          await loadTodaysPlan<unknown>(
-            "nutrition",
-            userId
-          );
+        const [saved, latestCheckIn] = await Promise.all([
+          loadTodaysPlan<unknown>("nutrition", userId),
+          getLatestCheckIn().catch((error) => {
+            console.error("Could not verify the nutrition plan's check-in context:", error);
+            return undefined;
+          }),
+        ]);
 
         if (cancelled) return;
 
@@ -489,6 +505,9 @@ Do not include any extra text.
 
         if (restored) {
           setPlan(restored);
+          setPlanContextStale(
+            !matchesCheckInContext(restored.checkInContextKey, latestCheckIn)
+          );
           return;
         }
 
@@ -662,6 +681,14 @@ Do not include any extra text.
             personalised nutrition plan.
           </Alert>
         )}
+
+      {plan && planContextStale && (
+        <Alert severity="warning" sx={{ mb: 2.5, borderRadius: 3 }}>
+          Your check-in has changed since this nutrition plan was generated, or
+          its original check-in context could not be verified. Regenerate to use
+          your latest data.
+        </Alert>
+      )}
 
       {error &&
         isLoggedIn && (
