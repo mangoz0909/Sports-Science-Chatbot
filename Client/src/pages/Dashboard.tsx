@@ -464,8 +464,6 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
 
         {/* Check-In Banner */}
         {!isGuest && <Box
-          component={checkedInToday ? "div" : RouterLink}
-          to={checkedInToday ? undefined : "/daily-check-in"}
           sx={{
             display: "flex",
             alignItems: "center",
@@ -476,11 +474,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
             borderRadius: 3,
             border: "1px solid",
             textDecoration: "none",
-            cursor: checkedInToday ? "default" : "pointer",
             bgcolor: checkedInToday ? "#f0fdf4" : "#fffbeb",
             borderColor: checkedInToday ? "#bbf7d0" : "#fde68a",
-            transition: "box-shadow 0.15s ease",
-            "&:hover": checkedInToday ? {} : { boxShadow: "0 4px 16px rgba(234,179,8,0.14)" },
           }}
         >
           {checkedInToday ? (
@@ -500,11 +495,27 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                 : "Dashboard KPIs will update once you log your daily check-in."}
             </Typography>
           </Box>
-          {!checkedInToday && (
-            <Typography fontSize={13} fontWeight={800} color="#d97706" sx={{ flexShrink: 0 }}>
-              Tap to log →
-            </Typography>
-          )}
+          <Button
+            component={RouterLink}
+            to="/daily-check-in"
+            variant="contained"
+            size="small"
+            sx={{
+              flexShrink: 0,
+              borderRadius: 2,
+              bgcolor: checkedInToday ? "#15803d" : "#d97706",
+              color: "#fff",
+              fontWeight: 800,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": {
+                bgcolor: checkedInToday ? "#166534" : "#b45309",
+                boxShadow: "none",
+              },
+            }}
+          >
+            {checkedInToday ? "Edit check-in" : "Log check-in"}
+          </Button>
         </Box>}
 
         <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
