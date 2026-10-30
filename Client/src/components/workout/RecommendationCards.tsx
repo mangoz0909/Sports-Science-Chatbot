@@ -66,7 +66,19 @@ export default function RecommendationCards({
                   <Chip label="Best fit" size="small" sx={{ height: 20, fontSize: 11, fontWeight: 900, bgcolor: INK, color: "#fff" }} />
                 )}
               </Stack>
-              <Typography variant="body2" color={MUTED} sx={{ mt: 0.25 }}>
+              <Typography
+                variant="body2"
+                color={MUTED}
+                sx={{
+                  mt: 0.25,
+                  lineHeight: 1.4,
+                  minHeight: "2.8em",
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                }}
+              >
                 {entry.reason}
               </Typography>
               <LinearProgress

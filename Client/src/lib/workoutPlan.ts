@@ -493,11 +493,13 @@ function readiness(daysSince: number | null): number {
 }
 
 function reasonFor(daysSince: number | null, name: string): string {
-  if (daysSince === null) return `No ${name.toLowerCase()} session logged yet.`;
-  if (daysSince <= 0) return "Already trained today.";
-  if (daysSince === 1) return "This workout or overlapping exercises were planned yesterday — allow recovery.";
-  if (daysSince === 2) return "This workout or overlapping exercises were planned 2 days ago.";
-  return `Last planned this workout or overlapping exercises ${daysSince} days ago.`;
+  if (daysSince === null) {
+    return `No ${name.toLowerCase()} session or overlapping exercises have been planned yet.`;
+  }
+
+  const when =
+    daysSince <= 0 ? "today" : daysSince === 1 ? "yesterday" : `${daysSince} days ago`;
+  return `This workout or overlapping exercises were last planned ${when}.`;
 }
 
 /** Most recent date strictly before `dateISO` on which `typeId` was trained. */

@@ -110,7 +110,28 @@ describe("recommendations", () => {
     );
 
     expect(byId.push.percent).toBeLessThan(10);
-    expect(byId.push.reason).toBe("Already trained today.");
+    expect(byId.push.reason).toBe(
+      "This workout or overlapping exercises were last planned today."
+    );
+  });
+
+  it("uses a consistent reason format for recommendation recency", () => {
+    const yesterday = planWith({
+      "2026-09-16": sessionFromType(defaultTypes()[0]),
+    });
+    const twoDaysAgo = planWith({
+      "2026-09-15": sessionFromType(defaultTypes()[0]),
+    });
+
+    expect(
+      recommendWorkouts(yesterday, TODAY).find((entry) => entry.type.id === "push")?.reason
+    ).toBe("This workout or overlapping exercises were last planned yesterday.");
+    expect(
+      recommendWorkouts(twoDaysAgo, TODAY).find((entry) => entry.type.id === "push")?.reason
+    ).toBe("This workout or overlapping exercises were last planned 2 days ago.");
+    expect(
+      recommendWorkouts(emptyPlan(), TODAY).find((entry) => entry.type.id === "push")?.reason
+    ).toBe("No push session or overlapping exercises have been planned yet.");
   });
 
   it("ignores sessions logged after the day being planned", () => {
