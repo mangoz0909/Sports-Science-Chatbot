@@ -25,7 +25,8 @@ import PsychologyIcon from "@mui/icons-material/Psychology";
 
 import {
   createDailyCheckIn,
-  getLatestCheckIn,
+  getCheckInForDate,
+  getCheckInDateBounds,
   localDateString,
 } from "../services/checkinService";
 
@@ -191,51 +192,55 @@ export default function DailyCheckIn() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = React.useState(false);
-  // Whether today's existing check-in has been looked up. Until it has,
-  // saving could silently replace it with the defaults (the save is an upsert).
+  const [selectedDate, setSelectedDate] = React.useState(() => localDateString());
+  // Until the selected date is loaded, saving could replace an existing row
+  // with defaults because the save is an upsert.
   const [loadState, setLoadState] = React.useState<"loading" | "ready" | "error">("loading");
-  // Set once the athlete moves anything, so a slow fetch landing afterwards
-  // doesn't snap their sliders back to the stored values.
-  const editedRef = React.useRef(false);
+  // Keep a slow date lookup from overwriting edits made while it was loading.
+  const editedDateRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
-    getLatestCheckIn().then((latest) => {
+    setLoadState("loading");
+    setAlreadyCheckedIn(false);
+    setSubmitted(false);
+    setError(null);
+    setData(defaultData);
+
+    getCheckInForDate(selectedDate).then((existing) => {
       if (!mounted) return;
       setLoadState("ready");
-      if (!latest) return;
-      const today = localDateString();
-      if (latest.checkin_date === today) {
+      if (existing) {
         setAlreadyCheckedIn(true);
-        if (editedRef.current) return;
+        if (editedDateRef.current === selectedDate) return;
         setData({
-          sleepHours: latest.sleep_hours ?? defaultData.sleepHours,
-          sleepQuality: latest.sleep_quality ?? defaultData.sleepQuality,
-          energy: latest.energy ?? defaultData.energy,
-          soreness: latest.soreness ?? defaultData.soreness,
-          fatigue: latest.fatigue ?? defaultData.fatigue,
-          stress: latest.stress ?? defaultData.stress,
-          mood: latest.mood ?? defaultData.mood,
-          hydration: latest.hydration ?? defaultData.hydration,
-          nutrition: latest.nutrition ?? defaultData.nutrition,
-          trainingIntensity: latest.training_intensity ?? defaultData.trainingIntensity,
-          painLevel: latest.pain_level ?? defaultData.painLevel,
-          notes: latest.notes ?? "",
+          sleepHours: existing.sleep_hours ?? defaultData.sleepHours,
+          sleepQuality: existing.sleep_quality ?? defaultData.sleepQuality,
+          energy: existing.energy ?? defaultData.energy,
+          soreness: existing.soreness ?? defaultData.soreness,
+          fatigue: existing.fatigue ?? defaultData.fatigue,
+          stress: existing.stress ?? defaultData.stress,
+          mood: existing.mood ?? defaultData.mood,
+          hydration: existing.hydration ?? defaultData.hydration,
+          nutrition: existing.nutrition ?? defaultData.nutrition,
+          trainingIntensity: existing.training_intensity ?? defaultData.trainingIntensity,
+          painLevel: existing.pain_level ?? defaultData.painLevel,
+          notes: existing.notes ?? "",
         });
       }
     }).catch((err) => {
-      console.error("Could not load today's check-in:", err);
+      console.error("Could not load the selected check-in:", err);
       if (mounted) setLoadState("error");
     });
     return () => { mounted = false; };
-  }, []);
+  }, [selectedDate]);
 
   const readiness = calculateReadiness(data);
   const injuryRisk = calculateInjuryRisk(data);
   const recovery = calculateRecovery(data);
 
   const updateValue = (key: keyof CheckInData, value: number | string) => {
-    editedRef.current = true;
+    editedDateRef.current = selectedDate;
     setData((prev) => ({
       ...prev,
       [key]: value,
@@ -244,7 +249,17 @@ export default function DailyCheckIn() {
     setError(null);
   };
 
+  const changeSelectedDate = (date: string) => {
+    if (!date) return;
+    setSelectedDate(date);
+    setData(defaultData);
+    setSubmitted(false);
+    setError(null);
+    editedDateRef.current = null;
+  };
+
   const handleSubmit = async () => {
+    const submittedDate = selectedDate;
     setSaving(true);
     setError(null);
 
@@ -265,9 +280,11 @@ export default function DailyCheckIn() {
         readiness_score: readiness,
         recovery_score: recovery,
         injury_risk: injuryRisk,
-      });
-
-      setSubmitted(true);
+      }, submittedDate);
+      if (selectedDate === submittedDate) {
+        setAlreadyCheckedIn(true);
+        setSubmitted(true);
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to save daily check-in.");
     } finally {
@@ -301,6 +318,12 @@ export default function DailyCheckIn() {
       color: getColor(data.nutrition * 10),
     },
   ];
+  const { earliest, latest } = getCheckInDateBounds();
+  const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString(
+    undefined,
+    { weekday: "long", month: "long", day: "numeric", year: "numeric" }
+  );
+  const isRetrospective = selectedDate !== latest;
 
   return (
     <Box sx={{ bgcolor: "#f8fafc" }}>
@@ -341,15 +364,36 @@ export default function DailyCheckIn() {
           </Typography>
         </Stack>
 
+        <Card elevation={0} sx={{ mb: 2.5, borderRadius: 4, border: "1px solid #e2e8f0" }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
+              <TextField
+                type="date"
+                label="Check-in date"
+                value={selectedDate}
+                disabled={saving}
+                onChange={(event) => changeSelectedDate(event.target.value)}
+                inputProps={{ min: earliest, max: latest, "aria-label": "Check-in date" }}
+                InputLabelProps={{ shrink: true }}
+                sx={{ width: { xs: "100%", sm: 240 } }}
+              />
+              <Typography color="#64748b" fontSize={14} lineHeight={1.7}>
+                Choose today or one of the previous six days. Existing entries for
+                the selected date will be loaded so you can update them.
+              </Typography>
+            </Stack>
+          </CardContent>
+        </Card>
+
         {alreadyCheckedIn && !submitted && (
           <Alert severity="warning" sx={{ mb: 2 }}>
-            You've already logged a check-in today. Saving again will update your existing entry.
+            A check-in already exists for {selectedDateLabel}. Saving again will update it.
           </Alert>
         )}
 
         {submitted && (
           <Alert severity="success" sx={{ mb: 2 }}>
-            Daily check-in {alreadyCheckedIn ? "updated" : "saved"} successfully.
+            Check-in for {selectedDateLabel} {alreadyCheckedIn ? "updated" : "saved"} successfully.
           </Alert>
         )}
 
@@ -545,18 +589,18 @@ export default function DailyCheckIn() {
               <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0" }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="h6" fontWeight={950} sx={{ mb: 2 }}>
-                    Save Today’s Check-In
+                    {isRetrospective ? "Save Past Check-In" : "Save Today’s Check-In"}
                   </Typography>
 
                   <Typography color="#64748b" lineHeight={1.8} sx={{ mb: 2 }}>
                     This will save your readiness, recovery, injury risk, and input data
-                    to your account.
+                    for {selectedDateLabel} to your account.
                   </Typography>
 
                   {loadState === "error" && (
                     <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-                      We couldn't check whether you've already checked in today. Saving
-                      will replace today's check-in if there is one.
+                      We couldn't check whether a check-in exists for this date. Please
+                      reload and try again before saving to avoid replacing stored data.
                     </Alert>
                   )}
 
@@ -564,7 +608,7 @@ export default function DailyCheckIn() {
                     fullWidth
                     variant="contained"
                     onClick={handleSubmit}
-                    disabled={saving || loadState === "loading"}
+                    disabled={saving || loadState !== "ready"}
                     sx={{
                       borderRadius: 3,
                       bgcolor: "#0f172a",
@@ -580,10 +624,10 @@ export default function DailyCheckIn() {
                     {saving
                       ? "Saving..."
                       : loadState === "loading"
-                      ? "Loading today's check-in…"
+                      ? "Loading selected check-in…"
                       : alreadyCheckedIn
-                      ? "Update Today's Check-In"
-                      : "Save Daily Check-In"}
+                      ? `Update Check-In for ${selectedDateLabel}`
+                      : `Save Check-In for ${selectedDateLabel}`}
                   </Button>
                 </CardContent>
               </Card>

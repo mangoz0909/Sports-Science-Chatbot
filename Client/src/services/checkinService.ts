@@ -34,6 +34,39 @@ export function localDateString(date: Date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+export function getCheckInDateBounds(now: Date = new Date()) {
+  const latest = localDateString(now);
+  const earliestDate = new Date(now);
+  earliestDate.setDate(earliestDate.getDate() - 6);
+
+  return { earliest: localDateString(earliestDate), latest };
+}
+
+export function validateCheckInDate(
+  checkinDate: string,
+  now: Date = new Date()
+): void {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(checkinDate);
+  if (!match) {
+    throw new Error("Choose a valid check-in date.");
+  }
+
+  const [, year, month, day] = match;
+  const parsed = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (
+    parsed.getUTCFullYear() !== Number(year) ||
+    parsed.getUTCMonth() !== Number(month) - 1 ||
+    parsed.getUTCDate() !== Number(day)
+  ) {
+    throw new Error("Choose a valid check-in date.");
+  }
+
+  const { earliest, latest } = getCheckInDateBounds(now);
+  if (checkinDate < earliest || checkinDate > latest) {
+    throw new Error("Check-ins can only be entered for the last 7 days.");
+  }
+}
+
 /**
  * Whether a check-in row is the athlete's entry for today.
  *
@@ -50,12 +83,15 @@ export function isCheckInFromToday(
   return checkIn?.checkin_date === today;
 }
 
-export async function createDailyCheckIn(checkInData: CheckInInput) {
+export async function createDailyCheckIn(
+  checkInData: CheckInInput,
+  checkinDate: string = localDateString()
+) {
+  validateCheckInDate(checkinDate);
+
   const user = await requireCurrentUser(
     "You must be logged in to save a check-in."
   );
-
-  const today = localDateString();
 
   const { data, error } = await supabase
     .from("daily_checkins")
@@ -63,7 +99,8 @@ export async function createDailyCheckIn(checkInData: CheckInInput) {
       {
         ...checkInData,
         user_id: user.id,
-        checkin_date: today,
+        checkin_date: checkinDate,
+        updated_at: new Date().toISOString(),
       },
       {
         onConflict: "user_id,checkin_date",
@@ -71,6 +108,23 @@ export async function createDailyCheckIn(checkInData: CheckInInput) {
     )
     .select()
     .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getCheckInForDate(checkinDate: string) {
+  validateCheckInDate(checkinDate);
+  const user = await getCurrentUser();
+
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("daily_checkins")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("checkin_date", checkinDate)
+    .maybeSingle();
 
   if (error) throw error;
   return data;
