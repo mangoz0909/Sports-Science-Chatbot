@@ -100,7 +100,6 @@ export async function createDailyCheckIn(
         ...checkInData,
         user_id: user.id,
         checkin_date: checkinDate,
-        updated_at: new Date().toISOString(),
       },
       {
         onConflict: "user_id,checkin_date",
