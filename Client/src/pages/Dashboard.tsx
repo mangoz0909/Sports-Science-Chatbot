@@ -51,6 +51,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -243,7 +244,8 @@ const userProfile = isGuest ? {
   hydrationGoal: 10,
 } : {
   name: profile?.name || "Athlete",
-  sport: profile?.primary_sport || "Sport",
+  // Empty when no sport is on file, so copy reads "your training", not "Sport training".
+  sport: profile?.primary_sport || "",
   readiness: latestCheckIn?.readiness_score ?? 0,
   recovery: latestCheckIn?.recovery_score ?? 0,
   load: latestCheckIn?.training_intensity != null ? latestCheckIn.training_intensity * 10 : 0,
@@ -326,47 +328,49 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
         month: "short",
       })
     : "";
-  const metricDateLabel = staleCheckIn && lastCheckInLabel ? ` · ${lastCheckInLabel}` : "";
+  // Shown on its own line under each KPI title, so a long title never wraps
+  // with the date split across lines ("Thu, Oct" / "29").
+  const metricDate = staleCheckIn && lastCheckInLabel ? lastCheckInLabel : "";
   const STALE_ADVICE = `Your last check-in was on ${lastCheckInLabel}. Log today's check-in and today's advice will appear here.`;
 
   const kpis = [
     {
-      label: `Readiness${metricDateLabel}`,
+      label: "Readiness",
       value: `${userProfile.readiness}%`,
       icon: <MonitorHeartIcon />,
       color: colors.green,
       progress: userProfile.readiness,
     },
     {
-      label: `Training Intensity${metricDateLabel}`,
+      label: "Training Intensity",
       value: `${userProfile.load}`,
       icon: <FitnessCenterIcon />,
       color: colors.blue,
       progress: userProfile.load,
     },
     {
-      label: `Fatigue${metricDateLabel}`,
+      label: "Fatigue",
       value: `${userProfile.fatigue}%`,
       icon: <LocalFireDepartmentIcon />,
       color: colors.amber,
       progress: userProfile.fatigue,
     },
     {
-      label: `Injury Risk${metricDateLabel}`,
+      label: "Injury Risk",
       value: `${userProfile.injuryRisk}%`,
       icon: <WarningAmberIcon />,
       color: riskColor(userProfile.injuryRisk),
       progress: userProfile.injuryRisk,
     },
     {
-      label: `Sleep Score${metricDateLabel}`,
+      label: "Sleep Score",
       value: `${userProfile.sleepQuality}%`,
       icon: <HotelIcon />,
       color: colors.purple,
       progress: userProfile.sleepQuality,
     },
     {
-      label: `Hydration${metricDateLabel}`,
+      label: "Hydration",
       // Hydration is the 1-10 self-rating from the daily check-in, not a volume.
       // This used to render "7/10L", inventing a litre goal the app never asked for.
       value: `${userProfile.hydration}/${userProfile.hydrationGoal}`,
@@ -422,7 +426,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           <Typography color="#64748b">
             {isGuest
               ? "Showing demo data — sign in to see your real training, recovery, and readiness metrics."
-              : `Your personal dashboard for ${userProfile.sport} training, recovery, sleep, nutrition, and injury prevention.`}
+              : `Your personal dashboard for ${userProfile.sport ? `${userProfile.sport} ` : ""}training, recovery, sleep, nutrition, and injury prevention.`}
           </Typography>
         </Stack>
 
@@ -467,6 +471,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           sx={{
             display: "flex",
             alignItems: "center",
+            // On phones the button wraps under the text instead of squeezing it.
+            flexWrap: { xs: "wrap", sm: "nowrap" },
             gap: 1.5,
             mb: 3,
             px: { xs: 2, md: 2.5 },
@@ -483,7 +489,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           ) : (
             <AddCircleOutlineIcon sx={{ color: "#d97706", fontSize: 22, flexShrink: 0 }} />
           )}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ flex: { xs: "1 1 calc(100% - 34px)", sm: 1 }, minWidth: 0 }}>
             <Typography fontWeight={800} fontSize={14} color={checkedInToday ? "#15803d" : "#92400e"}>
               {checkedInToday ? "Checked in today ✓" : "Log today's check-in"}
             </Typography>
@@ -502,6 +508,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
             size="small"
             sx={{
               flexShrink: 0,
+              // Lines up with the text above once wrapped (icon 22px + gap 12px).
+              ml: { xs: "34px", sm: 0 },
               borderRadius: 2,
               bgcolor: checkedInToday ? "#15803d" : "#d97706",
               color: "#fff",
@@ -535,7 +543,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     <Box sx={{ minWidth: 0 }}>
                       {/* Fixed two-line title slot so a wrapped title ("Training Load")
                           never pushes its number below its neighbours'. */}
-                      <MuiTooltip title={item.label} placement="top-start">
+                      <MuiTooltip title={metricDate ? `${item.label} · ${metricDate}` : item.label} placement="top-start">
                         <Typography
                           color={MUTED}
                           fontWeight={850}
@@ -550,6 +558,12 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                           }}
                         >
                           {item.label}
+                          {metricDate && (
+                            <>
+                              <br />
+                              {metricDate}
+                            </>
+                          )}
                         </Typography>
                       </MuiTooltip>
                       <Typography variant="h5" component="p" fontWeight={950} sx={{ mt: 0.5, lineHeight: "32px" }}>
@@ -629,12 +643,13 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       <LineChart data={weeklyData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={LINE} />
                         <XAxis dataKey="day" stroke="#64748b" tick={{ fontSize: 12 }} tickMargin={6} interval="preserveStartEnd" minTickGap={24} />
-                        <YAxis stroke="#64748b" domain={[0, 110]} tick={{ fontSize: 12 }} width={44} />
+                        <YAxis stroke="#64748b" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fontSize: 12 }} width={44} />
                         <Tooltip labelFormatter={trendTooltipLabel} />
-                        <Line type="monotone" dataKey="readiness" stroke={colors.green} strokeWidth={3} dot={singleDot} />
-                        <Line type="monotone" dataKey="recovery" stroke={colors.purple} strokeWidth={3} dot={singleDot} />
-                        <Line type="monotone" dataKey="load" stroke={colors.blue} strokeWidth={3} dot={singleDot} />
-                        <Line type="monotone" dataKey="fatigue" stroke={colors.amber} strokeWidth={3} dot={singleDot} />
+                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                        <Line type="monotone" dataKey="readiness" name="Readiness" stroke={colors.green} strokeWidth={3} dot={singleDot} />
+                        <Line type="monotone" dataKey="recovery" name="Recovery" stroke={colors.purple} strokeWidth={3} dot={singleDot} />
+                        <Line type="monotone" dataKey="load" name="Intensity" stroke={colors.blue} strokeWidth={3} dot={singleDot} />
+                        <Line type="monotone" dataKey="fatigue" name="Fatigue" stroke={colors.amber} strokeWidth={3} dot={singleDot} />
                       </LineChart>
                     </ResponsiveContainer>
                   )}
@@ -680,10 +695,10 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                       : staleCheckIn
                       ? `Log today's check-in to get a focus tailored to how you feel today.`
                       : userProfile.fatigue >= 60
-                      ? `High fatigue detected. Keep ${userProfile.sport} work technical and low-intensity today — prioritise sleep and hydration.`
+                      ? `High fatigue detected. Keep ${userProfile.sport ? `${userProfile.sport} ` : ""}sessions technical and low-intensity today — prioritise sleep and hydration.`
                       : userProfile.recovery < 50
-                      ? `Recovery is low. Focus on ${userProfile.sport} skill drills rather than high-load sessions, and aim for 8+ hours sleep tonight.`
-                      : `Keep today balanced: ${userProfile.sport} skill work, stay hydrated, and aim for at least 8 hours of sleep tonight.`}
+                      ? `Recovery is low. Focus on ${userProfile.sport ? `${userProfile.sport} ` : ""}skill drills rather than high-load sessions, and aim for 8+ hours sleep tonight.`
+                      : `Keep today balanced: ${userProfile.sport ? `${userProfile.sport} ` : ""}skill work, stay hydrated, and aim for at least 8 hours of sleep tonight.`}
                   </Typography>
                 </Box>
 
@@ -813,7 +828,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   </Box>
                   <Box>
                     <Typography variant="h6" component="h2" fontWeight={950} color="#1e3a5f">My Workout Plan</Typography>
-                    <Typography fontSize={13} color="#3b82f6">AI-personalised for {userProfile.sport}</Typography>
+                    <Typography fontSize={13} color="#3b82f6">AI-personalised for {userProfile.sport || "your training"}</Typography>
                   </Box>
                 </Stack>
                 <Typography color="#1e40af" fontSize={14} lineHeight={1.8} sx={{ mb: 2.5 }}>
@@ -873,7 +888,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   My Training Heatmap
                 </Typography>
                 <Typography color="#64748b" fontSize={14} sx={{ mb: 2 }}>
-                  Green = light/recovery, amber = moderate, red = high load.
+                  Green = light/recovery, amber = moderate, red = high intensity.
                 </Typography>
 
                 {weeklyData.length === 0 ? (

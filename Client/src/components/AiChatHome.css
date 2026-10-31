@@ -1110,6 +1110,23 @@
 
   .chat-header {
     padding: 12px 14px;
+    gap: 10px;
+  }
+
+  /* Keep "● AI Assistant · Ready" on one line beside the Clear button. */
+  .eyebrow {
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  .clear-btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    white-space: nowrap;
+  }
+
+  .clear-btn-noun {
+    display: none;
   }
 
   .brand-logo {
@@ -1210,4 +1227,11 @@
 
 @media (min-width: 900px) {
   .ai-page { --ai-page-inset: 32px; }
+}
+
+/* Keyboard shortcuts mean nothing on a touch screen. */
+@media (hover: none) and (pointer: coarse) {
+  .keyboard-hint {
+    display: none;
+  }
 }

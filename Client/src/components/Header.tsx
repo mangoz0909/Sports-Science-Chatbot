@@ -301,6 +301,8 @@ const Header: React.FC = () => {
                 "&:hover": { bgcolor: "#e2e8f0" },
               }}
               aria-label="Open navigation menu"
+              aria-haspopup="dialog"
+              aria-expanded={drawerOpen}
             >
               <MenuIcon sx={{ fontSize: 24 }} />
             </IconButton>

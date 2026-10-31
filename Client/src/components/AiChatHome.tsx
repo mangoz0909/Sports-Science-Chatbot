@@ -624,7 +624,7 @@ export default function AiChatHome({
             {messages.length > 0 && (
               <div className="header-actions">
                 <button className="clear-btn" type="button" disabled={isLoading || historyLoading || clearing} onClick={() => void clearConversation()}>
-                  {clearing ? "Clearing…" : "✕ Clear chat"}
+                  {clearing ? "Clearing…" : <>✕ Clear<span className="clear-btn-noun"> chat</span></>}
                 </button>
               </div>
             )}
@@ -832,7 +832,7 @@ export default function AiChatHome({
               <div className="input-hint" id="chat-input-hint" aria-live="polite">
                 {overLimit
                   ? `Message too long (${message.length}/${MAX_MESSAGE_LENGTH})`
-                  : "Enter to send · Shift+Enter for new line"}
+                  : <span className="keyboard-hint">Enter to send · Shift+Enter for new line</span>}
               </div>
             </div>
           </form>

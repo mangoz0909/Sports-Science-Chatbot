@@ -417,8 +417,8 @@ export default function ProfilePage() {
       icon: <FitnessCenterIcon />,
     },
     {
-      label: "Training Load",
-      subtitle: "Session intensity",
+      label: "Training Intensity",
+      subtitle: "Self-rated, 1–10",
       value: checkIn?.training_intensity
         ? Math.round(checkIn.training_intensity * 10)
         : 0,
@@ -620,7 +620,7 @@ export default function ProfilePage() {
                     useFlexGap
                     sx={{ mt: 2 }}
                   >
-                    <Chip label={form.primary_sport || "Sport"} sx={{ fontWeight: 900 }} />
+                    <Chip label={form.primary_sport || "No sport set"} sx={{ fontWeight: 900 }} />
                     <Chip
                       label="Active"
                       sx={{

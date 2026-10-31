@@ -242,6 +242,16 @@ const App: React.FC = () => {
                       element={<AuthPage />}
                     />
 
+                    {/* Common guesses for the auth page */}
+                    <Route
+                      path="/login"
+                      element={<Navigate to="/auth?mode=login" replace />}
+                    />
+                    <Route
+                      path="/signup"
+                      element={<Navigate to="/auth?mode=signup" replace />}
+                    />
+
                     <Route
                       path="/auth/callback"
                       element={<AuthCallback />}
