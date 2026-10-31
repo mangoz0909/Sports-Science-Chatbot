@@ -272,7 +272,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
       const checkInText = checkIn
         ? `${checkInFreshness}. Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Fatigue: ${checkIn.fatigue != null ? Math.round(checkIn.fatigue * 10) : "N/A"}%, Sleep: ${checkIn.sleep_hours ?? "N/A"}h, Training intensity: ${checkIn.training_intensity ?? "N/A"}/10, Soreness: ${checkIn.soreness ?? "N/A"}/10, Stress: ${checkIn.stress ?? "N/A"}/10, Injury risk: ${checkIn.injury_risk ?? "N/A"}%`
         : "No check-in on file";
-      const currentCheckInContextKey = checkInContextKey(checkIn);
+      const currentCheckInContextKey = checkInContextKey(checkIn, last7CheckIns);
 
       const weeklyTrendText =
         last7CheckIns && last7CheckIns.length > 0
@@ -417,10 +417,14 @@ Requirements:
     (async () => {
       try {
         // Falls back to the browser cache on its own if Supabase fails.
-        const [saved, latestCheckIn] = await Promise.all([
+        const [saved, latestCheckIn, recentCheckIns] = await Promise.all([
           loadTodaysPlan<DailyWorkoutPlan>("workout", userId),
           getLatestCheckIn().catch((error) => {
             console.error("Could not verify the workout's check-in context:", error);
+            return undefined;
+          }),
+          getLast7CheckIns().catch((error) => {
+            console.error("Could not verify the workout's check-in history:", error);
             return undefined;
           }),
         ]);
@@ -432,7 +436,7 @@ Requirements:
             const restored = normalizePlan(saved);
             setPlan(restored);
             setPlanContextStale(
-              !matchesCheckInContext(restored.checkInContextKey, latestCheckIn)
+              !matchesCheckInContext(restored.checkInContextKey, latestCheckIn, recentCheckIns)
             );
             return;
           } catch (error) {
