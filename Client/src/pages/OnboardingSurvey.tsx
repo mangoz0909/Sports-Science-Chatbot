@@ -29,6 +29,7 @@ import {
   ExtendedUserPreferences,
   getUserPreferences,
   saveUserPreferences,
+  skipOnboarding,
 } from "../services/preferencesService";
 
 import { toFormString } from "../data/profileOptions";
@@ -515,6 +516,7 @@ export default function OnboardingSurvey() {
 
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
+  const [skipping, setSkipping] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const totalSteps = 5;
@@ -694,6 +696,25 @@ export default function OnboardingSurvey() {
       top: 0,
       behavior: "smooth",
     });
+  }
+
+  async function handleSkip() {
+    setError(null);
+    setSkipping(true);
+
+    try {
+      await skipOnboarding();
+      navigate(returnTo);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to skip the athlete profile survey.";
+
+      setError(message);
+    } finally {
+      setSkipping(false);
+    }
   }
 
   /* ---------------------------------------------------------------------- */
@@ -1849,7 +1870,7 @@ export default function OnboardingSurvey() {
                 type="button"
                 variant="text"
                 startIcon={<ArrowBackRounded />}
-                disabled={step === 0}
+                disabled={step === 0 || submitting || skipping}
                 onClick={previousStep}
                 sx={{
                   color: "#475569",
@@ -1860,57 +1881,75 @@ export default function OnboardingSurvey() {
                 Back
               </Button>
 
-              {step < totalSteps - 1 ? (
+              <Stack direction="row" spacing={1} alignItems="center">
                 <Button
                   type="button"
-                  variant="contained"
-                  endIcon={<ArrowForwardRounded />}
-                  onClick={nextStep}
+                  variant="text"
+                  disabled={submitting || skipping}
+                  onClick={handleSkip}
                   sx={{
-                    bgcolor: "#0f172a",
+                    color: "#64748b",
+                    fontWeight: 850,
                     borderRadius: 2.5,
-                    px: 3,
-                    py: 1.15,
-                    fontWeight: 900,
-                    boxShadow: "none",
-
-                    "&:hover": {
-                      bgcolor: "#1e293b",
-                      boxShadow: "none",
-                    },
+                    px: { xs: 1, sm: 2 },
                   }}
                 >
-                  Continue
+                  {skipping ? "Skipping..." : "Skip survey"}
                 </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={submitting}
-                  endIcon={
-                    !submitting ? (
-                      <ArrowForwardRounded />
-                    ) : undefined
-                  }
-                  sx={{
-                    bgcolor: "#0f172a",
-                    borderRadius: 2.5,
-                    px: 3,
-                    py: 1.15,
-                    fontWeight: 900,
-                    boxShadow: "none",
 
-                    "&:hover": {
-                      bgcolor: "#1e293b",
+                {step < totalSteps - 1 ? (
+                  <Button
+                    type="button"
+                    variant="contained"
+                    endIcon={<ArrowForwardRounded />}
+                    disabled={submitting || skipping}
+                    onClick={nextStep}
+                    sx={{
+                      bgcolor: "#0f172a",
+                      borderRadius: 2.5,
+                      px: 3,
+                      py: 1.15,
+                      fontWeight: 900,
                       boxShadow: "none",
-                    },
-                  }}
-                >
-                  {submitting
-                    ? "Creating profile..."
-                    : "Create my profile"}
-                </Button>
-              )}
+
+                      "&:hover": {
+                        bgcolor: "#1e293b",
+                        boxShadow: "none",
+                      },
+                    }}
+                  >
+                    Continue
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={submitting || skipping}
+                    endIcon={
+                      !submitting ? (
+                        <ArrowForwardRounded />
+                      ) : undefined
+                    }
+                    sx={{
+                      bgcolor: "#0f172a",
+                      borderRadius: 2.5,
+                      px: 3,
+                      py: 1.15,
+                      fontWeight: 900,
+                      boxShadow: "none",
+
+                      "&:hover": {
+                        bgcolor: "#1e293b",
+                        boxShadow: "none",
+                      },
+                    }}
+                  >
+                    {submitting
+                      ? "Creating profile..."
+                      : "Create my profile"}
+                  </Button>
+                )}
+              </Stack>
             </Stack>
           </Box>
         </Paper>

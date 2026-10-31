@@ -70,11 +70,24 @@ export function takeReturnPath(): string | null {
 export async function needsOnboarding(userId: string): Promise<boolean> {
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("primary_sport, experience_level, main_goal")
+    .select("primary_sport, experience_level, main_goal, onboarding_skipped")
     .eq("id", userId)
     .maybeSingle();
 
   if (error) throw error;
+
+  return needsOnboardingFromProfile(profile);
+}
+
+export function needsOnboardingFromProfile(
+  profile: {
+    primary_sport?: string | null;
+    experience_level?: string | null;
+    main_goal?: string | null;
+    onboarding_skipped?: boolean | null;
+  } | null
+): boolean {
+  if (profile?.onboarding_skipped) return false;
 
   return !profile?.primary_sport || !profile?.experience_level || !profile?.main_goal;
 }

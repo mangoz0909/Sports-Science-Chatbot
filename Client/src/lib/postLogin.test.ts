@@ -1,10 +1,32 @@
 import {
+  needsOnboardingFromProfile,
   postLoginTarget,
   readOAuthError,
   rememberReturnPath,
   safeReturnPath,
   takeReturnPath,
 } from "./postLogin";
+
+describe("needsOnboardingFromProfile", () => {
+  it("requires onboarding when the profile is missing", () => {
+    expect(needsOnboardingFromProfile(null)).toBe(true);
+    expect(needsOnboardingFromProfile({ primary_sport: "Soccer" })).toBe(true);
+  });
+
+  it("does not require onboarding when the required profile fields exist", () => {
+    expect(
+      needsOnboardingFromProfile({
+        primary_sport: "Soccer",
+        experience_level: "Intermediate",
+        main_goal: "Build strength",
+      })
+    ).toBe(false);
+  });
+
+  it("respects a user's choice to skip onboarding", () => {
+    expect(needsOnboardingFromProfile({ onboarding_skipped: true })).toBe(false);
+  });
+});
 
 describe("safeReturnPath", () => {
   it.each(["/daily-check-in", "/my-workout-plan?tab=ai", "/health/nutrition"])("keeps in-app path %s", (path) => {

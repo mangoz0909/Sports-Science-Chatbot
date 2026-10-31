@@ -87,8 +87,32 @@ export async function saveUserPreferences(preferences: Partial<UserPreferences>)
     .upsert(
       {
         ...preferences,
+        onboarding_skipped: false,
         id: user.id,
         email: user.email,
+      },
+      { onConflict: "id" }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function skipOnboarding() {
+  const user = await requireCurrentUser(
+    "You must be logged in to skip onboarding."
+  );
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        email: user.email,
+        onboarding_skipped: true,
       },
       { onConflict: "id" }
     )
