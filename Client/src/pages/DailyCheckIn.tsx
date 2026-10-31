@@ -28,6 +28,7 @@ import {
   getCheckInForDate,
   getCheckInDateBounds,
   localDateString,
+  validateCheckInDate,
 } from "../services/checkinService";
 
 type CheckInData = {
@@ -192,6 +193,9 @@ export default function DailyCheckIn() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = React.useState(false);
+  // Whether the last successful save replaced an existing row, captured before
+  // the save so a first entry reads "saved", not "updated".
+  const [savedAsUpdate, setSavedAsUpdate] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(() => localDateString());
   // Until the selected date is loaded, saving could replace an existing row
   // with defaults because the save is an upsert.
@@ -251,6 +255,14 @@ export default function DailyCheckIn() {
 
   const changeSelectedDate = (date: string) => {
     if (!date) return;
+    // min/max only constrain the picker; a typed date can still fall outside
+    // the window, and loading it would fail as if the lookup had broken.
+    try {
+      validateCheckInDate(date);
+    } catch (err: any) {
+      setError(err?.message || "Choose a valid check-in date.");
+      return;
+    }
     setSelectedDate(date);
     setData(defaultData);
     setSubmitted(false);
@@ -259,7 +271,6 @@ export default function DailyCheckIn() {
   };
 
   const handleSubmit = async () => {
-    const submittedDate = selectedDate;
     setSaving(true);
     setError(null);
 
@@ -280,11 +291,11 @@ export default function DailyCheckIn() {
         readiness_score: readiness,
         recovery_score: recovery,
         injury_risk: injuryRisk,
-      }, submittedDate);
-      if (selectedDate === submittedDate) {
-        setAlreadyCheckedIn(true);
-        setSubmitted(true);
-      }
+      }, selectedDate);
+      // The date field is disabled while saving, so selectedDate is unchanged.
+      setSavedAsUpdate(alreadyCheckedIn);
+      setAlreadyCheckedIn(true);
+      setSubmitted(true);
     } catch (err: any) {
       setError(err?.message || "Failed to save daily check-in.");
     } finally {
@@ -393,7 +404,7 @@ export default function DailyCheckIn() {
 
         {submitted && (
           <Alert severity="success" sx={{ mb: 2 }}>
-            Check-in for {selectedDateLabel} {alreadyCheckedIn ? "updated" : "saved"} successfully.
+            Check-in for {selectedDateLabel} {savedAsUpdate ? "updated" : "saved"} successfully.
           </Alert>
         )}
 

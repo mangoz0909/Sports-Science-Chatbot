@@ -275,7 +275,7 @@ export default function NutritionPage() {
             checkIn.training_intensity ?? "N/A"
           }/10`
         : "No check-in on file";
-      const currentCheckInContextKey = checkInContextKey(checkIn);
+      const currentCheckInContextKey = checkInContextKey(checkIn, last7CheckIns);
 
       const weeklyTrendText =
         last7CheckIns &&
@@ -489,10 +489,14 @@ Do not include any extra text.
     (async () => {
       try {
         // Falls back to the browser cache on its own if Supabase fails.
-        const [saved, latestCheckIn] = await Promise.all([
+        const [saved, latestCheckIn, recentCheckIns] = await Promise.all([
           loadTodaysPlan<unknown>("nutrition", userId),
           getLatestCheckIn().catch((error) => {
             console.error("Could not verify the nutrition plan's check-in context:", error);
+            return undefined;
+          }),
+          getLast7CheckIns().catch((error) => {
+            console.error("Could not verify the nutrition plan's check-in history:", error);
             return undefined;
           }),
         ]);
@@ -506,7 +510,7 @@ Do not include any extra text.
         if (restored) {
           setPlan(restored);
           setPlanContextStale(
-            !matchesCheckInContext(restored.checkInContextKey, latestCheckIn)
+            !matchesCheckInContext(restored.checkInContextKey, latestCheckIn, recentCheckIns)
           );
           return;
         }

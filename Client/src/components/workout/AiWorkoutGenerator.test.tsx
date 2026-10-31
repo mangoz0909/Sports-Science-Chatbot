@@ -41,7 +41,7 @@ it("waits for an explicit request when no saved workout exists, then generates a
     timeout: 60_000, body: expect.objectContaining({ task: "workout" }),
   }));
   expect(host.textContent).toContain("Shuttle runs");
-  expect(saveTodaysPlan).toHaveBeenCalledWith("workout", "athlete", generated);
+  expect(saveTodaysPlan).toHaveBeenCalledWith("workout", "athlete", { ...generated, checkInContextKey: "no-check-in" });
 });
 
 it("shows the service error and allows a successful retry", async () => {

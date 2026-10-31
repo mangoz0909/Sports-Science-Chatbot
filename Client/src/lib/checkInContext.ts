@@ -13,11 +13,8 @@ type CheckInContext = {
   pain_level?: number | null;
 } | null;
 
-/** Stable snapshot of the check-in fields used to generate a plan. */
-export function checkInContextKey(checkIn: CheckInContext): string {
-  if (!checkIn) return "no-check-in";
-
-  return JSON.stringify([
+function snapshot(checkIn: NonNullable<CheckInContext>) {
+  return [
     checkIn.checkin_date ?? null,
     checkIn.readiness_score ?? null,
     checkIn.recovery_score ?? null,
@@ -30,13 +27,35 @@ export function checkInContextKey(checkIn: CheckInContext): string {
     checkIn.hydration ?? null,
     checkIn.nutrition ?? null,
     checkIn.pain_level ?? null,
+  ];
+}
+
+/**
+ * Stable snapshot of the check-in data used to generate a plan: the latest
+ * check-in plus the 7-day history, since the prompts read both. Back-filling
+ * or editing an earlier day changes the history and so marks the plan stale.
+ */
+export function checkInContextKey(
+  checkIn: CheckInContext,
+  history: NonNullable<CheckInContext>[] = []
+): string {
+  if (!checkIn && history.length === 0) return "no-check-in";
+
+  return JSON.stringify([
+    checkIn ? snapshot(checkIn) : null,
+    history.map(snapshot),
   ]);
 }
 
 /** Unknown or changed check-in context means a saved plan may be out of date. */
 export function matchesCheckInContext(
   savedKey: string | null | undefined,
-  latest: CheckInContext | undefined
+  latest: CheckInContext | undefined,
+  history: NonNullable<CheckInContext>[] | undefined
 ): boolean {
-  return latest !== undefined && savedKey === checkInContextKey(latest);
+  return (
+    latest !== undefined &&
+    history !== undefined &&
+    savedKey === checkInContextKey(latest, history)
+  );
 }
