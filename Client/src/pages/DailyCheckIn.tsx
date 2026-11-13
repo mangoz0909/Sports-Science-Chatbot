@@ -334,6 +334,11 @@ export default function DailyCheckIn() {
     undefined,
     { weekday: "long", month: "long", day: "numeric", year: "numeric" }
   );
+  // The button repeats the date; the long form wraps to three lines on phones.
+  const selectedDateShort = new Date(`${selectedDate}T00:00:00`).toLocaleDateString(
+    undefined,
+    { weekday: "short", month: "short", day: "numeric" }
+  );
   const isRetrospective = selectedDate !== latest;
 
   return (
@@ -366,7 +371,9 @@ export default function DailyCheckIn() {
               fontSize: { xs: "1.6rem", md: "3rem" },
             }}
           >
-            How are you feeling today?
+            {isRetrospective
+              ? `How were you feeling on ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString(undefined, { weekday: "long" })}?`
+              : "How are you feeling today?"}
           </Typography>
 
           <Typography color="#64748b" maxWidth={760} lineHeight={1.8}>
@@ -637,8 +644,8 @@ export default function DailyCheckIn() {
                       : loadState === "loading"
                       ? "Loading selected check-in…"
                       : alreadyCheckedIn
-                      ? `Update Check-In for ${selectedDateLabel}`
-                      : `Save Check-In for ${selectedDateLabel}`}
+                      ? `Update Check-In for ${selectedDateShort}`
+                      : `Save Check-In for ${selectedDateShort}`}
                   </Button>
                 </CardContent>
               </Card>

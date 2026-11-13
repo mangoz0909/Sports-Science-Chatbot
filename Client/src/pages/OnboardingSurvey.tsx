@@ -1860,11 +1860,18 @@ export default function OnboardingSurvey() {
               },
             }}
           >
+            {/*
+              Phones: Back and Continue share the first row and Skip survey
+              takes its own row below, so nothing wraps or runs off the card.
+            */}
             <Stack
               direction="row"
               justifyContent="space-between"
               alignItems="center"
-              spacing={1.5}
+              flexWrap="wrap"
+              useFlexGap
+              columnGap={1}
+              rowGap={0.5}
             >
               <Button
                 type="button"
@@ -1881,75 +1888,79 @@ export default function OnboardingSurvey() {
                 Back
               </Button>
 
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                type="button"
+                variant="text"
+                disabled={submitting || skipping}
+                onClick={handleSkip}
+                sx={{
+                  color: "#64748b",
+                  fontWeight: 850,
+                  borderRadius: 2.5,
+                  px: { xs: 1, sm: 2 },
+                  whiteSpace: "nowrap",
+                  order: { xs: 3, sm: 0 },
+                  width: { xs: "100%", sm: "auto" },
+                  ml: { sm: "auto" },
+                }}
+              >
+                {skipping ? "Skipping..." : "Skip survey"}
+              </Button>
+
+              {step < totalSteps - 1 ? (
                 <Button
                   type="button"
-                  variant="text"
+                  variant="contained"
+                  endIcon={<ArrowForwardRounded />}
                   disabled={submitting || skipping}
-                  onClick={handleSkip}
+                  onClick={nextStep}
                   sx={{
-                    color: "#64748b",
-                    fontWeight: 850,
+                    bgcolor: "#0f172a",
                     borderRadius: 2.5,
-                    px: { xs: 1, sm: 2 },
+                    px: 3,
+                    py: 1.15,
+                    fontWeight: 900,
+                    whiteSpace: "nowrap",
+                    boxShadow: "none",
+
+                    "&:hover": {
+                      bgcolor: "#1e293b",
+                      boxShadow: "none",
+                    },
                   }}
                 >
-                  {skipping ? "Skipping..." : "Skip survey"}
+                  Continue
                 </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={submitting || skipping}
+                  endIcon={
+                    !submitting ? (
+                      <ArrowForwardRounded />
+                    ) : undefined
+                  }
+                  sx={{
+                    bgcolor: "#0f172a",
+                    borderRadius: 2.5,
+                    px: 3,
+                    py: 1.15,
+                    fontWeight: 900,
+                    whiteSpace: "nowrap",
+                    boxShadow: "none",
 
-                {step < totalSteps - 1 ? (
-                  <Button
-                    type="button"
-                    variant="contained"
-                    endIcon={<ArrowForwardRounded />}
-                    disabled={submitting || skipping}
-                    onClick={nextStep}
-                    sx={{
-                      bgcolor: "#0f172a",
-                      borderRadius: 2.5,
-                      px: 3,
-                      py: 1.15,
-                      fontWeight: 900,
+                    "&:hover": {
+                      bgcolor: "#1e293b",
                       boxShadow: "none",
-
-                      "&:hover": {
-                        bgcolor: "#1e293b",
-                        boxShadow: "none",
-                      },
-                    }}
-                  >
-                    Continue
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={submitting || skipping}
-                    endIcon={
-                      !submitting ? (
-                        <ArrowForwardRounded />
-                      ) : undefined
-                    }
-                    sx={{
-                      bgcolor: "#0f172a",
-                      borderRadius: 2.5,
-                      px: 3,
-                      py: 1.15,
-                      fontWeight: 900,
-                      boxShadow: "none",
-
-                      "&:hover": {
-                        bgcolor: "#1e293b",
-                        boxShadow: "none",
-                      },
-                    }}
-                  >
-                    {submitting
-                      ? "Creating profile..."
-                      : "Create my profile"}
-                  </Button>
-                )}
-              </Stack>
+                    },
+                  }}
+                >
+                  {submitting
+                    ? "Creating profile..."
+                    : "Create my profile"}
+                </Button>
+              )}
             </Stack>
           </Box>
         </Paper>

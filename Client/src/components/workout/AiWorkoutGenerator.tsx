@@ -564,14 +564,15 @@ Requirements:
               alignItems={{ xs: "flex-start", md: "center" }}
               spacing={2}
             >
-              <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ minWidth: 0, width: { xs: "100%", md: "auto" } }}>
                 <Typography sx={captionSx}>
                   {plan.day} · {plan.date}
                 </Typography>
                 <Typography component="h3" fontWeight={950} fontSize={{ xs: 22, md: 26 }} color={INK} lineHeight={1.2} mt={0.5}>
                   {plan.focus}
                 </Typography>
-                <Stack direction="row" spacing={1} mt={1.25}>
+                {/* Three chips are wider than a 360px phone card; wrap rather than clip. */}
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" mt={1.25}>
                   <Chip
                     size="small"
                     label={`${plan.intensity} intensity`}

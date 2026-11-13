@@ -32,6 +32,29 @@ function toNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+/**
+ * Daily targets taken from the meals when every meal states that macro. The
+ * model's own daily figures don't always add up (protein listed as 155 g over
+ * meals totalling 175 g), and the meal cards are what the athlete eats.
+ */
+function mealTotals(meals: RichMeal[]): Partial<Pick<NutritionPlan, "calories" | "protein" | "carbs" | "fat">> {
+  const sum = (key: keyof MealMacros) =>
+    meals.every((meal) => meal[key] !== undefined)
+      ? meals.reduce((total, meal) => total + (meal[key] ?? 0), 0)
+      : undefined;
+  const calories = sum("calories");
+  const protein = sum("protein");
+  const carbs = sum("carbs");
+  const fat = sum("fat");
+
+  return {
+    ...(calories !== undefined ? { calories: `${calories} kcal` } : {}),
+    ...(protein !== undefined ? { protein: `${protein}g` } : {}),
+    ...(carbs !== undefined ? { carbs: `${carbs}g` } : {}),
+    ...(fat !== undefined ? { fat: `${fat}g` } : {}),
+  };
+}
+
 /** Normalises a raw or saved plan and keeps any per-meal macros it carries. */
 export function normalizeRichPlan(raw: unknown): RichNutritionPlan | null {
   const base = normalizeNutritionPlan(raw);
@@ -59,6 +82,7 @@ export function normalizeRichPlan(raw: unknown): RichNutritionPlan | null {
 
   return {
     ...base,
+    ...mealTotals(meals),
     meals,
     ...(typeof record.checkInContextKey === "string"
       ? { checkInContextKey: record.checkInContextKey }
@@ -123,7 +147,9 @@ export function splitFoods(foods: string): string[] {
 
   return parts
     .map((p) => p.trim().replace(/^(?:\d+[.)]|[-•*])\s+/, "").replace(/^and\s+/i, ""))
-    .filter(Boolean);
+    .filter(Boolean)
+    // Each food is its own list item, so start it with a capital like the first.
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1));
 }
 
 export function dismissKey(userId: string | null, date: string): string {

@@ -63,7 +63,7 @@ export default function RecommendationCards({
                   {entry.type.name}
                 </Typography>
                 {index === 0 && (
-                  <Chip label="Best fit" size="small" sx={{ height: 20, fontSize: 11, fontWeight: 900, bgcolor: INK, color: "#fff" }} />
+                  <Chip label="Best fit" size="small" sx={{ height: 20, fontSize: 12, fontWeight: 900, bgcolor: INK, color: "#fff" }} />
                 )}
               </Stack>
               <Typography
@@ -72,10 +72,12 @@ export default function RecommendationCards({
                 sx={{
                   mt: 0.25,
                   lineHeight: 1.4,
-                  minHeight: "2.8em",
+                  // Phones fit ~24 characters a line; three lines keep the
+                  // whole reason readable instead of cutting it mid-word.
+                  minHeight: { xs: "4.2em", sm: "2.8em" },
                   display: "-webkit-box",
                   WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: { xs: 3, sm: 2 },
                   overflow: "hidden",
                 }}
               >

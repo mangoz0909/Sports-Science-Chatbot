@@ -18,6 +18,17 @@ describe("normalizeRichPlan", () => {
     expect(plan?.meals[1]?.protein).toBeUndefined();
   });
 
+  it("derives daily targets from the meals when every meal has the macro", () => {
+    const plan = normalizeRichPlan({
+      ...base,
+      meals: [
+        { meal: "Breakfast", foods: "Oats", calories: 650, protein: 25, carbs: 90, fat: 20 },
+        { meal: "Lunch", foods: "Chicken", calories: 700, protein: 50, carbs: 70 },
+      ],
+    });
+    expect(plan).toMatchObject({ calories: "1350 kcal", protein: "75g", carbs: "160g", fat: "80g" });
+  });
+
   it("returns null for unusable input", () => {
     expect(normalizeRichPlan({ meals: [] })).toBeNull();
   });
@@ -48,7 +59,7 @@ describe("groupMeals", () => {
 
 describe("splitFoods", () => {
   it("does not split inside parentheses", () => {
-    expect(splitFoods("Oats (80g, dry), banana; 2. milk")).toEqual(["Oats (80g, dry)", "banana", "milk"]);
+    expect(splitFoods("Oats (80g, dry), banana; 2. milk")).toEqual(["Oats (80g, dry)", "Banana", "Milk"]);
   });
 });
 

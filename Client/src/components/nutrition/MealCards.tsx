@@ -108,7 +108,7 @@ function MacroDonut({ meal }: { meal: RichMeal }) {
             <Typography sx={{ fontWeight: 950, fontSize: 16, lineHeight: 1, color: INK }}>
               {kcal}
             </Typography>
-            <Typography sx={{ fontWeight: 700, fontSize: 11, color: MUTED }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 12, color: MUTED }}>
               kcal
             </Typography>
           </Box>

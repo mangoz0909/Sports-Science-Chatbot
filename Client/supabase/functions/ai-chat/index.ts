@@ -252,8 +252,10 @@ const TOOLS = [
         "Read the athlete's daily check-in history for a date range, including " +
         "readiness, recovery, injury risk, sleep, fatigue, soreness and training " +
         "intensity, each stamped with its date. Call this for anything about " +
-        "trends, recent load, or a specific past day. Today's date is supplied " +
-        "in the system instructions.",
+        "trends, recent load, or a specific past day. For the latest or most " +
+        "recent check-in, request at least the last 14 days and use the newest " +
+        "row, since the athlete may not have checked in today. Today's date is " +
+        "supplied in the system instructions.",
       parameters: {
         type: "object",
         properties: {
@@ -577,6 +579,9 @@ USING THE ATHLETE'S DATA:
 - Do not ask for information that already appears in their profile.
 - Call get_checkins for dated check-in information — readiness, recovery,
   sleep, fatigue, soreness, mood, pain, or training load over a date range.
+- For questions about the "last", "latest" or "recent" check-in, request at
+  least the last 14 days and answer from the newest row, saying its date when
+  it is not today. Only say there is no check-in data if that range is empty.
 - If no profile exists, tell the athlete to complete the onboarding survey.
 - If the athlete's current message conflicts with the saved profile, trust
   the current message.
