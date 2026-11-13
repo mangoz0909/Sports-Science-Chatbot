@@ -22,7 +22,17 @@ export default function HeroSection() {
     <Box component="section" aria-labelledby="hero-title" sx={{ pt: { xs: 6, md: 10 }, pb: { xs: 8, md: 12 } }}>
       <Frame>
         {/* Visible without JavaScript: no entrance animation on anything here. */}
-        <Box component="h1" id="hero-title" sx={{ ...type.hero, m: 0, color: color.ink, maxWidth: "14ch" }}>
+        <Box
+          component="h1"
+          id="hero-title"
+          sx={{
+            ...type.hero,
+            fontSize: { xs: "clamp(2.5rem, 12vw, 3rem)", sm: type.hero.fontSize },
+            m: 0,
+            color: color.ink,
+            maxWidth: "14ch",
+          }}
+        >
           Make athlete decisions easier to understand.
         </Box>
 
