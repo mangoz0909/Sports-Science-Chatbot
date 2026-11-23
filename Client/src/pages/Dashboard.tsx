@@ -276,10 +276,10 @@ if (loading) {
           <Skeleton variant="text" width="min(620px, 95%)" height={24} />
         </Stack>
 
-        <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5 }} sx={{ mb: 2.5 }}>
           {Array.from({ length: 6 }).map((_, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={2} key={index}>
-              <Skeleton variant="rounded" height={140} sx={{ borderRadius: 4 }} />
+            <Grid item xs={6} sm={6} md={4} lg={2} key={index}>
+              <Skeleton variant="rounded" height={{ xs: 112, sm: 140 }} sx={{ borderRadius: 4 }} />
             </Grid>
           ))}
         </Grid>
@@ -526,9 +526,9 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
           </Button>
         </Box>}
 
-        <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5 }} sx={{ mb: 2.5 }}>
           {kpis.map((item) => (
-            <Grid item xs={12} sm={6} md={4} lg={2} key={item.label}>
+            <Grid item xs={6} sm={6} md={4} lg={2} key={item.label}>
               <Card
                 elevation={0}
                 sx={{
@@ -538,7 +538,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   border: "1px solid #e2e8f0",
                 }}
               >
-                <CardContent sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column", "&:last-child": { pb: 2.5 } }}>
+                <CardContent sx={{ p: { xs: 1.5, sm: 2.5 }, height: "100%", display: "flex", flexDirection: "column", "&:last-child": { pb: { xs: 1.5, sm: 2.5 } } }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
                     <Box sx={{ minWidth: 0 }}>
                       {/* Fixed two-line title slot so a wrapped title ("Training Load")
@@ -550,7 +550,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                           fontSize={14}
                           sx={{
                             lineHeight: "20px",
-                            minHeight: 40,
+                            minHeight: { xs: 32, sm: 40 },
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: "vertical",
@@ -566,15 +566,15 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                           )}
                         </Typography>
                       </MuiTooltip>
-                      <Typography variant="h5" component="p" fontWeight={950} sx={{ mt: 0.5, lineHeight: "32px" }}>
+                      <Typography variant="h5" component="p" fontWeight={950} sx={{ mt: { xs: 0.25, sm: 0.5 }, lineHeight: { xs: "28px", sm: "32px" } }}>
                         {item.value}
                       </Typography>
                     </Box>
 
                     <Box
                       sx={{
-                        width: 42,
-                        height: 42,
+                        width: { xs: 36, sm: 42 },
+                        height: { xs: 36, sm: 42 },
                         borderRadius: 3,
                         display: "grid",
                         placeItems: "center",
@@ -586,7 +586,7 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     </Box>
                   </Stack>
 
-                  <Box sx={{ pt: 2, mt: "auto" }}>
+                  <Box sx={{ pt: { xs: 1, sm: 2 }, mt: "auto" }}>
                   <LinearProgress
                     variant="determinate"
                     value={item.progress}

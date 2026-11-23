@@ -1106,6 +1106,16 @@
 
   .mobile-quick-actions {
     display: flex;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: 6px;
+  }
+
+  .mobile-action-btn {
+    flex: 1 1 calc(50% - 6px);
+    justify-content: center;
+    min-width: 0;
+    white-space: normal;
   }
 
   .chat-header {

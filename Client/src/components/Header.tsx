@@ -316,8 +316,8 @@ const Header: React.FC = () => {
         onClose={closeDrawer}
         PaperProps={{
           sx: {
-            width: 300,
-            maxWidth: "90vw",
+            width: 280,
+            maxWidth: "84vw",
             borderRadius: "20px 0 0 20px",
             border: "none",
             ...bodyFont,
