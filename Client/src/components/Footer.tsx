@@ -22,15 +22,15 @@ const Footer: React.FC = () => {
         "& .MuiTypography-root, & .MuiLink-root": { fontFamily: font.body },
       }}
     >
-      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 7 } }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 2, md: 4 }, py: { xs: 4, md: 7 } }}>
         <Grid container spacing={{ xs: 3, md: 5 }}>
           {/* Brand column */}
           <Grid item xs={12} md={4.5}>
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5 }}>
               <Box
                 component="img"
-                src="/logo-192.png"
-                alt="SportLab AI"
+                src="/logo-mark.webp"
+                alt=""
                 sx={{
                   width: 44,
                   height: 44,
@@ -44,14 +44,14 @@ const Footer: React.FC = () => {
                 <Typography sx={{ "&&": { fontFamily: font.display }, fontWeight: 700, fontSize: "1.4rem", lineHeight: 1.1, textTransform: "uppercase", letterSpacing: "0.01em" }}>
                   SportLab AI
                 </Typography>
-                <Typography fontSize={12} sx={{ ...label, "&&": { fontFamily: font.mono }, color: "rgba(255,255,255,0.45)" }}>
+                <Typography fontSize={12} sx={{ ...label, "&&": { fontFamily: font.mono }, color: "rgba(255,255,255,0.62)" }}>
                   Sports Science Platform
                 </Typography>
               </Box>
             </Stack>
             <Typography sx={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.85, fontSize: 14, maxWidth: 380 }}>
               An all-in-one sports science app for AI coaching, sport discovery, athlete
-              readiness, recovery tracking, performance analytics, and mental support.
+              readiness, recovery tracking, training trends, and mental support.
             </Typography>
           </Grid>
 
@@ -131,9 +131,9 @@ const Footer: React.FC = () => {
             </Typography>
             <Stack spacing={1}>
               {[
-                "Training load & readiness",
+                "Training intensity & readiness",
                 "Recovery monitoring",
-                "Sport matching engine",
+                "AI sport matching",
                 "Mental performance support",
                 "AI-powered coaching",
               ].map((item) => (
@@ -154,10 +154,10 @@ const Footer: React.FC = () => {
           alignItems={{ xs: "flex-start", sm: "center" }}
           spacing={1}
         >
-          <Typography sx={{ color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+          <Typography sx={{ color: "rgba(255,255,255,0.62)", fontSize: 13 }}>
             © {new Date().getFullYear()} SportLab AI. All rights reserved.
           </Typography>
-          <Typography sx={{ color: "rgba(255,255,255,0.25)", fontSize: 13 }}>
+          <Typography sx={{ color: "rgba(255,255,255,0.62)", fontSize: 13 }}>
             Built for sports science workflows.
           </Typography>
         </Stack>

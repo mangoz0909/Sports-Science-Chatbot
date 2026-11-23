@@ -15,8 +15,6 @@ import {
 } from "@mui/material";
 
 import SportsTennisIcon from "@mui/icons-material/SportsTennis";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import { supabase } from "../lib/supabaseClient";
 import { functionErrorMessage } from "../lib/functionError";
@@ -373,6 +371,8 @@ Keep it concise, practical, and student-friendly.
   return (
     <Box className={compact ? "sports-finder-compact" : undefined}>
       <Stack spacing={{ xs: 2, md: compact ? 2 : 3 }}>
+        {/* The page already has its own heading; only the compact panel needs one. */}
+        {compact && (
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Box
             sx={{
@@ -410,23 +410,6 @@ Keep it concise, practical, and student-friendly.
             </Typography>
           </Box>
         </Stack>
-
-        {!authLoading && !isLoggedIn && (
-          <Alert
-            severity="info"
-            action={
-              <Button
-                component={RouterLink}
-                to="/auth?mode=login"
-                size="small"
-                sx={{ fontWeight: 800, textTransform: "none" }}
-              >
-                Sign in
-              </Button>
-            }
-          >
-            Sign in to generate your personalised sport matches.
-          </Alert>
         )}
 
         {isLoggedIn && loadingPrefs && (
@@ -523,7 +506,7 @@ Keep it concise, practical, and student-friendly.
                   aiLoading ? (
                     <CircularProgress size={18} color="inherit" />
                   ) : (
-                    <AutoAwesomeIcon />
+                    <SportsTennisIcon />
                   )
                 }
                 onClick={generateAiMatches}
@@ -570,10 +553,10 @@ Keep it concise, practical, and student-friendly.
           display: "grid",
           placeItems: "center",
           bgcolor: "#dbeafe",
-          fontSize: 19,
+          color: "#1e3a8a",
         }}
       >
-        ✨
+        <SportsTennisIcon fontSize="small" />
       </Box>
 
       <Box>

@@ -44,16 +44,16 @@ const navItems: NavItem[] = [
   { label: "Health", to: "/health/nutrition", match: "/health" },
 ];
 
-const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (
+const Logo: React.FC<{ size?: number }> = ({ size = 48 }) => (
   <Box
     component="img"
-    src="/logo-192.png"
-    alt="SportLab AI"
+    src="/logo-mark.webp"
+    alt=""
     sx={{
       width: size,
       height: size,
       objectFit: "contain",
-      borderRadius: "10px",
+      borderRadius: "4px",
       flexShrink: 0,
     }}
   />
@@ -118,7 +118,7 @@ const Header: React.FC = () => {
         <Container
           maxWidth="lg"
           sx={{
-            px: { xs: 2, sm: 3, md: 4 },
+            px: { xs: 2, md: 4 },
             mx: "auto",
           }}
         >
@@ -143,7 +143,7 @@ const Header: React.FC = () => {
                 flexShrink: 0,
               }}
             >
-              <Logo size={40} />
+              <Logo size={48} />
               <Typography
                 sx={{
                   ...wordmark,
@@ -173,10 +173,10 @@ const Header: React.FC = () => {
                   to={item.to}
                   aria-current={isActive(item.match ?? item.to) ? "page" : undefined}
                   sx={{
-                    color: isActive(item.match ?? item.to) ? "#0284c7" : "#475569",
+                    color: isActive(item.match ?? item.to) ? "#0369a1" : "#475569",
                     fontWeight: isActive(item.match ?? item.to) ? 800 : 600,
                     fontSize: "0.875rem",
-                    borderRadius: "10px",
+                    borderRadius: "4px",
                     px: 1.5,
                     py: 0.75,
                     minWidth: 0,
@@ -205,7 +205,7 @@ const Header: React.FC = () => {
                       width: 38,
                       height: 38,
                       bgcolor: isActive("/profile") ? "#e0f2fe" : "#f1f5f9",
-                      borderRadius: "10px",
+                      borderRadius: "4px",
                       "&:hover": { bgcolor: "#e0f2fe" },
                     }}
                   >
@@ -255,7 +255,7 @@ const Header: React.FC = () => {
                     component={RouterLink}
                     to="/auth?mode=login"
                     sx={{
-                      borderRadius: "10px",
+                      borderRadius: "4px",
                       fontWeight: 700,
                       fontSize: "0.875rem",
                       color: "#475569",
@@ -272,7 +272,7 @@ const Header: React.FC = () => {
                     to="/auth?mode=signup"
                     variant="contained"
                     sx={{
-                      borderRadius: "10px",
+                      borderRadius: "4px",
                       fontWeight: 700,
                       fontSize: "0.875rem",
                       textTransform: "none",
@@ -284,7 +284,7 @@ const Header: React.FC = () => {
                       "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
                     }}
                   >
-                    Get started
+                    Create account
                   </Button>
                 </>
               )}
@@ -296,7 +296,7 @@ const Header: React.FC = () => {
                 display: { xs: "inline-flex", md: "none" },
                 width: 48,
                 height: 48,
-                borderRadius: "16px",
+                borderRadius: "4px",
                 bgcolor: "#f1f5f9",
                 "&:hover": { bgcolor: "#e2e8f0" },
               }}
@@ -336,7 +336,7 @@ const Header: React.FC = () => {
             <IconButton
               onClick={closeDrawer}
               aria-label="Close navigation menu"
-              sx={{ width: 44, height: 44, bgcolor: "#f1f5f9", borderRadius: "10px" }}
+              sx={{ width: 44, height: 44, bgcolor: "#f1f5f9", borderRadius: "4px" }}
             >
               <CloseIcon sx={{ fontSize: 16 }} />
             </IconButton>
@@ -353,11 +353,11 @@ const Header: React.FC = () => {
                 onClick={closeDrawer}
                 aria-current={isActive(item.match ?? item.to) ? "page" : undefined}
                 sx={{
-                  borderRadius: "10px",
+                  borderRadius: "4px",
                   mb: 0.5,
                   py: 1,
                   bgcolor: isActive(item.match ?? item.to) ? "#e0f2fe" : "transparent",
-                  color: isActive(item.match ?? item.to) ? "#0284c7" : "#334155",
+                  color: isActive(item.match ?? item.to) ? "#0369a1" : "#334155",
                   "&:hover": { bgcolor: "#f8fafc" },
                 }}
               >
@@ -378,11 +378,11 @@ const Header: React.FC = () => {
                 onClick={closeDrawer}
                 aria-current={isActive("/profile") ? "page" : undefined}
                 sx={{
-                  borderRadius: "10px",
+                  borderRadius: "4px",
                   mb: 0.5,
                   py: 1,
                   bgcolor: isActive("/profile") ? "#e0f2fe" : "transparent",
-                  color: isActive("/profile") ? "#0284c7" : "#334155",
+                  color: isActive("/profile") ? "#0369a1" : "#334155",
                   "&:hover": { bgcolor: "#f8fafc" },
                 }}
               >
@@ -407,7 +407,7 @@ const Header: React.FC = () => {
                   closeDrawer();
                 }}
                 sx={{
-                  borderRadius: "10px",
+                  borderRadius: "4px",
                   fontWeight: 700,
                   textTransform: "none",
                   color: "#ef4444",
@@ -425,7 +425,7 @@ const Header: React.FC = () => {
                   variant="outlined"
                   onClick={closeDrawer}
                   sx={{
-                    borderRadius: "10px",
+                    borderRadius: "4px",
                     fontWeight: 700,
                     textTransform: "none",
                     borderColor: "#e2e8f0",
@@ -442,7 +442,7 @@ const Header: React.FC = () => {
                   variant="contained"
                   onClick={closeDrawer}
                   sx={{
-                    borderRadius: "10px",
+                    borderRadius: "4px",
                     fontWeight: 700,
                     textTransform: "none",
                     bgcolor: "#0f172a",
@@ -450,7 +450,7 @@ const Header: React.FC = () => {
                     "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
                   }}
                 >
-                  Get started
+                  Create account
                 </Button>
               </>
             )}

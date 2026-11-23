@@ -14,27 +14,22 @@ export function Frame({ children, sx }: { children: React.ReactNode; sx?: SxProp
 }
 
 /**
- * Section heading: a mono index ("02") and an uppercase condensed title over a
- * 2px rule. Replaces the old pill eyebrow + h2 + grey paragraph stack.
+ * Section heading: an uppercase condensed title under a 2px rule. Replaces the
+ * old pill eyebrow + h2 + grey paragraph stack.
  */
 export function SectionHead({
-  index,
   title,
   children,
   onInk = false,
   id,
 }: {
-  index: string;
   title: string;
   children?: React.ReactNode;
   onInk?: boolean;
   id?: string;
 }) {
   return (
-    <Box sx={{ borderTop: `2px solid ${onInk ? color.onInk : color.ruleStrong}`, pt: 2, mb: { xs: 4, md: 6 } }}>
-      <Box component="span" sx={{ ...type.label, display: "block", color: onInk ? color.accentOnInk : color.accent, mb: 1.5 }}>
-        {index}
-      </Box>
+    <Box sx={{ borderTop: `2px solid ${onInk ? color.onInk : color.ruleStrong}`, pt: 3, mb: { xs: 4, md: 6 } }}>
       <Box component="h2" id={id} sx={{ ...type.h2, m: 0, color: onInk ? color.onInk : color.ink, maxWidth: "22ch" }}>
         {title}
       </Box>
@@ -69,7 +64,7 @@ export function PrimaryButton({ to, children, onInk = false }: { to: string; chi
       to={to}
       sx={{
         ...buttonBase,
-        bgcolor: onInk ? color.accentOnInk : color.accent,
+        bgcolor: onInk ? color.lime : color.accent,
         color: onInk ? color.ink : "#fff",
         "&:hover": { bgcolor: onInk ? color.onInk : color.accentHover },
       }}
@@ -105,17 +100,35 @@ export function TextLink({ to, children, onInk = false }: { to: string; children
 }
 
 /**
- * Ten-segment meter for a 1–10 check-in value. Reads like a scale on a form,
- * not a progress bar. `invert` for fields where high is bad (fatigue, soreness).
+ * Ten-segment 1–10 scale that is also a slider: a native range input sits over
+ * the segments, so mouse, touch, keyboard and screen readers all work. `invert`
+ * for fields where high is bad (fatigue, soreness, stress).
  */
-export function Meter({ value, max = 10, invert = false, label }: { value: number; max?: number; invert?: boolean; label: string }) {
+export function SliderMeter({ value, onChange, max = 10, invert = false, label }: { value: number; onChange: (value: number) => void; max?: number; invert?: boolean; label: string }) {
   const goodness = invert ? max - value : value;
   const tone = goodness >= 7 ? color.go : goodness >= 4 ? color.caution : color.stop;
   return (
-    <Box role="img" aria-label={`${label}: ${value} out of ${max}`} sx={{ display: "flex", gap: "3px" }}>
-      {Array.from({ length: max }, (_, i) => (
-        <Box key={i} sx={{ flex: 1, height: 10, borderRadius: `${radius.sm}px`, bgcolor: i < value ? tone : color.wash }} />
-      ))}
+    <Box component="span" sx={{ display: "block", position: "relative", py: { xs: "17px", sm: "11px" }, borderRadius: `${radius.sm}px`, "&:focus-within": { boxShadow: focusRing }  }}>
+      <Box component="span" aria-hidden sx={{ display: "flex", gap: "3px" }}>
+        {Array.from({ length: max }, (_, i) => (
+          <Box
+            component="span"
+            key={i}
+            sx={{ flex: 1, height: 10, borderRadius: `${radius.sm}px`, bgcolor: i < value ? tone : color.wash, outline: i === value - 1 ? `2px solid ${color.ink}` : "none" }}
+          />
+        ))}
+      </Box>
+      <Box
+        component="input"
+        type="range"
+        min={1}
+        max={max}
+        step={1}
+        value={value}
+        aria-label={label}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(Number(event.target.value))}
+        sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", m: 0, opacity: 0, cursor: "ew-resize", touchAction: "pan-y" }}
+      />
     </Box>
   );
 }

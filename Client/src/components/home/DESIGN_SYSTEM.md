@@ -8,7 +8,7 @@ their own styling.
 
 Code lives in two files:
 - `landingTokens.ts` — colours, fonts, type scale, spacing, radii, motion
-- `LandingPrimitives.tsx` — `Frame`, `SectionHead`, `PrimaryButton`, `TextLink`, `Meter`, `Reveal`
+- `LandingPrimitives.tsx` — `Frame`, `SectionHead`, `PrimaryButton`, `TextLink`, `SliderMeter`, `Reveal`
 
 ## Why it looks like this
 
@@ -47,24 +47,26 @@ as a button and as text (`#0284c7` is only 4.1:1 on white).
 | `ink` | `#0F172A` | Brand navy: headings, body, dark bands, 2px section rules | 16.5:1 on paper |
 | `ink2` | `#3B4658` | Secondary text | 8.8:1 |
 | `ink3` | `#5A6577` | Captions, routes, indexes (≥13px) | 5.4:1 |
-| `accent` | `#0A6A9E` | **The only accent.** Primary button, index numbers, link hover | 5.4:1 on paper, 5.9:1 under white |
+| `accent` | `#0A6A9E` | **The only accent on paper.** Primary button, link hover | 5.4:1 on paper, 5.9:1 under white |
 | `accentHover` | `#08557F` | Primary button hover | 8.0:1 under white |
 | `onInk` / `onInk2` | `#F4F6F8` / `#9AA6B8` | Text on navy bands | 16.5:1 / 7.2:1 |
-| `accentOnInk` | `#38BDF8` | Brand sky on navy bands (button with navy text) | 8.3:1 both ways |
+| `lime` | `#D3EB12` | Sampled from the logo. Navy only, four places: the hero's readiness score, the icons in What it helps with, the closing button and the court's ball | 13.3:1 both ways |
+| `accentOnInk` | `#38BDF8` | Brand sky on navy bands: link underline on hover | 8.3:1 |
 | `go` / `caution` / `stop` | `#1F7A4D` / `#946013` / `#B42318` | Readiness data **only** — never decoration | ≥4.9:1 on paper |
 
-No gradients anywhere, and no second accent.
+No gradients anywhere. Sky is the accent on paper, the logo's lime is the accent on navy; never both on one surface.
 
 ### Type
 
 | Role | Font | Weight | Size |
 |---|---|---|---|
-| `hero` | Barlow Condensed, uppercase | 700 | `clamp(3rem, 8.5vw, 6.5rem)`, line-height 0.95 |
+| `hero` | Barlow Condensed, uppercase | 700 | up to 5.375rem (`HeroSection`), line-height 0.95 |
+| `score` | Barlow Condensed, tabular nums | 700 | `clamp(2.9rem, 6vw, 5.375rem)` — the hero's readiness score only |
 | `h2` | Barlow Condensed, uppercase | 700 | `clamp(2rem, 4.5vw, 3.25rem)` |
 | `h3` | Barlow | 600 | 1.25rem |
 | `lead` | Barlow | 400 | `clamp(1.0625rem, 1.6vw, 1.25rem)` |
 | `body` | Barlow | 400 | 1rem / 1.6 |
-| `label` | IBM Plex Mono | 500 | 0.8125rem — indexes, routes, "example" tags |
+| `label` | IBM Plex Mono | 500 | 0.8125rem — "example" and source tags |
 | `data` | IBM Plex Mono, tabular nums | 500 | inherits — every number |
 
 Condensed caps read like a scoreboard or kit number; that is the reason for the
@@ -89,20 +91,20 @@ choice. No weight above 700 (the old page used 950 everywhere).
 ## Components
 
 ### `SectionHead`
-Mono index (`01`) + condensed uppercase H2 over a 2px ink rule, optional lead.
-Replaces pill eyebrow labels. Props: `index`, `title`, `id` (for `aria-labelledby`), `onInk`, children (lead).
+Condensed uppercase H2 under a 2px ink rule, optional lead.
+Replaces pill eyebrow labels. Props: `title`, `id` (for `aria-labelledby`), `onInk`, children (lead).
 
 ### `PrimaryButton`
 Deep sky (`accent`), 48px tall, 4px radius, mono arrow. **One per section at most.**
-States: hover darkens (`accentHover`); focus shows the ring; active moves 1px. On ink bands use `onInk` (brand sky with navy text, hover goes paper).
+States: hover darkens (`accentHover`); focus shows the ring; active moves 1px. On ink bands use `onInk` (logo lime with navy text, hover goes paper).
 
 ### `TextLink`
 The secondary action. Underlined text, the underline turns `accent` on hover. Never a second outlined button.
 
-### `Meter`
-Ten segments for a 1–10 check-in value. `invert` for fields where high is bad
-(fatigue, soreness, stress). Colour comes from the value: ≥7 good → `go`, 4–6 →
-`caution`, ≤3 → `stop`. Has `role="img"` and an aria-label ("Fatigue: 4 out of 10").
+### `SliderMeter`
+Ten segments for a 1–10 check-in value, with a native range input over them. `invert` for fields where high is bad
+(fatigue, soreness, stress). Colour comes from the value: ≥7 good → `go`, 4–6 → `caution`, ≤3 → `stop`. The current
+segment has an ink outline, so it reads as a control.
 
 ### `Reveal`
 See motion. Don't nest them, don't stagger them, don't use in the hero.
@@ -111,11 +113,10 @@ See motion. Don't nest them, don't stagger them, don't use in the hero.
 
 | Section | Pattern | Replaces |
 |---|---|---|
-| Hero | Full-width headline, then lead + actions beside a real **check-in sheet** (actual field names from `DailyCheckIn.tsx`, labelled "example") with a coach note | Pills, split hero with floating mock card, stat row, blobs |
-| 01 What it helps with | Numbered, ruled two-column list | Four icon cards |
-| Ink band | Three columns split by hairlines | Three icon cards + shimmer |
-| 02 Everything in the app | Index table: name, description, route in mono, arrow — whole row is the link | Seven cards with coloured bars and bobbing icons |
-| Closing | Ink band, left-aligned headline, one button + one text link | Rounded panel with circles and a bouncing ball |
+| Hero | Headline, lead and actions beside a real **check-in sheet**: the readiness score and advice, worked out by `lib/checkInScores.ts` (shared with `DailyCheckIn.tsx`), then the answers it came from, as sliders a visitor can move; nothing is saved | Pills, stat row, blobs, hand-written coach note |
+| What it helps with | Ink band: each claim has an icon, and all but Mental support sit with a crop of the real guest page that backs them (`public/landing`, demo data; retake when those pages change) | Four icon cards and a three-column band that repeated them |
+| Everything in the app | Index table: name, description, arrow — whole row is the link | Seven cards with coloured bars and bobbing icons |
+| Closing | Ink band, left-aligned headline, one button + one text link, half a tennis court drawn in rule lines on the right | Rounded panel with circles and a bouncing ball |
 
 Every section has a different shape on purpose.
 
@@ -124,9 +125,10 @@ Every section has a different shape on purpose.
 | Do | Don't |
 |---|---|
 | Show the product's real fields, routes and wording | Invent stats, testimonials, user counts |
-| Label example data as "example" | Animate counters |
-| Use mono for numbers and routes | Use icons as section decoration |
-| Use `go/caution/stop` only for data | Add a second accent colour or any gradient |
+| Label example data as "example" or "demo data" | Animate counters |
+| Claim only what the app tracks (intensity is self-rated, not measured load) | "Training load", sprint speed, power output |
+| Use mono for numbers and source tags | Use icons outside What it helps with (one per claim, no tiles) |
+| Use `go/caution/stop` only for data | Add another accent colour or any gradient |
 | Vary section shapes by content | Default to a grid of cards |
 | Keep copy plain and specific | "Empower", "seamless", "unlock", "AI-powered interface" |
 

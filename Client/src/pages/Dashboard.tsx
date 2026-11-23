@@ -279,7 +279,7 @@ if (loading) {
         <Grid container spacing={{ xs: 1.5, sm: 2.5 }} sx={{ mb: 2.5 }}>
           {Array.from({ length: 6 }).map((_, index) => (
             <Grid item xs={6} sm={6} md={4} lg={2} key={index}>
-              <Skeleton variant="rounded" height={{ xs: 112, sm: 140 }} sx={{ borderRadius: 4 }} />
+              <Skeleton variant="rounded" sx={{ borderRadius: 4, height: { xs: 112, sm: 140 } }} />
             </Grid>
           ))}
         </Grid>

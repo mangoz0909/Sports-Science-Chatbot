@@ -29,7 +29,8 @@ export const color = {
   // On the ink band
   onInk: "#F4F6F8",
   onInk2: "#9AA6B8", // 7.2:1 on ink
-  accentOnInk: "#38BDF8", // brand sky — 8.3:1 on ink, and ink text on it is 8.3:1
+  lime: "#D3EB12", // the logo's lime, on navy only: the readiness score, the section icons and the closing button — 13.3:1 both ways
+  accentOnInk: "#38BDF8", // brand sky — 8.3:1 on ink: link underline on hover
   ruleOnInk: "rgba(244,246,248,0.16)",
   // Readiness status — only for data, never decoration
   go: "#1F7A4D",
@@ -38,19 +39,20 @@ export const color = {
 } as const;
 
 export const font = {
-  display: '"Barlow Condensed", "Arial Narrow", sans-serif', // headings: scoreboard / kit-number feel
-  body: '"Barlow", system-ui, -apple-system, "Segoe UI", sans-serif',
+  display: '"Barlow Condensed", "Barlow Condensed Fallback", "Arial Narrow", sans-serif', // headings: scoreboard / kit-number feel
+  body: '"Barlow", "Barlow Fallback", system-ui, -apple-system, "Segoe UI", sans-serif',
   mono: '"IBM Plex Mono", ui-monospace, Consolas, monospace', // numbers, routes, indexes
 } as const;
 
 /** Type scale. Display sizes are fluid; everything else is fixed. */
 export const type = {
-  hero: { fontFamily: font.display, fontWeight: 700, lineHeight: 0.95, letterSpacing: "-0.01em", fontSize: "clamp(3rem, 8.5vw, 6.5rem)", textTransform: "uppercase" as const },
+  hero: { fontFamily: font.display, fontWeight: 700, lineHeight: 0.95, letterSpacing: "-0.01em", fontSize: "clamp(2.5rem, 6vw, 5.5rem)", textTransform: "uppercase" as const },
   h2: { fontFamily: font.display, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.005em", fontSize: "clamp(2rem, 4.5vw, 3.25rem)", textTransform: "uppercase" as const },
   h3: { fontFamily: font.body, fontWeight: 600, lineHeight: 1.3, fontSize: "1.25rem" },
   lead: { fontFamily: font.body, fontWeight: 400, lineHeight: 1.55, fontSize: "clamp(1.0625rem, 1.6vw, 1.25rem)" },
   body: { fontFamily: font.body, fontWeight: 400, lineHeight: 1.6, fontSize: "1rem" },
   label: { fontFamily: font.mono, fontWeight: 500, lineHeight: 1.4, fontSize: "0.8125rem", letterSpacing: "0.02em" },
+  score: { fontFamily: font.display, fontWeight: 700, lineHeight: 0.85, fontSize: "clamp(2.9rem, 6vw, 5.375rem)", fontVariantNumeric: "tabular-nums" },
   data: { fontFamily: font.mono, fontWeight: 500, fontVariantNumeric: "tabular-nums" },
 } as const;
 

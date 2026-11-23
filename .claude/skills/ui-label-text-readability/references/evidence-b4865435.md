@@ -1,0 +1,1 @@
+soloFont: \"11px\" and tinyText detection in browser sweep flagged SOLO/TEAM captions below minimum; fixed in LevelPicker.tsx (commit 1702e36).

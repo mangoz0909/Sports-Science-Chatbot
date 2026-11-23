@@ -12,14 +12,12 @@ import {
   Typography,
 } from "@mui/material";
 
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CloseIcon from "@mui/icons-material/Close";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 
-import { Link as RouterLink } from "react-router-dom";
 import { getUserPreferences } from "../services/preferencesService";
 import {
   getLatestCheckIn,
@@ -34,6 +32,7 @@ import { cleanJsonResponse } from "../lib/aiJson";
 import { functionErrorMessage } from "../lib/functionError";
 import { checkInContextKey, matchesCheckInContext } from "../lib/checkInContext";
 import MealCards from "../components/nutrition/MealCards";
+import { demoNutritionPlan } from "../components/nutrition/demoPlan";
 import {
   dismissKey,
   localDateKey,
@@ -543,32 +542,35 @@ Do not include any extra text.
     userId,
   ]);
 
+  // Guests get an example plan, so the demo page is not empty.
+  const shown = plan ?? (!authLoading && !isLoggedIn ? demoNutritionPlan : null);
+
   const macros: MacroItem[] =
-    plan
+    shown
       ? [
           {
             label: "Calories",
-            value: plan.calories,
+            value: shown.calories,
             unit: "",
           },
           {
             label: "Protein",
-            value: plan.protein,
+            value: shown.protein,
             unit: "",
           },
           {
             label: "Carbs",
-            value: plan.carbs,
+            value: shown.carbs,
             unit: "",
           },
           {
             label: "Fat",
-            value: plan.fat,
+            value: shown.fat,
             unit: "",
           },
           {
             label: "Hydration",
-            value: plan.hydration,
+            value: shown.hydration,
             unit: "",
           },
         ]
@@ -658,34 +660,6 @@ Do not include any extra text.
         )}
       </Stack>
 
-      {!authLoading &&
-        !isLoggedIn && (
-          <Alert
-            severity="info"
-            sx={{
-              mb: 3,
-              borderRadius: 3,
-            }}
-            action={
-              <Button
-                component={RouterLink}
-                to="/auth?mode=login"
-                size="small"
-                sx={{
-                  fontWeight: 800,
-                  textTransform:
-                    "none",
-                }}
-              >
-                Sign in
-              </Button>
-            }
-          >
-            Sign in to generate your
-            personalised nutrition plan.
-          </Alert>
-        )}
-
       {plan && planContextStale && (
         <Alert severity="warning" sx={{ mb: 2.5, borderRadius: 3 }}>
           Your check-in has changed since this nutrition plan was generated, or
@@ -765,10 +739,10 @@ Do not include any extra text.
           </Grid>
         )}
 
-      {plan && (
+      {shown && (
         <Stack spacing={3}>
           {/* AI Summary */}
-          {plan.summary && !noteDismissed && (
+          {shown.summary && !noteDismissed && (
             <Box
               role="note"
               sx={{
@@ -785,7 +759,7 @@ Do not include any extra text.
                 alignItems="center"
                 sx={{ mb: 0.5 }}
               >
-                <AutoAwesomeIcon
+                <RestaurantMenuIcon
                   sx={{
                     fontSize: 18,
                     color: "#047857",
@@ -821,7 +795,7 @@ Do not include any extra text.
                 fontSize={15}
                 lineHeight={1.75}
               >
-                {plan.summary}
+                {shown.summary}
               </Typography>
             </Box>
           )}
@@ -945,10 +919,10 @@ Do not include any extra text.
           </Box>
 
           {/* Meal plan */}
-          <MealCards meals={plan.meals} />
+          <MealCards meals={shown.meals} />
 
           {/* Tip */}
-          {plan.tip && (
+          {shown.tip && (
             <Box
               sx={{
                 p: {
@@ -975,7 +949,7 @@ Do not include any extra text.
                 fontSize={15}
                 lineHeight={1.75}
               >
-                {plan.tip}
+                {shown.tip}
               </Typography>
             </Box>
           )}

@@ -1,0 +1,1 @@
+Dashboard Year view was a 365-tile heatmap scrolling off-screen and illegible. Fixed by bucketing into 12 monthly averages. Day view bars were 1px high until bucketed by hour. Tests confirm 12-month output, label formats match range (\"Nov '25\" for Year, \"Mon\" for Week), and heatmap rows fit 1440px (12 tiles / 4 cols = 3 rows, 12 tiles / 2 cols = 6 rows on 375px)."

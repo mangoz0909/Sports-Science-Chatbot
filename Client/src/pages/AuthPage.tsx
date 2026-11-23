@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Checkbox,
-  Chip,
   CircularProgress,
   Container,
   FormControlLabel,
@@ -281,9 +280,9 @@ const AuthPage: React.FC = () => {
     />
     <Box
       sx={{
-        minHeight: "calc(100dvh - var(--app-header-h, 64px))",
+        minHeight: "calc(100dvh - var(--app-header-h, 64px) - 1px)",
         bgcolor: "#f8fafc",
-        py: { xs: 4, md: 7 },
+        py: { xs: 2, md: 2 },
         display: "grid",
         alignItems: "center",
       }}
@@ -295,66 +294,29 @@ const AuthPage: React.FC = () => {
               elevation={0}
               sx={{
                 height: "100%",
-                minHeight: { xs: "auto", md: 640 },
-                borderRadius: 5,
-                p: { xs: 3, md: 4 },
+                                borderRadius: 5,
+                p: { xs: 3, md: 3.5 },
                 bgcolor: "#0f172a",
                 color: "#fff",
                 display: "flex",
                 flexDirection: "column",
               }}
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  component="img"
-                  src="/logo-192.png"
-                  alt="SportLab AI"
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    objectFit: "contain",
-                    borderRadius: "12px",
-                    bgcolor: "rgba(255,255,255,0.08)",
-                    p: 0.5,
-                    flexShrink: 0,
-                  }}
-                />
-                <Box>
-                  <Typography variant="h5" fontWeight={900} lineHeight={1.15}>
-                    SportLab AI
-                  </Typography>
-                  <Typography color="#94a3b8" fontSize={13} fontWeight={500}>
-                    Athlete intelligence platform
-                  </Typography>
-                </Box>
-              </Stack>
-
-              <Box sx={{ flex: 1, display: "grid", alignContent: "center", py: 5 }}>
-                <Chip
-                  label="Clean access for performance teams"
-                  sx={{
-                    width: "fit-content",
-                    bgcolor: "rgba(56,189,248,0.12)",
-                    color: "#7dd3fc",
-                    fontWeight: 900,
-                    mb: 2,
-                  }}
-                />
-
+              <Box sx={{ flex: 1, display: "grid", alignContent: "center", py: 2 }}>
                 <Typography
                   variant="h2"
                   sx={{
                     fontWeight: 950,
                     lineHeight: 1.02,
                     letterSpacing: -1,
-                    fontSize: { xs: "2.3rem", md: "3.3rem" },
+                    fontSize: { xs: "2rem", md: "2.5rem" },
                     mb: 2,
                   }}
                 >
                   One login for sports AI, recovery insights, and dashboards.
                 </Typography>
 
-                <Typography sx={{ color: "#cbd5e1", lineHeight: 1.8 }}>
+                <Typography sx={{ color: "#cbd5e1", lineHeight: 1.6 }}>
                   Keep the product focused: easy onboarding, clean forms, readable
                   visuals, and clear access to the athlete workspace.
                 </Typography>
@@ -362,7 +324,7 @@ const AuthPage: React.FC = () => {
                 <Grid container spacing={1.5} sx={{ mt: 3 }}>
                   {[
                     { icon: <SpeedIcon />, label: "Performance" },
-                    { icon: <FitnessCenterIcon />, label: "Load" },
+                    { icon: <FitnessCenterIcon />, label: "Training" },
                     { icon: <PsychologyIcon />, label: "Mindset" },
                     { icon: <ShieldOutlinedIcon />, label: "Secure" },
                   ].map((item) => (
@@ -387,7 +349,7 @@ const AuthPage: React.FC = () => {
                 </Grid>
               </Box>
 
-              <Typography color="#64748b" fontSize={14}>
+              <Typography color="#94a3b8" fontSize={14}>
                 Sports science tools for athletes, coaches, and student projects.
               </Typography>
             </Paper>
@@ -406,16 +368,15 @@ const AuthPage: React.FC = () => {
               noValidate
               sx={{
                 height: "100%",
-                minHeight: { xs: "auto", md: 640 },
-                borderRadius: 5,
-                p: { xs: 3, sm: 4, md: 5 },
+                                borderRadius: 5,
+                p: { xs: 2.5, sm: 3, md: 2.25 },
                 bgcolor: "#ffffff",
                 border: "1px solid #e2e8f0",
                 display: "grid",
                 alignContent: "center",
               }}
             >
-              <Stack spacing={2.4} sx={{ maxWidth: 520, mx: "auto", width: "100%" }}>
+              <Stack spacing={1.25} sx={{ maxWidth: 520, mx: "auto", width: "100%" }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <IconButton
                     onClick={() => navigate("/")}
@@ -444,13 +405,13 @@ const AuthPage: React.FC = () => {
                       fontWeight: 950,
                       letterSpacing: -0.8,
                       color: "#0f172a",
-                      fontSize: { xs: "2rem", md: "2.7rem" },
+                      fontSize: { xs: "1.6rem", md: "2rem" },
                     }}
                   >
                     {title}
                   </Typography>
 
-                  <Typography color="#64748b" lineHeight={1.8} sx={{ mt: 1 }}>
+                  <Typography color="#64748b" lineHeight={1.5} sx={{ mt: 0.5 }}>
                     {subtitle}
                   </Typography>
                 </Box>
@@ -507,7 +468,7 @@ const AuthPage: React.FC = () => {
                   startIcon={<GoogleIcon />}
                   sx={{
                     borderRadius: 3,
-                    py: 1.4,
+                    py: 1.1,
                     fontWeight: 900,
                     textTransform: "none",
                     color: "#0f172a",
@@ -521,13 +482,14 @@ const AuthPage: React.FC = () => {
                   {googleSubmitting ? "Opening Google..." : "Continue with Google"}
                 </Button>
 
-                <Typography textAlign="center" color="#64748b" fontWeight={800}>
+                <Typography textAlign="center" color="#64748b" fontWeight={800} fontSize={13} lineHeight={1}>
                   OR
                 </Typography>
 
                 {mode === "signup" && (
                   <TextField
                     fullWidth
+                    size="small"
                     label="Full Name"
                     autoComplete="name"
                     value={name}
@@ -539,6 +501,7 @@ const AuthPage: React.FC = () => {
 
                 <TextField
                   fullWidth
+                  size="small"
                   label="Email"
                   type="email"
                   autoComplete="email"
@@ -550,6 +513,7 @@ const AuthPage: React.FC = () => {
 
                 <TextField
                   fullWidth
+                  size="small"
                   label="Password"
                   type={showPw ? "text" : "password"}
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
@@ -614,7 +578,7 @@ const AuthPage: React.FC = () => {
                     borderRadius: 3,
                     bgcolor: "#0f172a",
                     fontWeight: 950,
-                    py: 1.4,
+                    py: 1.1,
                     boxShadow: "none",
                     "&:hover": {
                       bgcolor: "#1e293b",

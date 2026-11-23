@@ -1,6 +1,11 @@
 import React from "react";
 import { Box, Chip, Stack } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import BedtimeOutlinedIcon from "@mui/icons-material/BedtimeOutlined";
+import MilitaryTechOutlinedIcon from "@mui/icons-material/MilitaryTechOutlined";
+import SelfImprovementIcon from "@mui/icons-material/SelfImprovement";
+import SportsIcon from "@mui/icons-material/Sports";
 import AiChatHome from "../components/AiChatHome";
 import Seo, { breadcrumbs } from "../components/Seo";
 import { getUserPreferences } from "../services/preferencesService";
@@ -75,13 +80,13 @@ export default function UnifiedAIHome() {
   const statusChip = dataStatus === "loading" ? null : dataStatus === "full" ? (
     <Chip
       size="small"
-      label="🟢 Using your profile + today's check-in"
+      label="Using your profile + today's check-in"
       sx={{ bgcolor: "#ecfdf5", color: "#15803d", fontWeight: 700, fontSize: 12, border: "1px solid #bbf7d0" }}
     />
   ) : dataStatus === "profile-only" ? (
     <Chip
       size="small"
-      label="🟡 Using your profile — no check-in today"
+      label="Using your profile — no check-in today"
       sx={{ bgcolor: "#fffbeb", color: "#92400e", fontWeight: 700, fontSize: 12, border: "1px solid #fde68a" }}
     />
   ) : dataStatus === "none" ? (
@@ -90,7 +95,7 @@ export default function UnifiedAIHome() {
       component={RouterLink}
       to="/profile"
       clickable
-      label="⚪ Complete your profile for personalized advice →"
+      label="Complete your profile for personalized advice →"
       sx={{ bgcolor: "#f1f5f9", color: "#475569", fontWeight: 700, fontSize: 12, border: "1px solid #e2e8f0", textDecoration: "none" }}
     />
   ) : null;
@@ -114,33 +119,32 @@ export default function UnifiedAIHome() {
     <AiChatHome
       chatType="sports"
       title="Sports Health AI"
-      logoSrc="/logo-192.png"
-      emptyIcon="🏆"
+      emptyIcon={<SportsIcon sx={{ fontSize: 34 }} />}
       emptyTitle="Ask about sports performance or mental wellbeing"
       emptySubtitle="Training · Recovery · Nutrition · Stress · Confidence · Focus"
       inputPlaceholder="Ask SportLab AI anything…"
       toolsTitle="Quick Actions"
       quickActions={[
         {
-          icon: "📅",
+          icon: <CalendarMonthIcon />,
           label: "Training Plan",
           prompt:
             "Create a weekly training plan based on my athlete profile.",
         },
         {
-          icon: "💪",
+          icon: <BedtimeOutlinedIcon />,
           label: "Recovery",
           prompt:
             "Give me personalized recovery recommendations based on my athlete profile.",
         },
         {
-          icon: "🧠",
+          icon: <MilitaryTechOutlinedIcon />,
           label: "Confidence",
           prompt:
             "Give me a confidence routine tailored to my sport and goals.",
         },
         {
-          icon: "🌿",
+          icon: <SelfImprovementIcon />,
           label: "Stress Support",
           prompt:
             "Help me balance academics, stress, and sports based on my profile.",
@@ -157,11 +161,11 @@ export default function UnifiedAIHome() {
       ]}
       footerNote={
         <>
-          🔒 Conversations are powered by OpenAI and saved to your account.
+          Conversations are powered by OpenAI and saved to your account.
           <br />
-          🏆 Responses are personalized using your athlete profile.
+          Responses are personalized using your athlete profile.
           <br />
-          🚨 For emergencies, contact local services or a trusted adult immediately.
+          For emergencies, contact local services or a trusted adult immediately.
         </>
       }
     />

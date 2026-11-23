@@ -7,7 +7,7 @@ const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`;
 const DEFAULT_IMAGE_ALT =
   "SportLab AI — sports science platform for readiness, recovery, and AI coaching.";
 const DEFAULT_DESCRIPTION =
-  "Track readiness, recovery and training load, get AI coaching for training, nutrition and mental performance, and find the sport that fits you.";
+  "Track readiness, recovery and training intensity, get AI coaching for training, nutrition and mental performance, and find the sport that fits you.";
 
 /**
  * Indexable pages get the expanded directive so Google may show a full-size

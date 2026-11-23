@@ -17,10 +17,7 @@
 
   min-height: var(--ai-available);
   width: 100%;
-  background:
-    radial-gradient(ellipse at 15% 0%, rgba(14, 165, 233, 0.10), transparent 40%),
-    radial-gradient(ellipse at 85% 100%, rgba(34, 197, 94, 0.08), transparent 38%),
-    #f0f4fa;
+  background: #f0f4fa;
   padding: var(--ai-gutter) var(--ai-page-inset);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #101828;
@@ -79,42 +76,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.brand-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  object-fit: contain;
-  background: transparent;
-  padding: 0;
-  border: none;
-  box-shadow: 0 1px 4px rgba(16, 24, 40, 0.10);
-}
-
-.eyebrow {
-  margin: 0 0 2px;
-  font-size: 12px; /* 12px floor: smaller text fails legibility on phones */
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #98a2b3;
-}
-
-.status-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #22c55e;
-  margin-right: 5px;
-  vertical-align: middle;
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
-}
-
-.status-dot.offline {
-  background: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
 
 .chat-header h1 {
@@ -185,7 +146,7 @@
   padding: clamp(20px, 5vw, 40px) clamp(14px, 4vw, 28px);
   border: 1.5px dashed rgba(16, 24, 40, 0.12);
   border-radius: 24px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.0), rgba(240, 244, 250, 0.5));
+  background: #f8fafc;
 }
 
 .empty-icon {
@@ -194,10 +155,9 @@
   margin: 0 auto 16px;
   display: grid;
   place-items: center;
-  font-size: 34px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #e0f2fe, #f0fdf4);
-  border: 1px solid rgba(14, 165, 233, 0.12);
+  border-radius: 50%;
+  color: #0f172a;
+  background: #d3eb12; /* the logo's lime */
 }
 
 .empty-state h2 {
@@ -922,22 +882,29 @@
 
 /* ─── Side Panel ─── */
 .side-panel {
-  padding: 18px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   height: fit-content;
   position: sticky;
   /* Clears the sticky AppBar — at top:20px the panel slid underneath it. */
   top: calc(var(--app-header-h, 64px) + var(--ai-gutter));
   max-height: calc(var(--ai-available) - (var(--ai-gutter) * 2));
+  /* Sized to fit without scrolling; on a very short window it still scrolls,
+     without drawing a bar beside the chat's own. */
   overflow-y: auto;
+  scrollbar-width: none;
   overscroll-behavior: contain;
+}
+
+.side-panel::-webkit-scrollbar {
+  display: none;
 }
 
 .panel-section {
   border-radius: 18px;
-  padding: 16px 18px;
+  padding: 12px 14px;
   background: #ffffff;
   border: 1px solid rgba(16, 24, 40, 0.07);
 }
@@ -958,6 +925,7 @@
 
 .quick-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -967,9 +935,10 @@
   background: #f0f7ff;
   color: #1d4ed8;
   border-radius: 12px;
-  padding: 11px 13px;
+  padding: 10px;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1.25;
   cursor: pointer;
   text-align: left;
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
@@ -984,9 +953,13 @@
   border-color: rgba(37, 99, 235, 0.28);
 }
 
-.quick-grid button .qa-icon {
-  font-size: 16px;
+.qa-icon {
+  display: grid;
   flex-shrink: 0;
+}
+
+.qa-icon svg {
+  font-size: 18px;
 }
 
 .panel-section ul {
@@ -996,9 +969,10 @@
   color: #475467;
   line-height: 1.6;
   font-size: 13px;
+  line-height: 1.4;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
 }
 
 .panel-section li {
@@ -1007,7 +981,7 @@
   gap: 7px;
   cursor: pointer;
   min-height: 36px;
-  padding: 9px 10px;
+  padding: 7px 8px;
   border-radius: 8px;
   transition: background 0.13s;
   color: #344054;
@@ -1032,8 +1006,8 @@
 }
 
 .chat-footer-note {
-  margin-top: 12px;
-  padding: 12px 14px;
+  margin-top: 8px;
+  padding: 10px 12px;
   border-radius: 12px;
   background: #f8fafc;
   color: #667085;
@@ -1123,12 +1097,6 @@
     gap: 10px;
   }
 
-  /* Keep "● AI Assistant · Ready" on one line beside the Clear button. */
-  .eyebrow {
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-  }
-
   .clear-btn {
     flex-shrink: 0;
     padding: 6px 12px;
@@ -1137,11 +1105,6 @@
 
   .clear-btn-noun {
     display: none;
-  }
-
-  .brand-logo {
-    width: 38px;
-    height: 38px;
   }
 
   .chat-box {

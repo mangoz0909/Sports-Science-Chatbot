@@ -102,6 +102,19 @@ function revealAnimatedContent() {
 }
 
 /**
+ * Emotion adds its rules through the CSSOM in production, so they never reach
+ * the serialised HTML and the page painted unstyled until JavaScript ran. Write
+ * each sheet's rules into its <style> tag. The tags keep data-s, so Emotion
+ * leaves them alone and adds its own as usual.
+ */
+function writeOutStyles() {
+  document.querySelectorAll("style[data-emotion]").forEach((el) => {
+    if (el.textContent || !el.sheet) return;
+    el.textContent = [...el.sheet.cssRules].map((rule) => rule.cssText).join("");
+  });
+}
+
+/**
  * The template ships static SEO defaults and Helmet adds the route's own on
  * mount, so a raw capture contains both. Collapse them so crawlers read exactly
  * one title, one canonical and one of each og/twitter tag.
@@ -224,13 +237,16 @@ async function prerenderRoute(browser, origin, route) {
     const revealed = await page.evaluate(revealAnimatedContent);
     if (revealed) console.log(`    ~   ${route}: revealed ${revealed} still-animating element(s)`);
 
+    await page.evaluate(writeOutStyles);
+
     const html = await page.content();
     const meta = await page.evaluate(() => ({
       title: document.title,
       headTitle: document.querySelector("title")?.textContent,
       canonical: document.querySelector("link[rel=canonical]")?.href,
       canonicals: document.querySelectorAll("link[rel=canonical]").length,
-      titles: document.querySelectorAll("title").length,
+      // Head only: chart SVGs carry <title> elements of their own.
+      titles: document.head.querySelectorAll("title").length,
       text: document.body.innerText.replace(/\s+/g, " ").trim().length,
     }));
 

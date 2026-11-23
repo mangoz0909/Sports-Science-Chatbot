@@ -5,12 +5,12 @@ import { color, focusRing, font, motion, type } from "./landingTokens";
 import { Frame, Reveal, SectionHead } from "./LandingPrimitives";
 
 const workspaces = [
-  { title: "Daily Athlete Check-In", desc: "Log sleep, fatigue, soreness, hydration, recovery, training intensity, and wellness data.", to: "/daily-check-in" },
+  { title: "Daily Athlete Check-In", desc: "Log sleep, fatigue, soreness, hydration, mood, pain, and training intensity.", to: "/daily-check-in" },
   { title: "Sports Health AI", desc: "Ask about training, recovery, performance, injury prevention, nutrition, stress, focus, and confidence.", to: "/sports" },
-  { title: "Athlete Dashboard", desc: "Track readiness, recovery, workload, fatigue, sleep, hydration, injury risk, and weekly trends.", to: "/dashboard" },
+  { title: "Athlete Dashboard", desc: "Track readiness, recovery, training intensity, fatigue, sleep, hydration, injury risk, and weekly trends.", to: "/dashboard" },
   { title: "My Workout Plan", desc: "Build your own workouts, record sets, reps, and weights, and get progression suggestions for your next session.", to: "/my-workout-plan" },
-  { title: "AI Workout Planner", desc: "Generate training plans based on your sport, goals, schedule, and athlete profile.", to: "/my-workout-plan?tab=ai" },
-  { title: "Sports Match", desc: "Find sports that match your interests, movement style, intensity, and athletic profile.", to: "/sports-list" },
+  { title: "AI Workout Planner", desc: "Generate today's workout from your sport, goals, check-ins, and athlete profile.", to: "/my-workout-plan?tab=ai" },
+  { title: "Sports Match", desc: "Find sports that match your goals, intensity, contact, and skill preferences.", to: "/sports-list" },
   { title: "Nutrition Planner", desc: "Get nutrition guidance based on your sport, goals, dietary needs, and training demands.", to: "/health/nutrition" },
 ];
 
@@ -23,8 +23,8 @@ export default function WorkspacesSection() {
     <Box component="section" aria-labelledby="workspaces-title" sx={{ py: { xs: 8, md: 12 } }}>
       <Frame>
         <Reveal>
-          <SectionHead index="02" title="Everything in the app" id="workspaces-title">
-            Move between AI support and analytics. Each one is a page you can open now.
+          <SectionHead title="Everything in the app" id="workspaces-title">
+            Look around most of it without an account. The check-in, chat, and AI results need one.
           </SectionHead>
         </Reveal>
 
@@ -36,7 +36,7 @@ export default function WorkspacesSection() {
                 to={item.to}
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: { xs: "1fr auto", md: "16rem 1fr 11rem auto" },
+                  gridTemplateColumns: { xs: "1fr auto", md: "16rem 1fr auto" },
                   columnGap: 4,
                   rowGap: 0.5,
                   alignItems: "baseline",
@@ -55,7 +55,6 @@ export default function WorkspacesSection() {
                 <Box component="p" sx={{ ...type.body, m: 0, color: color.ink2, gridColumn: { xs: "1 / -1", md: "auto" }, gridRow: { xs: 2, md: "auto" } }}>
                   {item.desc}
                 </Box>
-                <Box sx={{ ...type.label, color: color.ink3, display: { xs: "none", md: "block" } }}>{item.to}</Box>
                 <Box className="arrow" aria-hidden sx={{ fontFamily: font.mono, color: color.ink3, transition: `color ${motion.fast}s ease` }}>→</Box>
               </Box>
             </Box>

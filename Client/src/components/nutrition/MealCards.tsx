@@ -81,6 +81,8 @@ function MacroDonut({ meal }: { meal: RichMeal }) {
             <Pie
               data={total > 0 ? data : [{ name: "None", value: 1, fill: LINE }]}
               dataKey="value"
+              // Decorative: the wrapper carries the text, so it takes no focus.
+              rootTabIndex={-1}
               innerRadius={30}
               outerRadius={44}
               paddingAngle={total > 0 ? 2 : 0}

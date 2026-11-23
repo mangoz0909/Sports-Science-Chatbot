@@ -14,6 +14,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap" />
 
+    <!-- System fonts resized to Barlow's widths, so the swap moves nothing -->
+    <style>
+      @font-face { font-family: "Barlow Fallback"; font-weight: 400; src: local("Arial"), local("Roboto"); size-adjust: 96.76%; ascent-override: 103.35%; descent-override: 20.67%; line-gap-override: 0%; }
+      @font-face { font-family: "Barlow Fallback"; font-weight: 600; src: local("Arial Bold"), local("Arial-BoldMT"), local("Roboto Bold"); size-adjust: 91.72%; ascent-override: 109.03%; descent-override: 21.81%; line-gap-override: 0%; }
+      @font-face { font-family: "Barlow Condensed Fallback"; font-weight: 600 700; src: local("Arial Bold"), local("Arial-BoldMT"), local("Roboto Bold"); size-adjust: 68.51%; ascent-override: 145.97%; descent-override: 29.19%; line-gap-override: 0%; }
+    </style>
+
     <!-- Viewport & Theme -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0f172a" />
@@ -27,14 +34,14 @@
       route, and a second static copy would conflict with it.
     -->
     <title>SportLab AI — Sports Science Platform for Athletes</title>
-    <meta name="description" content="Track readiness, recovery and training load, get AI coaching for training, nutrition and mental performance, and find the sport that fits you." />
+    <meta name="description" content="Track readiness, recovery and training intensity, get AI coaching for training, nutrition and mental performance, and find the sport that fits you." />
     <meta name="author" content="SportLab AI" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="SportLab AI" />
     <meta property="og:title" content="SportLab AI — Sports Science Platform for Athletes" />
-    <meta property="og:description" content="Track readiness, recovery and training load, get AI coaching for training, nutrition and mental performance, and find the sport that fits you." />
+    <meta property="og:description" content="Track readiness, recovery and training intensity, get AI coaching for training, nutrition and mental performance, and find the sport that fits you." />
     <meta property="og:image" content="https://sportslabai.onrender.com/og-image.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
@@ -47,7 +54,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@sportlabai" />
     <meta name="twitter:title" content="SportLab AI — Sports Science Platform for Athletes" />
-    <meta name="twitter:description" content="Track readiness, recovery and training load, get AI coaching for training, nutrition and mental performance, and find the sport that fits you." />
+    <meta name="twitter:description" content="Track readiness, recovery and training intensity, get AI coaching for training, nutrition and mental performance, and find the sport that fits you." />
     <meta name="twitter:image" content="https://sportslabai.onrender.com/og-image.png" />
     <meta name="twitter:image:alt" content="SportLab AI — sports science platform for readiness, recovery, and AI coaching." />
 
@@ -67,7 +74,7 @@
             "width": 512,
             "height": 512
           },
-          "description": "Sports science platform combining AI coaching with athlete readiness, recovery, and training-load tracking."
+          "description": "Sports science platform combining AI coaching with athlete readiness, recovery, and training-intensity tracking."
         },
         {
           "@type": "WebSite",
@@ -97,7 +104,7 @@
             "Daily athlete check-in",
             "AI sports coaching",
             "Recovery and readiness tracking",
-            "Training load monitoring",
+            "Self-rated training intensity",
             "Mental performance coaching",
             "Sport matching engine",
             "Performance analytics dashboard"
@@ -112,7 +119,7 @@
       <h1>SportLab AI — Sports Science Platform for Athletes</h1>
       <p>
         SportLab AI is an all-in-one sports science platform for athletes: daily
-        readiness and recovery tracking, training-load monitoring, AI coaching,
+        readiness and recovery tracking, training-intensity monitoring, AI coaching,
         personalised workout and nutrition plans, mental performance coaching, and a
         sport matching engine.
       </p>

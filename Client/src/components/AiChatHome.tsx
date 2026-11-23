@@ -1,5 +1,8 @@
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import MicNoneIcon from "@mui/icons-material/MicNone";
 import "./AiChatHome.css";
 import { getChatHistory, clearChatHistory, saveChatExchange, type ChatType } from "../services/chatService";
 import { supabase } from "../lib/supabaseClient";
@@ -17,13 +20,12 @@ import {
 type QuickAction = {
   label: string;
   prompt: string;
-  icon?: string;
+  icon?: ReactNode;
 };
 
 type AiChatHomeProps = {
   title: string;
-  logoSrc: string;
-  emptyIcon: string;
+  emptyIcon: ReactNode;
   emptyTitle: string;
   emptySubtitle: string;
   inputPlaceholder: string;
@@ -235,7 +237,6 @@ function formatTime(date: Date) {
 
 export default function AiChatHome({
   title,
-  logoSrc,
   emptyIcon,
   emptyTitle,
   emptySubtitle,
@@ -612,14 +613,7 @@ export default function AiChatHome({
         <section className="chat-card">
           <header className="chat-header">
             <div className="brand-block">
-              <img src={logoSrc} alt={`${title} logo`} className="brand-logo" />
-              <div>
-                <p className="eyebrow">
-                  <span className={`status-dot ${isLoggedIn ? "" : "offline"}`} />
-                  AI Assistant &nbsp;·&nbsp; {isLoggedIn ? "Ready" : "Sign in to chat"}
-                </p>
-                <h1>{title}</h1>
-              </div>
+              <h1>{title}</h1>
             </div>
             {messages.length > 0 && (
               <div className="header-actions">
@@ -648,7 +642,7 @@ export default function AiChatHome({
 
             {!historyLoading && messages.length === 0 && !isLoading && (
               <div className="empty-state">
-                <div className="empty-icon">{emptyIcon}</div>
+                <div className="empty-icon" aria-hidden="true">{emptyIcon}</div>
                 <h2>{emptyTitle}</h2>
                 <p>{emptySubtitle}</p>
               </div>
@@ -739,7 +733,7 @@ export default function AiChatHome({
                   onClick={() => submitMessage(action.prompt)}
                   disabled={isLoading || historyLoading}
                 >
-                  <span>{action.icon}</span>
+                  {action.icon && <span className="qa-icon" aria-hidden="true">{action.icon}</span>}
                   <span>{action.label}</span>
                 </button>
               ))}
@@ -809,7 +803,7 @@ export default function AiChatHome({
                   disabled={isLoading || attaching}
                   aria-label="Attach an image"
                 >
-                  <span aria-hidden="true">📎</span>
+                  <AttachFileIcon fontSize="small" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -818,7 +812,7 @@ export default function AiChatHome({
                   aria-label="Use voice input"
                   aria-pressed={isRecording}
                 >
-                  <span aria-hidden="true">🎤</span>
+                  <MicNoneIcon fontSize="small" aria-hidden />
                 </button>
                 <button
                   type="submit"
@@ -826,7 +820,7 @@ export default function AiChatHome({
                   disabled={!canSend}
                   aria-label="Send message"
                 >
-                  ↑
+                  <ArrowUpwardIcon fontSize="small" aria-hidden />
                 </button>
               </div>
               <div className="input-hint" id="chat-input-hint" aria-live="polite">
@@ -852,7 +846,7 @@ export default function AiChatHome({
                   onClick={() => submitMessage(action.prompt)}
                   disabled={isLoading || historyLoading}
                 >
-                  {action.icon && <span className="qa-icon">{action.icon}</span>}
+                  {action.icon && <span className="qa-icon" aria-hidden="true">{action.icon}</span>}
                   {action.label}
                 </button>
               ))}
