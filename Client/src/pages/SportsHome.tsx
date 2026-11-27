@@ -164,10 +164,10 @@ export default function UnifiedAIHome() {
           Conversations are powered by OpenAI and saved to your account.
           <br />
           Responses are personalized using your athlete profile.
-          <br />
-          For emergencies, contact local services or a trusted adult immediately.
         </>
       }
+      // Moved out of footerNote: the side panel is hidden on phones (V4-02).
+      safetyNote="Educational only, not medical advice. For emergencies, contact local services or a trusted adult immediately."
     />
     </Box>
   );

@@ -686,6 +686,9 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                     </Typography>
                   </Box>
                 </Box>
+                <Typography fontSize={13} color={MUTED} sx={{ mt: 1.5 }}>
+                  Educational only, not medical advice.
+                </Typography>
 
                 <Box sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
                   <Typography fontWeight={950}>Today’s Focus</Typography>
@@ -828,7 +831,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   </Box>
                   <Box>
                     <Typography variant="h6" component="h2" fontWeight={950} color="#1e3a5f">My Workout Plan</Typography>
-                    <Typography fontSize={13} color="#3b82f6">AI-personalised for {userProfile.sport || "your training"}</Typography>
+                    {/* #2563eb: 4.75:1 on the card's #eff6ff (#3b82f6 was 3.38, V4-12). */}
+                    <Typography fontSize={13} color="#2563eb">AI-personalised for {userProfile.sport || "your training"}</Typography>
                   </Box>
                 </Stack>
                 <Typography color="#1e40af" fontSize={14} lineHeight={1.8} sx={{ mb: 2.5 }}>
@@ -863,7 +867,8 @@ const hasNoData = !isGuest && weeklyCheckIns.length === 0 && !latestCheckIn;
                   </Box>
                   <Box>
                     <Typography variant="h6" component="h2" fontWeight={950} color="#064e3b">My Nutrition Plan</Typography>
-                    <Typography fontSize={13} color="#10b981">AI-personalised for your goals</Typography>
+                    {/* #047857, the card's icon colour: 5.21:1 on #ecfdf5 (#10b981 was 2.41, V4-12). */}
+                    <Typography fontSize={13} color="#047857">AI-personalised for your goals</Typography>
                   </Box>
                 </Stack>
                 <Typography color="#065f46" fontSize={14} lineHeight={1.8} sx={{ mb: 2.5 }}>

@@ -6,6 +6,7 @@ import ExerciseCard from "./ExerciseCard";
 import { sessionFromType, summarizeWorkouts, type WorkoutType } from "../../lib/workoutPlan";
 import { getUserPreferences } from "../../services/preferencesService";
 import { saveTodaysPlan } from "../../services/planService";
+import { getLast7CheckIns, getLatestCheckIn } from "../../services/checkinService";
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), invoke: vi.fn() }));
 vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ session: { user: { id: "athlete" } }, loading: false }) }));
@@ -111,6 +112,40 @@ it("provides a duration input without a weight or reps input for timed exercises
   expect(host.querySelector('input[aria-label$="weight in pounds"]')).toBeNull();
   expect(host.querySelector('input[aria-label$=" reps"]')).toBeNull();
   expect(host.textContent).toContain("Rest 60 sec");
+});
+
+// Bug hunt v4, V4-04 (16 Nov 2026): the check-in's "injury risk" is a fixed
+// formula over the athlete's own ratings, but the prompt handed it to the
+// model as "Injury risk: 40%", a measured probability.
+it("labels the injury score as a 0-100 score from self-ratings, not a measured risk", async () => {
+  const checkIn = {
+    checkin_date: "2026-11-27", readiness_score: 70, recovery_score: 60, fatigue: 4, sleep_hours: 7,
+    training_intensity: 6, soreness: 3, stress: 4, injury_risk: 40,
+  };
+  mocks.load.mockResolvedValue(null);
+  vi.mocked(getLatestCheckIn).mockResolvedValue(checkIn as never);
+  vi.mocked(getLast7CheckIns).mockResolvedValue([{ ...checkIn, checkin_date: "2026-11-26", injury_risk: 35 }] as never);
+  mocks.invoke.mockResolvedValue({ data: { result: JSON.stringify(generated) }, error: null });
+  try {
+    await act(async () => root.render(<AiWorkoutGenerator />));
+    const button = Array.from(host.querySelectorAll("button")).find((item) => item.textContent === "Generate Workout")!;
+    await act(async () => button.click());
+    const prompt: string = mocks.invoke.mock.calls[0][1].body.prompt;
+    expect(prompt).toContain("Injury risk score: 40/100");
+    expect(prompt).toContain("Injury risk score 35/100");
+    expect(prompt).not.toMatch(/Injury risk:? \d+%/);
+    expect(prompt).toMatch(/self-ratings[\s\S]*not a measured or validated injury prediction/);
+  } finally {
+    vi.mocked(getLatestCheckIn).mockResolvedValue(null);
+    vi.mocked(getLast7CheckIns).mockResolvedValue([]);
+  }
+});
+
+// Bug hunt v4, V4-02: generated plans carried no "not medical advice" line.
+it("shows the not-medical-advice line with a generated workout", async () => {
+  await act(async () => root.render(<AiWorkoutGenerator />));
+  expect(host.textContent).toContain("Shuttle runs");
+  expect(host.querySelector("article")!.textContent).toContain("Educational only, not medical advice.");
 });
 
 describe("summarizeWorkouts", () => {

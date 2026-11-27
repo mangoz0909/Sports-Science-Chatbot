@@ -510,6 +510,9 @@ export default function DailyCheckIn() {
                       </Typography>
                     </Box>
                   </Box>
+                  <Typography color="#64748b" fontSize={13} sx={{ mt: 1.5 }}>
+                    Educational only, not medical advice.
+                  </Typography>
                 </CardContent>
               </Card>
 

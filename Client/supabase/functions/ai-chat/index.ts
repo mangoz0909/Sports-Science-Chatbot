@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { consumeQuota, refundQuota } from "../_shared/quota.ts";
 import { allowedOrigins } from "../_shared/cors.ts";
+import { YOUTH_AND_EATING_RULES } from "../_shared/safetyRules.ts";
 
 type RequestBody = {
   message?: unknown;
@@ -507,6 +508,7 @@ OPERATOR RULES — these are absolute and apply to every response:
   straight away.
 - Never give guidance that knowingly conflicts with a stated injury, medical
   restriction, allergy, or intolerance.
+${YOUTH_AND_EATING_RULES}
 `.trim();
 
 /*
@@ -582,6 +584,10 @@ USING THE ATHLETE'S DATA:
 - For questions about the "last", "latest" or "recent" check-in, request at
   least the last 14 days and answer from the newest row, saying its date when
   it is not today. Only say there is no check-in data if that range is empty.
+- A check-in's injury_risk is a 0-100 score the app calculates from the
+  athlete's own ratings (pain, soreness, fatigue, training intensity, sleep
+  quality and hydration). It is not a measured or validated injury prediction:
+  never present it as a probability, a percentage chance or a medical estimate.
 - If no profile exists, tell the athlete to complete the onboarding survey.
 - If the athlete's current message conflicts with the saved profile, trust
   the current message.
@@ -652,6 +658,26 @@ async function getAthleteProfile(
     ]),
   );
 }
+
+/**
+ * A client that runs as the service role, used for the quota refund only.
+ *
+ * refund_ai_quota is not executable by signed-in users (migration
+ * 20261127000000, bug hunt V4-05): when it was, any account could call it
+ * through the API after every request and keep its daily counter at zero.
+ * Only this function's own failure path refunds, at most once per request.
+ * Null when the key is not set; refundQuota then skips the refund.
+ */
+function serviceRoleClient(supabaseUrl: string) {
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  return serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    : null;
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -804,7 +830,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return jsonResponse({ error: quota.message }, quota.status, corsHeaders);
     }
 
-    refundCharge = () => refundQuota(supabase);
+    refundCharge = () => refundQuota(serviceRoleClient(supabaseUrl), user.id);
 
     const requestedChatType =
       typeof body.chatType === "string"

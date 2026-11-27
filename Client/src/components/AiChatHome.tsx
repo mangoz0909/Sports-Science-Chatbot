@@ -34,6 +34,11 @@ type AiChatHomeProps = {
   examplesTitle: string;
   examples: string[];
   footerNote?: ReactNode;
+  /**
+   * Shown under the composer at every width. The side panel (and footerNote
+   * with it) is hidden on phones, so anything every reader must see goes here.
+   */
+  safetyNote?: ReactNode;
   sideContent?: ReactNode;
   chatType?: ChatType;
 };
@@ -246,6 +251,7 @@ export default function AiChatHome({
   examplesTitle,
   examples,
   footerNote,
+  safetyNote,
   sideContent,
   chatType,
 }: AiChatHomeProps) {
@@ -829,6 +835,7 @@ export default function AiChatHome({
                   : <span className="keyboard-hint">Enter to send · Shift+Enter for new line</span>}
               </div>
             </div>
+            {safetyNote && <p className="chat-safety-note">{safetyNote}</p>}
           </form>
         </section>
 
@@ -855,25 +862,19 @@ export default function AiChatHome({
 
           <section className="panel-section">
             <h3>{examplesTitle}</h3>
+            {/* A real button inside each item: <li role="button"> dropped the
+                list semantics screen readers announce (V4-13), and a button
+                already fires on Enter and Space. */}
             <ul>
               {examples.map((example) => (
-                <li
-                  key={example}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => submitMessage(example)}
-                  // Announced as a button, so it has to behave like one: a real
-                  // button fires on Space as well as Enter. Space alone used to
-                  // scroll the page instead, which is its default on a focused
-                  // non-button — hence the preventDefault.
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      submitMessage(example);
-                    }
-                  }}
-                >
-                  {example}
+                <li key={example}>
+                  <button
+                    type="button"
+                    className="example-btn"
+                    onClick={() => submitMessage(example)}
+                  >
+                    {example}
+                  </button>
                 </li>
               ))}
             </ul>

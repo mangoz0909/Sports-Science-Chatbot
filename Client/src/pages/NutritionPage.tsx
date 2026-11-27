@@ -916,6 +916,9 @@ Do not include any extra text.
                 }
               )}
             </Grid>
+            <Typography fontSize={13} color={MUTED} sx={{ mt: 1.5 }}>
+              Educational only, not medical advice.
+            </Typography>
           </Box>
 
           {/* Meal plan */}

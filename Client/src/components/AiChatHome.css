@@ -611,6 +611,18 @@
   background: #ffffff;
 }
 
+/* Under the composer at every width: the side panel's note is hidden on
+   phones, so this is the one place every reader sees it (V4-02). 12px is the
+   phone floor used elsewhere here; #475467 is 7.6:1 on the white composer. */
+.chat-safety-note {
+  margin: 8px 4px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #475467;
+  text-align: center;
+  text-wrap: balance;
+}
+
 /* Padding lives here rather than on .input-wrapper so the focus ring stays
    tight to the pill. Without it the textarea and the send button sit flush
    against the border — the phone breakpoint below already had this, desktop
@@ -975,25 +987,32 @@
   gap: 0;
 }
 
-.panel-section li {
+/* The example questions: each list item holds a real button (V4-13), styled
+   exactly as the clickable items were. */
+.panel-section .example-btn {
   display: flex;
   align-items: flex-start;
   gap: 7px;
+  width: 100%;
   cursor: pointer;
   min-height: 36px;
   padding: 7px 8px;
+  border: 0;
   border-radius: 8px;
+  background: none;
+  font: inherit;
+  text-align: left;
   transition: background 0.13s;
   color: #344054;
 }
 
-.panel-section li:hover,
-.panel-section li:focus-visible {
+.panel-section .example-btn:hover,
+.panel-section .example-btn:focus-visible {
   background: #f8fafc;
   color: #1d4ed8;
 }
 
-.panel-section li::before {
+.panel-section .example-btn::before {
   content: '→';
   font-size: 12px;
   color: #94a3b8;
@@ -1001,7 +1020,7 @@
   margin-top: 1px;
 }
 
-.panel-section li:hover::before {
+.panel-section .example-btn:hover::before {
   color: #2563eb;
 }
 

@@ -9,7 +9,8 @@
  *
  * It runs through the caller's own JWT, which is why there is no service-role
  * key here: the SQL function derives the user from auth.uid() rather than
- * trusting anything the request supplies.
+ * trusting anything the request supplies. The refund is the exception (see
+ * refundQuota): a user must not be able to run it.
  */
 
 export type QuotaResult =
@@ -111,17 +112,34 @@ export async function consumeQuota(
  * meant an OpenAI outage also spent their requests, and retrying through one
  * could use up the whole day's allowance for no answers.
  *
- * Never throws and never changes the response: if refund_ai_quota is missing
- * (its migration not applied yet) or the call fails, the athlete simply keeps
- * the old behaviour of losing that one request. Callers make sure it runs at
- * most once per request.
+ * Runs as the service role: `admin` is a service-role client and `userId` the
+ * athlete whose request failed. refund_ai_quota used to be executable by every
+ * signed-in user, so anyone could call it through the API after each request
+ * and never reach the cap (bug hunt v4, V4-05). Since migration
+ * 20261127000000 only the service role may run it, and only the edge
+ * functions' own failure paths call this.
+ *
+ * Never throws and never changes the response: with no service-role client,
+ * if refund_ai_quota(uuid) is missing (its migration not applied yet) or the
+ * call fails, the athlete simply keeps the old behaviour of losing that one
+ * request. Callers make sure it runs at most once per request.
  */
 export async function refundQuota(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  admin: any,
+  userId: string,
 ): Promise<void> {
+  if (!admin) {
+    console.error(
+      "Could not refund the AI quota: SUPABASE_SERVICE_ROLE_KEY is not set.",
+    );
+    return;
+  }
+
   try {
-    const { error } = await supabase.rpc("refund_ai_quota");
+    const { error } = await admin.rpc("refund_ai_quota", {
+      p_user_id: userId,
+    });
     if (error) console.error("Could not refund the AI quota:", error);
   } catch (error) {
     console.error("Could not refund the AI quota:", error);

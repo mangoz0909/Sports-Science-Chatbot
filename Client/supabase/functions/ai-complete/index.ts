@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { consumeQuota, refundQuota } from "../_shared/quota.ts";
 import { allowedOrigins, DEFAULT_ALLOWED_ORIGINS } from "../_shared/cors.ts";
+import { YOUTH_AND_EATING_RULES } from "../_shared/safetyRules.ts";
 
 // Origins that may call this function come from ../_shared/cors.ts: set
 // ALLOWED_ORIGINS (comma-separated) in the function's environment when the app
@@ -91,6 +92,7 @@ OPERATOR RULES — these are absolute and apply to every response:
 - Never prescribe training, exercises, or foods that conflict with a stated
   injury, medical restriction, allergy, or intolerance, even when the request
   asks for exactly that.
+${YOUTH_AND_EATING_RULES}
 `.trim();
 
 /*
@@ -140,6 +142,25 @@ class PublicError extends Error {
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   const num = typeof value === "number" && Number.isFinite(value) ? value : fallback;
   return Math.min(max, Math.max(min, num));
+}
+
+/**
+ * A client that runs as the service role, used for the quota refund only.
+ *
+ * refund_ai_quota is not executable by signed-in users (migration
+ * 20261127000000, bug hunt V4-05): when it was, any account could call it
+ * through the API after every request and keep its daily counter at zero.
+ * Only this function's own failure path refunds, at most once per request.
+ * Null when the key is not set; refundQuota then skips the refund.
+ */
+function serviceRoleClient(supabaseUrl: string) {
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  return serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -254,7 +275,7 @@ Deno.serve(async (req: Request) => {
 
     // From here on a request has been charged; any failure below hands it
     // back (in the catch), since the athlete gets no plan for it.
-    refundCharge = () => refundQuota(supabase);
+    refundCharge = () => refundQuota(serviceRoleClient(supabaseUrl), user.id);
 
     // Accepted and ignored rather than rejected: during a rollout the old
     // client is still sending one, and failing those requests would take the

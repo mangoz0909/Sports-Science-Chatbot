@@ -270,7 +270,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
         : `Filed on ${checkIn?.checkin_date ?? "an earlier date"} — the athlete has NOT checked in today, so treat these numbers as out of date and lean on the 7-day history instead`;
 
       const checkInText = checkIn
-        ? `${checkInFreshness}. Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Fatigue: ${checkIn.fatigue != null ? Math.round(checkIn.fatigue * 10) : "N/A"}%, Sleep: ${checkIn.sleep_hours ?? "N/A"}h, Training intensity: ${checkIn.training_intensity ?? "N/A"}/10, Soreness: ${checkIn.soreness ?? "N/A"}/10, Stress: ${checkIn.stress ?? "N/A"}/10, Injury risk: ${checkIn.injury_risk ?? "N/A"}%`
+        ? `${checkInFreshness}. Readiness: ${checkIn.readiness_score ?? "N/A"}%, Recovery: ${checkIn.recovery_score ?? "N/A"}%, Fatigue: ${checkIn.fatigue != null ? Math.round(checkIn.fatigue * 10) : "N/A"}%, Sleep: ${checkIn.sleep_hours ?? "N/A"}h, Training intensity: ${checkIn.training_intensity ?? "N/A"}/10, Soreness: ${checkIn.soreness ?? "N/A"}/10, Stress: ${checkIn.stress ?? "N/A"}/10, Injury risk score: ${checkIn.injury_risk ?? "N/A"}/100`
         : "No check-in on file";
       const currentCheckInContextKey = checkInContextKey(checkIn, last7CheckIns);
 
@@ -287,7 +287,7 @@ export default function AiWorkoutGenerator({ onSaveWorkout, workoutTypes = [] }:
                   `Training intensity ${item.training_intensity ?? "N/A"}/10`,
                   `Soreness ${item.soreness ?? "N/A"}`,
                   `Stress ${item.stress ?? "N/A"}`,
-                  `Injury risk ${item.injury_risk ?? "N/A"}%`,
+                  `Injury risk score ${item.injury_risk ?? "N/A"}/100`,
                 ].join(", ")
               )
               .join("\n")
@@ -357,6 +357,7 @@ Requirements:
 - Use the most recent check-in heavily when deciding intensity and exercise selection, but only in proportion to how current it is.
 - Use the last 7 calendar days to detect fatigue, recovery, sleep, and training-intensity patterns.
 - Training intensity is a self-rating from 1-10, not measured training volume or total workload. Do not describe it as a measured workload.
+- The injury risk score is a 0-100 number the app calculates from the athlete's own self-ratings (pain, soreness, fatigue, training intensity, sleep quality, hydration). It is not a measured or validated injury prediction. Do not present it as a probability or a medical estimate.
 - If fewer than 3 check-ins are available, say the trend evidence is limited and do not claim a sustained pattern.
 - Do not overreact to one unusual check-in if the 7-day pattern suggests otherwise.
 - Respect all injuries and physical restrictions.
@@ -626,6 +627,9 @@ Requirements:
                 </Typography>
               </Stack>
             )}
+            <Typography color={MUTED} fontSize={13} sx={{ mt: 1.5 }}>
+              Educational only, not medical advice.
+            </Typography>
           </Box>
 
           {/* SESSION */}
